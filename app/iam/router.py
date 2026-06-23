@@ -1,0 +1,79 @@
+"""Routes IAM — /auth/*, /me. HTTP uniquement : décode, appelle le service, encode."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, status
+
+from app.core.ratelimit import rate_limit
+from app.iam.dependencies import AuthContext, get_auth_service, get_current_user
+from app.iam.schemas import (
+    LoginIn,
+    MeOut,
+    RefreshIn,
+    RegisterIn,
+    TokenPair,
+    UpdateMeIn,
+    UserOut,
+)
+from app.iam.service import AuthService
+
+router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.post(
+    "/register",
+    response_model=TokenPair,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit("auth_register", limit=5, window_seconds=60))],
+)
+async def register(
+    body: RegisterIn,
+    svc: AuthService = Depends(get_auth_service),
+) -> TokenPair:
+    return await svc.register(email=body.email, password=body.password, full_name=body.full_name)
+
+
+@router.post(
+    "/login",
+    response_model=TokenPair,
+    dependencies=[Depends(rate_limit("auth_login_ip", limit=10, window_seconds=60))],
+)
+async def login(
+    body: LoginIn,
+    svc: AuthService = Depends(get_auth_service),
+) -> TokenPair:
+    return await svc.login(email=body.email, password=body.password)
+
+
+@router.post("/refresh", response_model=TokenPair)
+async def refresh(
+    body: RefreshIn,
+    svc: AuthService = Depends(get_auth_service),
+) -> TokenPair:
+    return await svc.refresh(refresh_token=body.refresh_token)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    body: RefreshIn,
+    svc: AuthService = Depends(get_auth_service),
+) -> None:
+    await svc.logout(refresh_token=body.refresh_token)
+
+
+@router.get("/me", response_model=MeOut)
+async def get_me(
+    ctx: AuthContext = Depends(get_current_user),
+    svc: AuthService = Depends(get_auth_service),
+) -> MeOut:
+    return await svc.me(ctx.user)
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(
+    body: UpdateMeIn,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: AuthService = Depends(get_auth_service),
+) -> UserOut:
+    user = await svc.update_me(ctx.user, full_name=body.full_name)
+    return UserOut.model_validate(user)

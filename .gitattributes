@@ -1,0 +1,5 @@
+# Fins de ligne normalisées (LF) dans le dépôt — cohérent avec la CI Linux.
+* text=auto eol=lf
+*.png binary
+*.pdf binary
+*.ico binary

@@ -1,0 +1,66 @@
+{
+  "grid_version": "v1-placeholder",
+  "note": "Golden set de calibration — cas de référence notés par des EXPERTS. `model_axes` est une prédiction enregistrée (régénérée par le LLM à LLM-01) servant de base de non-régression. Remplacer/enrichir avec de vrais cas issus des ateliers.",
+  "cases": [
+    {
+      "id": "tontine-fintech",
+      "category": "fintech",
+      "archetype": "digital",
+      "context": {
+        "description": "Appli de tontine/épargne via mobile money, traçabilité et confiance entre membres.",
+        "answers": {
+          "probleme": "Tontines manuelles : pertes et litiges.",
+          "solution": "Traçabilité + preuve de chaque cotisation.",
+          "confiance": "Agrégateur mobile money agréé, chiffrement."
+        }
+      },
+      "expert_axes": { "probleme": 80, "valeur": 68, "marche": 62, "modele": 38, "equipe": 55, "croissance": 72 },
+      "model_axes":  { "probleme": 80, "valeur": 70, "marche": 65, "modele": 45, "equipe": 55, "croissance": 75 }
+    },
+    {
+      "id": "irrigation-agritech",
+      "category": "agritech",
+      "archetype": "field",
+      "context": {
+        "description": "Place de marché d'irrigation goutte-à-goutte + conseil agronomique pour petits producteurs.",
+        "answers": {
+          "probleme": "Rendements faibles faute d'eau maîtrisée.",
+          "solution": "Kits abordables + suivi terrain.",
+          "terrain": "Relais coopératives locales."
+        }
+      },
+      "expert_axes": { "probleme": 78, "valeur": 72, "marche": 70, "modele": 60, "equipe": 65, "croissance": 68 },
+      "model_axes":  { "probleme": 75, "valeur": 70, "marche": 72, "modele": 55, "equipe": 70, "croissance": 70 }
+    },
+    {
+      "id": "tutorat-edtech",
+      "category": "edtech",
+      "archetype": "digital",
+      "context": {
+        "description": "Appli générique de tutorat scolaire, peu différenciée.",
+        "answers": {
+          "probleme": "Soutien scolaire cher.",
+          "solution": "Mise en relation tuteurs/élèves.",
+          "engagement": "Rappels et quiz."
+        }
+      },
+      "expert_axes": { "probleme": 45, "valeur": 40, "marche": 50, "modele": 30, "equipe": 40, "croissance": 55 },
+      "model_axes":  { "probleme": 50, "valeur": 45, "marche": 52, "modele": 38, "equipe": 42, "croissance": 60 }
+    },
+    {
+      "id": "teleconsult-sante",
+      "category": "sante",
+      "archetype": "digital",
+      "context": {
+        "description": "Téléconsultation pour zones rurales mal desservies, avec relais infirmiers.",
+        "answers": {
+          "probleme": "Déserts médicaux ruraux.",
+          "solution": "Téléconsult + relais infirmiers locaux.",
+          "confiance": "Médecins agréés, dossier sécurisé."
+        }
+      },
+      "expert_axes": { "probleme": 85, "valeur": 75, "marche": 65, "modele": 50, "equipe": 60, "croissance": 70 },
+      "model_axes":  { "probleme": 82, "valeur": 78, "marche": 60, "modele": 58, "equipe": 62, "croissance": 68 }
+    }
+  ]
+}

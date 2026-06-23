@@ -1,0 +1,96 @@
+# Stack de dev backend : postgres, redis, minio, api, worker.
+# Le frontend Next.js vit dans son propre repo (idea-front) ; on n'expose ici que le backend.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ideaxion
+      POSTGRES_PASSWORD: ideaxion
+      POSTGRES_DB: ideaxion
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ideaxion"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ideaxion
+      MINIO_ROOT_PASSWORD: ideaxion-secret
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # console web
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Init one-shot : crée le bucket applicatif au démarrage (idempotent).
+  # Filet de sécurité côté code : app/core/storage.py.put_bytes appelle aussi ensure_bucket.
+  createbuckets:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ideaxion ideaxion-secret &&
+      mc mb --ignore-existing local/ideaxion &&
+      echo 'bucket ideaxion prêt'
+      "
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      # En conteneur, on cible les services par leur nom de réseau Docker.
+      DATABASE_URL: postgresql://ideaxion:ideaxion@postgres:5432/ideaxion
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: ["uv", "run", "python", "-m", "app.worker"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://ideaxion:ideaxion@postgres:5432/ideaxion
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pg_data:
+  minio_data:

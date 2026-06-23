@@ -1,0 +1,3 @@
+# Les révisions de migration sont générées ici via `make revision m="..."`.
+# La première migration (schéma MVP) se génère après `docker compose up -d` :
+#   make revision m="initial schema"   puis   make migrate

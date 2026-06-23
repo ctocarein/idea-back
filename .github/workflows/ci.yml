@@ -1,0 +1,73 @@
+name: CI
+
+# Lint + typage + tests unitaires, puis le test d'intégration du parcours porteur
+# contre un Postgres + Redis réels. La preuve devient continue (à chaque push/PR).
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+env:
+  UV_SYSTEM_PYTHON: "1"
+
+jobs:
+  quality:
+    name: Lint · types · tests unitaires
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Python
+        run: uv python install 3.12
+      - name: Dépendances (dev + pdf)
+        run: uv sync --extra dev --extra pdf
+      - name: Lint (ruff)
+        run: uv run ruff check app tests
+      - name: Format check (ruff)
+        run: uv run ruff format --check app tests
+      - name: Typage (mypy)
+        run: uv run mypy app
+      - name: Tests unitaires
+        run: uv run pytest -m "not integration"
+
+  integration:
+    name: Parcours porteur (intégration)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ideaxion
+          POSTGRES_PASSWORD: ideaxion
+          POSTGRES_DB: ideaxion
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ideaxion"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://ideaxion:ideaxion@localhost:5432/ideaxion
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET: ci-secret-32-bytes-minimum-okokokok
+      LLM_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+      - name: Python
+        run: uv python install 3.12
+      - name: Dépendances
+        run: uv sync --extra dev
+      - name: Migration baseline
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: uv run alembic upgrade head
+      - name: Test d'intégration
+        run: uv run pytest tests/integration -v
