@@ -41,6 +41,15 @@ async def client():
     # Reset du client Redis global : il est lié à la boucle d'event ; chaque test a la
     # sienne (function scope) → on force un client frais pour éviter "different loop".
     cache_mod._redis = None
+    # Vide Redis entre tests : sinon les compteurs de rate-limit (register/login, par IP)
+    # s'accumulent d'un test à l'autre → 429. Chaque test repart d'un état propre.
+    import redis.asyncio as _aioredis
+
+    _r = _aioredis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+    try:
+        await _r.flushdb()
+    finally:
+        await _r.aclose()
 
     import app.models  # noqa: F401  (enregistre les tables)
     from app.core.database import Base, get_engine, get_session_factory

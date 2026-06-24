@@ -21,8 +21,8 @@ jobs:
         uses: astral-sh/setup-uv@v3
       - name: Python
         run: uv python install 3.12
-      - name: Dépendances (dev + pdf)
-        run: uv sync --extra dev --extra pdf
+      - name: Dépendances (dev + pdf + pitch)
+        run: uv sync --extra dev --extra pdf --extra pitch
       - name: Lint (ruff)
         run: uv run ruff check app tests
       - name: Format check (ruff)
@@ -64,7 +64,7 @@ jobs:
       - name: Python
         run: uv python install 3.12
       - name: Dépendances
-        run: uv sync --extra dev
+        run: uv sync --extra dev --extra pitch
       - name: Migration baseline
         env:
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}

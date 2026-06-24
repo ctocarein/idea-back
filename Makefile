@@ -7,8 +7,8 @@
 help: ## Affiche cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-install: ## Installe les dépendances (prod + dev + pdf)
-	uv sync --extra dev --extra pdf
+install: ## Installe les dépendances (prod + dev + pdf + pitch)
+	uv sync --extra dev --extra pdf --extra pitch
 
 run: ## Lance l'API en local (rechargement à chaud)
 	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8080

@@ -21,7 +21,7 @@ from app.iam.models import PermissionGrant, RefreshToken, User  # noqa: F401
 from app.instrumentation.models import Event  # noqa: F401
 from app.jobs.models import Job  # noqa: F401
 from app.opportunities.models import Opportunity  # noqa: F401
-from app.pitchsim.models import PitchRubric  # noqa: F401
+from app.pitchsim.models import PitchDeck, PitchRubric, PitchSlide  # noqa: F401
 from app.projects.models import Project  # noqa: F401
 from app.reports.models import Report  # noqa: F401
 from app.scoring.models import ScoreRun, ScoringGrid  # noqa: F401
@@ -38,7 +38,9 @@ __all__ = [
     "Lesson",
     "Opportunity",
     "PermissionGrant",
+    "PitchDeck",
     "PitchRubric",
+    "PitchSlide",
     "Project",
     "Report",
     "RefreshToken",

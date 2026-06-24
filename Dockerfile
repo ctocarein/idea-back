@@ -27,13 +27,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Couche dépendances (cache) : on copie d'abord les manifestes. `--extra pdf` = WeasyPrint.
+# Couche dépendances (cache) : `--extra pdf` = WeasyPrint, `--extra pitch` = parsing decks.
 COPY pyproject.toml ./
-RUN uv sync --no-install-project --no-dev --extra pdf || true
+RUN uv sync --no-install-project --no-dev --extra pdf --extra pitch || true
 
 # Puis le code applicatif.
 COPY . .
-RUN uv sync --no-dev --extra pdf
+RUN uv sync --no-dev --extra pdf --extra pitch
 
 EXPOSE 8080
 

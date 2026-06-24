@@ -22,6 +22,7 @@ dependencies = [
     "httpx>=0.28",
     "minio>=7.2",
     "structlog>=24.4",
+    "python-multipart>=0.0.9",  # upload multipart (pitch decks)
 ]
 
 [project.optional-dependencies]
@@ -36,6 +37,11 @@ dev = [
 # NB : WeasyPrint requiert des libs système (pango, cairo) sur l'hôte/conteneur.
 pdf = [
     "weasyprint>=63.0",
+]
+# Parsing des pitch decks (PITCH-02). `uv sync --extra pitch`.
+pitch = [
+    "pypdf>=4.0",
+    "python-pptx>=0.6",
 ]
 
 [build-system]
