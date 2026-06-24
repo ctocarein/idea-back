@@ -33,11 +33,14 @@ Voir aussi : [GRILLE_RADAR_V2.md](GRILLE_RADAR_V2.md) (le scoring dont on réuti
 
 | Couche | Contenu | Sprint |
 | :-- | :-- | :-- |
-| **4A — « Le Comité »** | Mode Slides **texte**, tour-par-tour : comités+personas, parsing deck, slides typées, narration→réactions, **interruptions déclenchées par les faiblesses**, imprévus (config), score **Fond** + **Forme-texte**, **post-mortem + PDF**, progression | **S4 (MVP)** |
-| **4B — « La Voix »** | Upload audio (DOC-01) → Whisper (seam STT + mock) → métriques de délivrance déterministes (débit, tics, timing) → Forme défendable | Premium (post-S4) |
+| **4A — « Le Comité »** ✅ | Mode Slides **texte**, tour-par-tour : comités+personas, parsing deck, slides typées, narration→réactions, imprévus (config), score **Fond** + **Forme-texte**, **post-mortem + PDF**, progression | **S4 (livré)** |
+| **PITCH-06 — « Comité silencieux »** | Refonte de l'orchestration vers le **modèle canonique** (§14) : phases, prise de parole ordonnée, expert métier, questions variées, tour libre, délibération verbatim | **prochain (texte)** |
+| **4B — « La Voix »** | Upload audio (DOC-01) → Whisper (seam STT + mock) → métriques de délivrance déterministes (débit, tics, timing) → Forme défendable | Premium |
 | **V2 — « La Salle »** | Realtime WebRTC + voix TTS par juge + **Mode Caméra** (Hume/MediaPipe) RGPD-gated + replay vidéo | V2 (épic séparée) |
 
-Cette spec couvre **4A** en détail ; 4B/V2 sont esquissés pour que le modèle ne se peigne pas dans un coin.
+> ⚠️ **4A livré avec le modèle « interruption pendant le pitch »** (PITCH-03). Le **§14 (comité
+> silencieux)** est désormais **canonique** et le remplace — voir la machine à phases et l'orchestrateur.
+> §3-9 décrivent le socle 4A (toujours valable : scoring, deck, post-mortem) ; §14 décrit l'interaction cible.
 
 ---
 
@@ -220,13 +223,14 @@ Permission : `PITCHSIM_RUN` (déjà au catalogue rôle FOUNDER). Garde d'ownersh
 
 | Code | Story | Pts |
 | :-- | :-- | --: |
-| IDX-PITCH-01 | Rubrique de pitch (3 comités, 10 axes ancrés placeholder) + `PitchRubric` | 5 |
-| IDX-PITCH-02 | Deck : upload (DOC-01) + parsing PDF/PPTX → slides typées | 5 |
-| IDX-PITCH-03 | Session + tours (narration/answer) + **moteur de scénario** (imprévus déclenchés par faiblesses) | 8 |
-| IDX-PITCH-04 | Scoring Fond (LLM ancré, `PitchRun` rejouable) + Forme-texte (déterministe) | 5 |
-| IDX-PITCH-05 | Post-mortem (réutilise report+PDF) + progression + plan→Academy/OPP | 5 |
+| IDX-PITCH-01 | Rubrique de pitch (3 comités, 10 axes ancrés placeholder) + `PitchRubric` | 5 | ✅ |
+| IDX-PITCH-02 | Deck : upload (DOC-01) + parsing PDF/PPTX → slides typées | 5 | ✅ |
+| IDX-PITCH-03 | Session + tours (narration/answer) + moteur de scénario | 8 | ✅ |
+| IDX-PITCH-04 | Scoring Fond (LLM ancré, `PitchRun` rejouable) + Forme-texte (déterministe) | 5 | ✅ |
+| IDX-PITCH-05 | Post-mortem (réutilise report+PDF) + progression + plan→Academy/OPP | 5 | ✅ |
 
-**Sprint 4 backend ≈ 28 pts** (4A). 4B (audio/Whisper) et V2 (realtime/caméra/bio) = épics séparées.
+**Sprint 4 backend (4A) = 28 pts — LIVRÉ.** Refonte « comité silencieux » = **PITCH-06 (§14.12, ~26 pts)**.
+4B (audio/Whisper) et V2 (realtime/caméra/bio) = épics séparées.
 
 ---
 
@@ -239,4 +243,128 @@ Permission : `PITCHSIM_RUN` (déjà au catalogue rôle FOUNDER). Garde d'ownersh
 - **Intégrité du credential** : seul le **Fond** alimente le score partagé/B2B ; la Forme reste coaching.
 - **Matière** : les **3 rubriques ancrées** + personas sont *placeholder v1* → à figer en atelier produit
   (comme la grille Radar v2).
+
+---
+
+## 14. Modèle d'interaction « Comité silencieux » (CANONIQUE — doc fondateur, V2.1)
+
+> **Statut.** Le doc fondateur « Version Humaine — Juin 2026 » fait foi. Il **remplace** le modèle
+> d'interruption livré en 4A (PITCH-03). La refonte de l'orchestration = **PITCH-06** ; le socle
+> (rubrique, mapping faiblesse→juge, Fond/Forme, post-mortem, gamification, deck) **est réutilisé**.
+
+### 14.1 Les 5 règles d'or (contrat d'expérience)
+1. Le comité **ne coupe jamais la parole pendant le pitch** (réactions visuelles seulement).
+2. **C'est le porteur qui annonce la fin** (« j'ai terminé », clic en MVP / phrase en V2). Alerte douce
+   à la durée cible + **30 s de grâce**, jamais de coupure auto.
+3. Chaque agent **parle à son tour** (ordre fixe), puis un **tour libre**.
+4. Les agents **se parlent entre eux** (rebond, contradiction, soutien).
+5. Le rapport cite **les mots exacts** de chaque agent (pas un score abstrait).
+
+### 14.2 Machine à PHASES (remplace la machine plate de §3 pour PITCH-06)
 ```
+BRIEFING ─start─> PITCHING ─« terminé »(garde ≥30s)─> QA ─tous ont fini─> FREE_ROUND
+   └─> DELIBERATING ─(verdicts + scoring)─> COMPLETED        (any non-terminal ─abandon─> ABANDONED)
+```
+- `phase` devient un champ explicite de `PitchSession` (BRIEFING/PITCHING/QA/FREE_ROUND/DELIBERATING/
+  COMPLETED/ABANDONED). Aucune transition implicite ; saut illégal → 422 (comme les autres machines).
+
+### 14.3 L'Orchestrateur (pur, déterministe → testable)
+Fonction serveur invisible qui, à partir de `phase` + mémoire, décide **le prochain coup du jury** :
+- tient **un seul jeton de parole** (`current_speaker`) — un agent à la fois ;
+- en QA, donne la parole dans l'**ordre du comité** ; un agent rend le micro quand sa file de questions
+  est vide **ou** qu'il a atteint `qa_questions_per_agent` ;
+- **anti-doublon** : clé de question = `(axis, angle)` ; sautée si déjà dans `asked_questions` ;
+- déclenche les **micro-réactions** (§14.8) et fait évoluer la **conviction** (§14.4) ;
+- avance les phases. **Toute cette logique est sans LLM** (règles pures) ; seul le *contenu* (questions,
+  débat, verdicts) appelle le modèle.
+
+### 14.4 Mémoire de session + conviction
+Au-delà des `pitch_turns` (transcript horodaté), la session porte un **état d'agents** (JSONB) :
+```
+agent_state = { "<nom>": { "conviction": {axis: -2..+2}, "pending": [angle…], "asked": int } }
+current_speaker, qa_order: [noms], qa_index, asked_questions: [(axis,angle)]
+```
+La conviction baisse quand une faiblesse touche l'obsession de l'agent, monte sur un signal positif.
+Elle pondère le **ton** du verdict final (§14.9) et l'ordre/priorité des questions.
+
+### 14.5 Le TEMPS — qui le définit (combinaison, pas un seul facteur)
+| Levier | Effet |
+| :-- | :-- |
+| **Type de comité** | durée de base + style de Q&A (`default_duration_min`, `qa_questions_per_agent`, `tour_libre`) |
+| **Format** choisi par le porteur | dans les bornes du comité : `elevator`(1') · `standard`(3') · `long`(5') |
+| **Niveau** (gamification) | **débloque** les modes extrêmes (Flash 30s, Contrarian, Imprévisible) — n'altère pas la base |
+| **Palier freemium** | plafonne (gratuit = format standard, 1 session/mois ; premium = tous modes) |
+
+Défauts par comité : **Concours** 3' / 1 question·agent ; **Investisseur** 3' / 2 + tour libre ;
+**Incubateur** 5' / 2 + tour libre. **Le chrono dur ne s'applique qu'au PITCH** (soft alert + 30 s de
+grâce) ; le **Q&A se mesure en nombre de questions par agent**, pas en horloge (plus humain, plus simple).
+
+### 14.6 Le QUESTIONNEMENT varié (sans tomber dans l'incohérence)
+Séparer **structure** (déterministe) et **contenu** (varié) :
+- **Pertinence contrainte** : l'axe d'une question ∈ (faiblesses détectées ∪ obsession de l'agent).
+- **Variété du contenu**, 4 leviers : (1) le transcript réel diffère ; (2) **seed de variation** par
+  session + **température LLM > 0** ; (3) **pool d'angles par axe** (ex. marché : taille / source /
+  part adressable / saturation) dans lequel l'agent pioche un angle **non encore utilisé** ; (4)
+  **mémoire inter-sessions** : on évite les angles déjà posés aux sessions précédentes du projet.
+- En **test** : mock déterministe (seed → angle stable). En **prod** : Mistral génère la variété.
+- → « aléatoire » = **varié dans le cadre de la pertinence**, jamais du hasard pur.
+
+### 14.7 L'EXPERT MÉTIER — 5ᵉ juge dynamique par secteur
+Le comité = **4 personas fixes + 1 expert sectoriel** injecté selon `project.sector` (qu'on stocke déjà)
+→ on retombe sur les « 3 à 5 juges » du doc.
+```
+SECTOR_EXPERTS = {
+  "fintech":  {name:"Expert Fintech",  obsession:"business_model", concerns:[régulation, confiance, unit economics]},
+  "agritech": {name:"Expert AgriTech", obsession:"marche",         concerns:[chaîne d'appro, saisonnalité, logistique]},
+  "sante":    {name:"Expert Santé",    obsession:"traction",       concerns:[preuve clinique, régulation, remboursement]},
+  …  + "_default": {name:"Expert Secteur", obsession:"solution", concerns:[…]}   # repli
+}
+```
+Le comité **résolu** (4 fixes + expert) est **snapshotté sur la session** (`committee_personas` JSONB) →
+stable et **rejouable**. Le prompt de l'expert inclut le secteur + ses `concerns`.
+
+### 14.8 Micro-réactions pendant le pitch (silencieuses)
+Pour chaque narration, chaque agent émet **un signal** (déterministe : faiblesse + obsession +
+conviction) parmi : `nod`, `frown`, `note`, `glance`, `impatient`, `none`. Renvoyés dans la réponse
+`/slide` (`reactions:[{agent,reaction}]`) → **le front anime l'avatar**. Stockés en `meta` de la
+narration pour la timeline du post-mortem. **Aucune parole.**
+
+### 14.9 Délibération VERBATIM + rapport
+À `DELIBERATING` : chaque agent produit **son verdict, avec ses mots** (1 appel LLM par persona, sous
+son prompt système + sa conviction + la mémoire) ; il peut **changer d'avis** et **voter**. Stocké en
+`pitch_turns` (kind=`deliberation`, actor=agent) **et** dans `PitchRun.verdicts = [{agent, text, vote}]`.
+Le post-mortem les surface **verbatim** (Règle 5) — « Ce que M. Morel a dit pendant la délibération… ».
+Le scoring **Fond/Forme** (inchangé) est calculé en parallèle sur le transcript complet.
+
+### 14.10 Contrat API (deltas PITCH-06)
+| Méthode | Route | Rôle |
+| :-- | :-- | :-- |
+| POST | `/sessions` | résout le comité (**+ expert secteur**), `phase=BRIEFING`, renvoie comité + timing |
+| POST | `/sessions/{id}/start` | BRIEFING→PITCHING (démarre le chrono) |
+| POST | `/sessions/{id}/slide` | narration → **réactions** (plus d'interruption) + indicateurs ; MAJ pending+conviction |
+| POST | `/sessions/{id}/end-pitch` | « j'ai terminé » → PITCHING→QA (garde ≥30 s) |
+| POST | `/sessions/{id}/answer` | réponse à l'agent au micro → question suivante **ou** passe le micro / → FREE_ROUND |
+| POST | `/sessions/{id}/pause` · `/resume` | le porteur suspend ; le comité attend |
+| POST | `/sessions/{id}/free-round` | génère 1 échange inter-agents (borné) |
+| POST | `/sessions/{id}/finish` | FREE_ROUND→DELIBERATING→COMPLETED : verdicts verbatim + scoring |
+| GET | `/sessions/{id}/post-mortem` | + `verdicts` verbatim |
+
+### 14.11 Modèle de données (deltas)
+- `PitchSession` : `+phase`, `+committee_personas` (snapshot), `+agent_state`, `+current_speaker`,
+  `+qa_order`, `+qa_index`, `+format`, `+pitch_clock` (soft).
+- `PitchTurn` : nouveaux `kind` = `reaction` (silencieux), `verdict` ; `meta` porte `angle`, `conviction`.
+- `PitchRun` : `+verdicts` (les mots des agents) ; `+committee_key`/personas pour l'audit.
+- Comités (constantes) : `+default_duration_min`, `+qa_questions_per_agent`, `+allowed_formats`,
+  `+tour_libre` ; nouveau `SECTOR_EXPERTS`.
+
+### 14.12 Stories PITCH-06 (refonte orchestration)
+| Code | Story | Pts |
+| :-- | :-- | --: |
+| IDX-PITCH-06a | Machine à **phases** + Orchestrateur (parole, ordre, anti-doublon) — pur/testé | 8 |
+| IDX-PITCH-06b | **Expert métier** par secteur + comité snapshotté + timing (contexte×format×niveau×palier) | 5 |
+| IDX-PITCH-06c | **Questionnement varié** (pool d'angles + seed + mémoire inter-sessions) | 5 |
+| IDX-PITCH-06d | **Tour libre** (inter-agents) + **délibération verbatim** → rapport « mots des agents » | 5 |
+| IDX-PITCH-06e | **Micro-réactions** + conviction (signaux pour le front) | 3 |
+
+**PITCH-06 ≈ 26 pts** (texte d'abord). Réutilise tout le socle 4A ; ne touche pas au scoring Fond/Forme.
+Le realtime/voix/avatars/ambiance restent **V2 « La Salle »** (transport, pas logique).

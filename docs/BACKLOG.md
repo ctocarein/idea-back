@@ -135,7 +135,22 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-PITCH-04 | Scoring Fond (LLM ancré, `PitchRun` rejouable) + Forme-texte | 5 | ✅ | PITCH-03 | Fond = credential (LLM ancré sur transcript+slides, validé strict) · Forme = proxies déterministes (concision/tics/complétude/structure) · `PitchRun` · **validé sur Mistral réel** · 5 tests |
 | IDX-PITCH-05 | Post-mortem + progression + plan→Academy/OPP | 5 | ✅ | PITCH-04, reports | `PostMortemOut` (scores+niveau gamifié, radar 10 axes, timeline=`pitch_turns`, progression, **plan déterministe → Academy/preuves/mentor/session/opportunités**) · rendu HTML + PDF guardé · 9 tests |
 
-**Sprint 4 backend (4A) : 28 pts.** *(4B audio + V2 realtime/caméra/bio = épics séparées, payantes.)*
+**Sprint 4 backend (4A) : 28 pts — ✅ LIVRÉ.** *(4B audio + V2 realtime/caméra/bio = épics séparées, payantes.)*
+
+### PITCH-06 — Refonte « Comité silencieux » (planifié) — cf. [SPEC_PITCHSIM.md §14](SPEC_PITCHSIM.md)
+
+> Modèle canonique (doc fondateur) : comité **silencieux pendant le pitch**, « j'ai terminé », **Q&A
+> ordonnée**, **tour libre** inter-agents, **délibération verbatim**. Réutilise tout le socle 4A.
+
+| Code | Story | Pts | Statut |
+| :--- | :--- | ---: | :--- |
+| IDX-PITCH-06a | Machine à **phases** + Orchestrateur (parole/ordre/anti-doublon, pur) | 8 | ⬜ |
+| IDX-PITCH-06b | **Expert métier** par secteur + comité snapshotté + timing (contexte×format×niveau×palier) | 5 | ⬜ |
+| IDX-PITCH-06c | **Questionnement varié** (pool d'angles + seed + mémoire inter-sessions) | 5 | ⬜ |
+| IDX-PITCH-06d | **Tour libre** + **délibération verbatim** → rapport « mots des agents » | 5 | ⬜ |
+| IDX-PITCH-06e | **Micro-réactions** + conviction (signaux front) | 3 | ⬜ |
+
+**PITCH-06 ≈ 26 pts** (texte d'abord ; realtime/voix/avatars = V2 « La Salle »).
 
 ---
 
