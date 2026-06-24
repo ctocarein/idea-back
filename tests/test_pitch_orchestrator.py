@@ -105,3 +105,12 @@ def test_next_question_none_when_all_angles_used():
     diallo = next(p for p in INCUB if p["name"] == "Mme Diallo")  # obsession equipe
     used = {"equipe": [a["angle"] for a in orch.ANGLE_POOL["equipe"]]}
     assert orch.next_question(diallo, used, "s") is None
+
+
+def test_pick_angle_avoids_history_but_falls_back():
+    # L'historique inter-sessions est évité si possible…
+    res = orch.pick_angle("marche", [], "s", history=["source"])
+    assert res is not None and res["angle"] != "source"
+    # …mais relâché s'il couvre tout (l'agent n'est jamais muet).
+    everything = [a["angle"] for a in orch.ANGLE_POOL["marche"]]
+    assert orch.pick_angle("marche", [], "s", history=everything) is not None

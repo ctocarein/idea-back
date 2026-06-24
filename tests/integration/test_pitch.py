@@ -202,3 +202,54 @@ async def test_silent_committee_flow(client) -> None:
     # Le score (credential) et le post-mortem sont disponibles.
     assert (await client.get(f"{base}/{sid}/run", headers=headers)).status_code == 200
     assert (await client.get(f"{base}/{sid}/post-mortem", headers=headers)).status_code == 200
+
+
+async def _run_silent_qa(client, headers, project_id) -> set:
+    base = "/api/v1/pitchsim/sessions"
+    r = await client.post(base, headers=headers, json={"committee_key": "incubateur", "project_id": project_id})
+    sid = r.json()["id"]
+    await client.post(f"{base}/{sid}/start-pitch", headers=headers)
+    await client.post(f"{base}/{sid}/narrate", headers=headers, json={"narration": "Projet de tontine."})
+    await client.post(f"{base}/{sid}/end-pitch", headers=headers)
+    for _ in range(20):
+        cur = (await client.get(f"{base}/{sid}", headers=headers)).json()
+        if cur["phase"] != "qa":
+            break
+        await client.post(f"{base}/{sid}/respond", headers=headers, json={"answer": "Réponse."})
+    s = (await client.get(f"{base}/{sid}", headers=headers)).json()
+    await client.post(f"{base}/{sid}/deliberate", headers=headers)
+    return {(t["meta"]["axis"], t["meta"]["angle"]) for t in s["turns"] if t["kind"] == "question"}
+
+
+async def test_questions_vary_across_sessions(client) -> None:
+    # La mémoire inter-sessions doit faire varier les angles d'une session à l'autre.
+    headers = await _register(client, "vary@ideaxion.io")
+    r = await client.post(
+        "/api/v1/diagnostics",
+        headers=headers,
+        json={
+            "projectName": "Tontine+",
+            "sector": "fintech",
+            "description": "Appli de tontine via mobile money, traçabilité et confiance.",
+            "consent": True,
+            "archetype": "terrain",
+        },
+    )
+    created = r.json()
+    from app.diagnostics.handlers import handle_run_diagnostic
+
+    await handle_run_diagnostic(
+        {
+            "diagnostic_id": created["diagnostic_id"],
+            "project_id": created["project_id"],
+            "report_id": created["report_id"],
+            "mode": "guided",
+        }
+    )
+    pid = created["project_id"]
+
+    s1 = await _run_silent_qa(client, headers, pid)
+    s2 = await _run_silent_qa(client, headers, pid)
+    assert s1 and s2
+    # Au moins un angle de la 2e session n'a pas été posé en 1re (variété inter-sessions).
+    assert s2 - s1, "la 2e session devrait varier les angles posés"

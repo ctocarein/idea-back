@@ -447,12 +447,15 @@ class PitchSessionService:
             raise BusinessRuleError("Présentez votre pitch avant de dire « j'ai terminé ».")
         await self._set_phase(ps, orchestrator.PitchPhase.QA)
         personas = self._session_personas(ps)
+        # Mémoire inter-sessions : angles déjà posés aux sessions passées du projet.
+        history = await self.repo.project_question_angles(ps.project_id) if ps.project_id else {}
         ps.orch = {
             **ps.orch,
             "qa_order": orchestrator.qa_order(personas),
             "qa_index": 0,
             "qa_asked": 0,  # questions déjà posées par le juge au micro
             "asked": {},
+            "history": history,
         }
         await self._serve_question(ps, personas)
         await self.session.commit()
@@ -467,7 +470,12 @@ class PitchSessionService:
             return False
         persona = next(p for p in personas if p["name"] == name)
         asked_n = ps.orch.get("qa_asked", 0)
-        q = orchestrator.next_question(persona, ps.orch.get("asked", {}), seed_key=f"{ps.id}:{idx}:{asked_n}")
+        q = orchestrator.next_question(
+            persona,
+            ps.orch.get("asked", {}),
+            seed_key=f"{ps.id}:{idx}:{asked_n}",
+            history_by_axis=ps.orch.get("history", {}),
+        )
         if q is None:
             return False
         asked = {**ps.orch.get("asked", {})}

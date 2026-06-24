@@ -122,19 +122,38 @@ def next_speaker(order: list[str], index: int) -> str | None:
     return order[index] if 0 <= index < len(order) else None
 
 
-def pick_angle(axis: str, asked_angles: list[str], seed_key: str) -> dict | None:
-    """Choisit un angle NON encore posé sur cet axe (varié, déterministe). None si épuisé."""
+def pick_angle(axis: str, asked_angles: list[str], seed_key: str, history: list[str] | None = None) -> dict | None:
+    """Choisit un angle sur cet axe (varié, déterministe).
+
+    `asked_angles` = déjà posés DANS la session (anti-doublon dur). `history` = angles posés aux
+    sessions PRÉCÉDENTES (filtre SOUPLE inter-sessions : évité si possible, ignoré s'il épuise tout).
+    None seulement si tous les angles intra-session sont épuisés.
+    """
     pool = ANGLE_POOL.get(axis, [])
-    fresh = [a for a in pool if a["angle"] not in set(asked_angles)]
+    intra = set(asked_angles)
+    hist = set(history or [])
+    fresh = [a for a in pool if a["angle"] not in intra and a["angle"] not in hist]
+    if not fresh:  # l'historique inter-sessions a tout couvert → on le relâche
+        fresh = [a for a in pool if a["angle"] not in intra]
     if not fresh:
         return None
     return fresh[_seed(seed_key, axis) % len(fresh)]
 
 
-def next_question(persona: dict, asked_angles_by_axis: dict[str, list[str]], seed_key: str) -> dict | None:
-    """Prochaine question d'un agent sur SON obsession (angle varié, anti-doublon). None si épuisé."""
+def next_question(
+    persona: dict,
+    asked_angles_by_axis: dict[str, list[str]],
+    seed_key: str,
+    history_by_axis: dict[str, list[str]] | None = None,
+) -> dict | None:
+    """Prochaine question d'un agent sur SON obsession (angle varié, anti-doublon intra + inter)."""
     axis = persona["obsession"]
-    chosen = pick_angle(axis, asked_angles_by_axis.get(axis, []), seed_key)
+    chosen = pick_angle(
+        axis,
+        asked_angles_by_axis.get(axis, []),
+        seed_key,
+        history=(history_by_axis or {}).get(axis),
+    )
     if chosen is None:
         return None
     return {

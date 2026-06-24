@@ -129,6 +129,20 @@ class PitchSessionRepository:
         )
         return int(result.scalar_one())
 
+    async def project_question_angles(self, project_id: UUID) -> dict[str, list[str]]:
+        # Angles déjà posés aux sessions PRÉCÉDENTES du projet (mémoire inter-sessions).
+        result = await self.session.execute(
+            select(PitchTurn.meta)
+            .join(PitchSession, PitchTurn.session_id == PitchSession.id)
+            .where(PitchSession.project_id == project_id, PitchTurn.kind == "question")
+        )
+        out: dict[str, list[str]] = {}
+        for meta in result.scalars():
+            axis, angle = (meta or {}).get("axis"), (meta or {}).get("angle")
+            if axis and angle:
+                out.setdefault(axis, []).append(angle)
+        return out
+
 
 class PitchRunRepository:
     def __init__(self, session: AsyncSession) -> None:
