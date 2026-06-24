@@ -132,7 +132,7 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-PITCH-01 | Rubrique de pitch (3 comités, 10 axes ancrés placeholder) | 5 | ✅ | SCORING | `PitchRubric` versionnée (8 axes Fond ancrés + 2 bio différés) · 3 comités/personas (obsession = axe) · seed + 15 tests |
 | IDX-PITCH-02 | Deck : upload + parsing PDF/PPTX → slides typées | 5 | ✅ | DOC-01 | `pitch_decks`/`pitch_slides` (main/backup/synthèse) · upload **multipart** + parsing `pypdf`/`python-pptx` · 10 tests |
 | IDX-PITCH-03 | Session + tours + **moteur de scénario** | 8 | ✅ | PITCH-01, LLM-01 | `pitch_sessions`/`pitch_turns` · moteur **pur déterministe** : heuristique de faiblesse → juge (obsession) interrompt · imprévus configurables + investisseur surprise · machine à états · 9 tests |
-| IDX-PITCH-04 | Scoring Fond (LLM ancré, `PitchRun` rejouable) + Forme-texte | 5 | ⬜ | PITCH-03 | Fond = credential · Forme = proxies déterministes (concision, tics, complétude) |
+| IDX-PITCH-04 | Scoring Fond (LLM ancré, `PitchRun` rejouable) + Forme-texte | 5 | ✅ | PITCH-03 | Fond = credential (LLM ancré sur transcript+slides, validé strict) · Forme = proxies déterministes (concision/tics/complétude/structure) · `PitchRun` · **validé sur Mistral réel** · 5 tests |
 | IDX-PITCH-05 | Post-mortem + progression + plan→Academy/OPP | 5 | ⬜ | PITCH-04, reports | réutilise report+PDF · timeline = `pitch_turns` · plan via next_actions + opportunités |
 
 **Sprint 4 backend (4A) : 28 pts.** *(4B audio + V2 realtime/caméra/bio = épics séparées, payantes.)*

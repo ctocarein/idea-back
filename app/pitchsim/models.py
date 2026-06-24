@@ -98,3 +98,29 @@ class PitchTurn(Base):
     slide_id: Mapped[UUID | None] = mapped_column(default=None)
     meta: Mapped[dict] = mapped_column(JSONB, default=dict)  # axis, imprevu_type…
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class PitchRun(Base):
+    # Évaluation d'une session : score Fond (credential, LLM ancré) + Forme (coaching, texte).
+    # Rejouable/auditable comme `ScoreRun` (rubric_version + modèle + sortie brute figés).
+    __tablename__ = "pitch_runs"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(ForeignKey("pitch_sessions.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[UUID | None] = mapped_column(default=None, index=True)  # progression
+    rubric_version: Mapped[str] = mapped_column(String(40))
+    source: Mapped[str] = mapped_column(String(20), default="llm")  # llm | human | replay
+    model: Mapped[str] = mapped_column(String(80), default="")
+    raw_output: Mapped[dict | None] = mapped_column(JSONB, default=None)  # audit
+
+    # Fond = le credential (axes ancrés notés par le LLM).
+    fond_scores: Mapped[dict] = mapped_column(JSONB, default=dict)  # {axis: 0-10}
+    overall_fond: Mapped[float] = mapped_column(default=0.0)
+    # Forme = coaching (proxies déterministes, « indicatif »).
+    forme_scores: Mapped[dict] = mapped_column(JSONB, default=dict)  # {proxy: 0-10}
+    overall_forme: Mapped[float] = mapped_column(default=0.0)
+    overall_global: Mapped[float] = mapped_column(default=0.0)
+
+    strengths: Mapped[list] = mapped_column(JSONB, default=list)
+    weaknesses: Mapped[list] = mapped_column(JSONB, default=list)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)

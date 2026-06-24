@@ -87,3 +87,18 @@ class SessionOut(BaseModel):
     status: str
     config: dict
     turns: list[TurnOut] = []
+
+
+class PitchRunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    rubric_version: str
+    model: str
+    fond_scores: dict  # le credential (axes Fond /10)
+    overall_fond: float
+    forme_scores: dict  # coaching (proxies /10), « indicatif »
+    overall_forme: float
+    overall_global: float
+    strengths: list
+    weaknesses: list

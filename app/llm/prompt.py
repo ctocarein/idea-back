@@ -14,6 +14,41 @@ import json
 PROMPT_VERSION = "scoring-v2"
 REPORT_PROMPT_VERSION = "report-v1"
 COACH_PROMPT_VERSION = "coach-v1"
+PITCH_PROMPT_VERSION = "pitch-v1"
+
+
+def build_pitch_prompt(
+    *,
+    rubric_axes: list[dict],
+    committee_label: str,
+    transcript: str,
+    slide_text: str,
+) -> str:
+    # Le comité note CHAQUE axe Fond contre ses ancres, à partir du transcript + des slides.
+    # Marqueur FORMAT=axes : même contrat de sortie que le scoring Radar (axes + justifications).
+    lines = [
+        "FORMAT=axes.",
+        f"Tu es un comité de pitch ({committee_label}), rigoureux et bienveillant.",
+        "Note CHAQUE axe de 0 à 10 EN T'APPUYANT sur ses ancres. Juge le pitch, pas l'enthousiasme.",
+        "",
+        "AXES, QUESTION & ANCRES :",
+    ]
+    for axis in rubric_axes:
+        bands = " | ".join(f"{b['min']}-{b['max']}: {b['label']}" for b in axis.get("anchors", []))
+        cq = axis.get("central_question", "")
+        lines.append(f"- {axis['key']} ({axis['label']}) — {cq} Ancres : {bands}")
+    lines += [
+        "",
+        "PITCH (transcript du porteur) :",
+        transcript or "(vide)",
+        "",
+        "SLIDES :",
+        slide_text or "(aucune)",
+        "",
+        'Réponds STRICTEMENT en JSON : { "axes": { "<key>": <0-10> }, '
+        '"justifications": { "<key>": "<raison courte>" } }',
+    ]
+    return "\n".join(lines)
 
 
 def build_coach_prompt(*, section: str, draft: str, message: str) -> str:

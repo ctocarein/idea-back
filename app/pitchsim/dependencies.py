@@ -5,11 +5,14 @@ from __future__ import annotations
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.database import get_session
 from app.core.storage import get_storage
+from app.llm.factory import get_llm
 from app.pitchsim.repository import (
     PitchDeckRepository,
     PitchRubricRepository,
+    PitchRunRepository,
     PitchSessionRepository,
 )
 from app.pitchsim.service import PitchDeckService, PitchSessionService
@@ -20,4 +23,10 @@ def get_deck_service(session: AsyncSession = Depends(get_session)) -> PitchDeckS
 
 
 def get_session_service(session: AsyncSession = Depends(get_session)) -> PitchSessionService:
-    return PitchSessionService(PitchSessionRepository(session), PitchRubricRepository(session))
+    return PitchSessionService(
+        PitchSessionRepository(session),
+        PitchRubricRepository(session),
+        PitchRunRepository(session),
+        PitchDeckRepository(session),
+        get_llm(get_settings()),
+    )

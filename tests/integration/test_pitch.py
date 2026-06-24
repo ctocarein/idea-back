@@ -115,12 +115,22 @@ async def test_pitch_session_flow_with_committee(client) -> None:
     assert r.status_code == 200
     assert any(t["kind"] == "imprevu" for t in r.json()["turns"])
 
-    # Fin → délibération + statut completed.
+    # Fin → délibération + scoring + statut completed.
     r = await client.post(f"/api/v1/pitchsim/sessions/{sid}/finish", headers=headers)
     assert r.status_code == 200, r.text
     final = r.json()
     assert final["status"] == "completed"
     assert any(t["kind"] == "deliberation" for t in final["turns"])
+
+    # Le score (Fond credential + Forme coaching) est disponible.
+    r = await client.get(f"/api/v1/pitchsim/sessions/{sid}/run", headers=headers)
+    assert r.status_code == 200, r.text
+    run = r.json()
+    assert len(run["fond_scores"]) == 8  # 8 axes Fond
+    assert 0 <= run["overall_fond"] <= 10
+    assert set(run["forme_scores"]) == {"concision", "fluidite", "completude", "structure"}
+    assert 0 <= run["overall_global"] <= 10
+    assert len(run["strengths"]) == 3 and len(run["weaknesses"]) == 3
 
     # Action après finish interdite (machine à états).
     r = await client.post(

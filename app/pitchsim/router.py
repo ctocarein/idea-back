@@ -15,6 +15,7 @@ from app.pitchsim.schemas import (
     AnswerIn,
     CommitteeOut,
     DeckOut,
+    PitchRunOut,
     SessionOut,
     SessionStartIn,
     SlideSubmitIn,
@@ -142,3 +143,13 @@ async def get_session(
     svc: PitchSessionService = Depends(get_session_service),
 ) -> SessionOut:
     return await svc.get_session(ctx, session_id)
+
+
+@router.get("/sessions/{session_id}/run", response_model=PitchRunOut)
+async def get_run(
+    session_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
+    svc: PitchSessionService = Depends(get_session_service),
+) -> PitchRunOut:
+    # Score Fond (credential) + Forme (coaching) calculé à finish.
+    return await svc.get_run(ctx, session_id)

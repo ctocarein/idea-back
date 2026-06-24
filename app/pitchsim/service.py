@@ -12,16 +12,27 @@ from uuid import UUID
 from app.core.errors import BusinessRuleError, NotFoundError
 from app.core.storage import ObjectStorage
 from app.iam.dependencies import AuthContext, guard_owner_access
-from app.pitchsim import scenario
+from app.llm.base import LLMProvider
+from app.llm.prompt import build_pitch_prompt
+from app.pitchsim import evaluate, forme, scenario
 from app.pitchsim.constants import committee as get_committee
 from app.pitchsim.models import PitchSession, PitchStatus, PitchTurn, SlideKind
 from app.pitchsim.parser import ALLOWED_DECK_TYPES, MAX_MAIN_SLIDES, parse_deck
 from app.pitchsim.repository import (
     PitchDeckRepository,
     PitchRubricRepository,
+    PitchRunRepository,
     PitchSessionRepository,
 )
-from app.pitchsim.schemas import DeckOut, SessionOut, SessionStartIn, SlideOut, TurnOut
+from app.pitchsim.schemas import (
+    DeckOut,
+    PitchRunOut,
+    SessionOut,
+    SessionStartIn,
+    SlideOut,
+    TurnOut,
+)
+from app.scoring import engine
 
 MAX_DECK_BYTES = 20 * 1024 * 1024  # 20 Mo
 
@@ -103,9 +114,19 @@ class PitchSessionService:
     les imprévus. Le vrai scoring LLM arrive à `finish` (PITCH-04).
     """
 
-    def __init__(self, repo: PitchSessionRepository, rubrics: PitchRubricRepository) -> None:
+    def __init__(
+        self,
+        repo: PitchSessionRepository,
+        rubrics: PitchRubricRepository,
+        runs: PitchRunRepository,
+        decks: PitchDeckRepository,
+        provider: LLMProvider,
+    ) -> None:
         self.repo = repo
         self.rubrics = rubrics
+        self.runs = runs
+        self.decks = decks
+        self.provider = provider
         self.session = repo.session
 
     async def _load_owned(self, ctx: AuthContext, session_id: UUID) -> PitchSession:
@@ -211,18 +232,84 @@ class PitchSessionService:
     async def finish(self, ctx: AuthContext, session_id: UUID) -> SessionOut:
         ps = await self._load_owned(ctx, session_id)
         self._require_in_progress(ps)
-        # Faiblesses cumulées sur toutes les narrations → verdicts du comité.
+        await self.repo.set_status(ps, PitchStatus.DELIBERATING)
         turns = await self.repo.turns_for_session(ps.id)
+
+        # Verdicts du comité (déterministes), à partir des faiblesses cumulées.
         weak: set[str] = set()
         for t in turns:
             if t.kind == "narration":
                 weak.update(scenario.assess_weakness(t.content))
         for v in scenario.deliberation(self._personas(ps.committee_key), list(weak)):
             await self._add(ps, actor=v["actor"], kind="deliberation", content=v["content"])
-        # PITCH-04 calculera le PitchRun (Fond/Forme) ici. Pour l'instant : session terminée.
+
+        # Scoring à finish : Fond (LLM ancré) + Forme (déterministe).
+        await self._score(ps, turns)
+
         await self.repo.set_status(ps, PitchStatus.COMPLETED)
         await self.session.commit()
         return await self._out(ps)
+
+    async def _score(self, ps: PitchSession, turns: list[PitchTurn]) -> None:
+        rubric = await self.rubrics.get_active()
+        if rubric is None:
+            raise BusinessRuleError("Aucune rubrique de pitch active.")
+        narration = "\n".join(t.content for t in turns if t.kind == "narration")
+        transcript = "\n".join(t.content for t in turns if t.kind in ("narration", "answer"))
+        n_questions = sum(1 for t in turns if t.kind in ("interruption", "question", "imprevu"))
+        n_answers = sum(1 for t in turns if t.kind == "answer")
+
+        # Texte des slides du deck (les juges « voient » les slides).
+        slide_text = ""
+        if ps.deck_id is not None:
+            slides = await self.decks.slides_for_deck(ps.deck_id)
+            slide_text = "\n".join(s.extracted_text for s in slides)
+
+        committee = get_committee(ps.committee_key)
+        label = committee["label"] if committee else ps.committee_key
+        prompt = build_pitch_prompt(
+            rubric_axes=rubric.axes,
+            committee_label=label,
+            transcript=transcript,
+            slide_text=slide_text,
+        )
+        raw = await self.provider.analyze_json(prompt)
+        axes = {k: int(v) for k, v in raw.get("axes", {}).items()}
+        engine.validate_axes(rubric.axes, axes, rubric.scale_max)  # strict : le credential doit tenir
+        justifications = raw.get("justifications", {})
+
+        overall_fond = evaluate.weighted_overall(rubric.axes, axes)
+        strengths, weaknesses = evaluate.top_bottom(rubric.axes, axes, justifications)
+        forme_result = forme.score_forme(
+            narration_text=narration,
+            n_questions=n_questions,
+            n_answers=n_answers,
+            duration_min=int(ps.config.get("duration_min", 5)),
+        )
+        overall_global = round(0.7 * overall_fond + 0.3 * forme_result["overall"], 1)
+
+        await self.runs.create(
+            session_id=ps.id,
+            project_id=ps.project_id,
+            rubric_version=rubric.version,
+            source="llm",
+            model=getattr(self.provider, "model", ""),
+            raw_output=raw,
+            fond_scores=axes,
+            overall_fond=overall_fond,
+            forme_scores=forme_result["scores"],
+            overall_forme=forme_result["overall"],
+            overall_global=overall_global,
+            strengths=strengths,
+            weaknesses=weaknesses,
+        )
+
+    async def get_run(self, ctx: AuthContext, session_id: UUID) -> PitchRunOut:
+        ps = await self._load_owned(ctx, session_id)
+        run = await self.runs.latest_for_session(ps.id)
+        if run is None:
+            raise NotFoundError("pitch_run")
+        return PitchRunOut.model_validate(run)
 
     async def abandon(self, ctx: AuthContext, session_id: UUID) -> None:
         ps = await self._load_owned(ctx, session_id)
