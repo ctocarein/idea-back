@@ -33,7 +33,7 @@ de l'exécution ; le GUIDE reste la spec. Périmètre : **stories à dominante b
 | **ACADEMY** | Apprendre (`app/academy`) | S3 | ✅ | 16 |
 | **DOC** | Documents presigned (`app/documents`) | S3 | ✅ | 5 |
 | **OPP** | Espace opportunités (éligibilité déterministe) | S3 | ✅ | 5 |
-| **PITCH** | Simulateur de pitch « Le Comité » (`app/pitchsim`) | S4 | ⬜ | 28 |
+| **PITCH** | Simulateur de pitch « Le Comité » (`app/pitchsim`) | S4 | ✅ | 28 |
 | **MENTOR** | Onboarding & marketplace mentors (`app/mentors`) | S5 | ⬜ | 15 |
 | **ADMIN** | Back-office (`app/projects`, `app/audit`) | S5 | ⬜ | 16 |
 | **INSTRUM** | Instrumentation d'apprentissage (transverse) | S6 | 🟡 | 8 |
@@ -133,7 +133,7 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-PITCH-02 | Deck : upload + parsing PDF/PPTX → slides typées | 5 | ✅ | DOC-01 | `pitch_decks`/`pitch_slides` (main/backup/synthèse) · upload **multipart** + parsing `pypdf`/`python-pptx` · 10 tests |
 | IDX-PITCH-03 | Session + tours + **moteur de scénario** | 8 | ✅ | PITCH-01, LLM-01 | `pitch_sessions`/`pitch_turns` · moteur **pur déterministe** : heuristique de faiblesse → juge (obsession) interrompt · imprévus configurables + investisseur surprise · machine à états · 9 tests |
 | IDX-PITCH-04 | Scoring Fond (LLM ancré, `PitchRun` rejouable) + Forme-texte | 5 | ✅ | PITCH-03 | Fond = credential (LLM ancré sur transcript+slides, validé strict) · Forme = proxies déterministes (concision/tics/complétude/structure) · `PitchRun` · **validé sur Mistral réel** · 5 tests |
-| IDX-PITCH-05 | Post-mortem + progression + plan→Academy/OPP | 5 | ⬜ | PITCH-04, reports | réutilise report+PDF · timeline = `pitch_turns` · plan via next_actions + opportunités |
+| IDX-PITCH-05 | Post-mortem + progression + plan→Academy/OPP | 5 | ✅ | PITCH-04, reports | `PostMortemOut` (scores+niveau gamifié, radar 10 axes, timeline=`pitch_turns`, progression, **plan déterministe → Academy/preuves/mentor/session/opportunités**) · rendu HTML + PDF guardé · 9 tests |
 
 **Sprint 4 backend (4A) : 28 pts.** *(4B audio + V2 realtime/caméra/bio = épics séparées, payantes.)*
 

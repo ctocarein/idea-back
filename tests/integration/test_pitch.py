@@ -132,6 +132,15 @@ async def test_pitch_session_flow_with_committee(client) -> None:
     assert 0 <= run["overall_global"] <= 10
     assert len(run["strengths"]) == 3 and len(run["weaknesses"]) == 3
 
+    # Post-mortem : radar 10 axes, progression, plan d'entraînement → Academy/OPP.
+    r = await client.get(f"/api/v1/pitchsim/sessions/{sid}/post-mortem", headers=headers)
+    assert r.status_code == 200, r.text
+    pm = r.json()
+    assert len(pm["radar"]) == 10  # 8 Fond + 2 bio
+    assert pm["scores"]["level"]["title"]
+    assert pm["training_plan"][-1]["type"] == "opportunity"
+    assert pm["progression"]
+
     # Action après finish interdite (machine à états).
     r = await client.post(
         f"/api/v1/pitchsim/sessions/{sid}/slide",

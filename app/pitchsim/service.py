@@ -14,7 +14,8 @@ from app.core.storage import ObjectStorage
 from app.iam.dependencies import AuthContext, guard_owner_access
 from app.llm.base import LLMProvider
 from app.llm.prompt import build_pitch_prompt
-from app.pitchsim import evaluate, forme, scenario
+from app.pitchsim import evaluate, forme, postmortem, scenario
+from app.pitchsim.constants import BIO_AXES
 from app.pitchsim.constants import committee as get_committee
 from app.pitchsim.models import PitchSession, PitchStatus, PitchTurn, SlideKind
 from app.pitchsim.parser import ALLOWED_DECK_TYPES, MAX_MAIN_SLIDES, parse_deck
@@ -27,6 +28,7 @@ from app.pitchsim.repository import (
 from app.pitchsim.schemas import (
     DeckOut,
     PitchRunOut,
+    PostMortemOut,
     SessionOut,
     SessionStartIn,
     SlideOut,
@@ -310,6 +312,46 @@ class PitchSessionService:
         if run is None:
             raise NotFoundError("pitch_run")
         return PitchRunOut.model_validate(run)
+
+    async def post_mortem(self, ctx: AuthContext, session_id: UUID) -> PostMortemOut:
+        ps = await self._load_owned(ctx, session_id)
+        run = await self.runs.latest_for_session(ps.id)
+        if run is None:
+            raise NotFoundError("pitch_run")  # session pas encore terminée
+        rubric = await self.rubrics.get_active()
+        labels = {a["key"]: a["label"] for a in (rubric.axes if rubric else [])}
+
+        # Radar 10 axes : 8 Fond notés + 2 biométriques (null, Mode Caméra).
+        radar = [{"axis": k, "label": labels.get(k, k), "score": v, "kind": "fond"} for k, v in run.fond_scores.items()]
+        radar += [{"axis": a["key"], "label": a["label"], "score": None, "kind": "bio"} for a in BIO_AXES]
+
+        global_100 = round(run.overall_global * 10)
+        scores = {
+            "global": run.overall_global,
+            "fond": run.overall_fond,
+            "forme": run.overall_forme,
+            "global_100": global_100,
+            "level": postmortem.level_for(global_100),
+        }
+
+        # Progression : tous les runs du projet (sinon juste celui-ci).
+        if ps.project_id is not None:
+            history = await self.runs.list_for_project(ps.project_id)
+            progression = [{"global": r.overall_global} for r in history]
+        else:
+            progression = [{"global": run.overall_global}]
+
+        turns = await self.repo.turns_for_session(ps.id)
+        return PostMortemOut(
+            committee_key=ps.committee_key,
+            scores=scores,
+            radar=radar,
+            timeline=[TurnOut.model_validate(t) for t in turns],
+            strengths=run.strengths,
+            weaknesses=run.weaknesses,
+            progression=progression,
+            training_plan=postmortem.training_plan(run.weaknesses),
+        )
 
     async def abandon(self, ctx: AuthContext, session_id: UUID) -> None:
         ps = await self._load_owned(ctx, session_id)

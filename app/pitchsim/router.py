@@ -4,18 +4,20 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 
 from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
 from app.pitchsim.constants import COMMITTEES
 from app.pitchsim.dependencies import get_deck_service, get_session_service
 from app.pitchsim.models import SlideKind
+from app.pitchsim.pdf import render_postmortem_html, render_postmortem_pdf
 from app.pitchsim.schemas import (
     AnswerIn,
     CommitteeOut,
     DeckOut,
     PitchRunOut,
+    PostMortemOut,
     SessionOut,
     SessionStartIn,
     SlideSubmitIn,
@@ -153,3 +155,28 @@ async def get_run(
 ) -> PitchRunOut:
     # Score Fond (credential) + Forme (coaching) calculé à finish.
     return await svc.get_run(ctx, session_id)
+
+
+@router.get("/sessions/{session_id}/post-mortem", response_model=PostMortemOut)
+async def get_post_mortem(
+    session_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
+    svc: PitchSessionService = Depends(get_session_service),
+) -> PostMortemOut:
+    # Scores Fond/Forme + radar + timeline + progression + plan d'entraînement → Academy/OPP.
+    return await svc.post_mortem(ctx, session_id)
+
+
+@router.get("/sessions/{session_id}/post-mortem/pdf")
+async def get_post_mortem_pdf(
+    session_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
+    svc: PitchSessionService = Depends(get_session_service),
+) -> Response:
+    pm = await svc.post_mortem(ctx, session_id)
+    html = render_postmortem_html(pm)
+    try:
+        pdf = render_postmortem_pdf(html)
+    except ImportError as exc:  # WeasyPrint absent → dégradation propre.
+        raise HTTPException(status_code=503, detail="PDF indisponible (WeasyPrint non installé).") from exc
+    return Response(content=pdf, media_type="application/pdf")

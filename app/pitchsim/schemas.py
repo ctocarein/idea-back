@@ -102,3 +102,14 @@ class PitchRunOut(BaseModel):
     overall_global: float
     strengths: list
     weaknesses: list
+
+
+class PostMortemOut(BaseModel):
+    committee_key: str
+    scores: dict  # global, fond, forme, global_100, level{level,title,badge}
+    radar: list[dict]  # 10 axes (8 Fond notés + 2 bio null)
+    timeline: list[TurnOut]
+    strengths: list
+    weaknesses: list
+    progression: list[dict]  # [{global}] des sessions du projet
+    training_plan: list[dict]  # routage faiblesses → academy/preuves/mentor/session/opportunités
