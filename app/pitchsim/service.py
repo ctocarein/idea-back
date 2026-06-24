@@ -14,7 +14,7 @@ from app.core.storage import ObjectStorage
 from app.iam.dependencies import AuthContext, guard_owner_access
 from app.llm.base import LLMProvider
 from app.llm.prompt import build_pitch_prompt
-from app.pitchsim import evaluate, forme, postmortem, scenario
+from app.pitchsim import evaluate, forme, orchestrator, postmortem, scenario
 from app.pitchsim.constants import BIO_AXES
 from app.pitchsim.constants import committee as get_committee
 from app.pitchsim.models import PitchSession, PitchStatus, PitchTurn, SlideKind
@@ -369,6 +369,116 @@ class PitchSessionService:
             committee_key=ps.committee_key,
             mode=ps.mode,
             status=ps.status.value,
+            phase=ps.phase,
             config=ps.config,
             turns=[TurnOut.model_validate(t) for t in turns],
         )
+
+    # --- Flux « comité silencieux » (PITCH-06) — additif, ne remplace pas encore 4A ---
+
+    def _phase(self, ps: PitchSession) -> orchestrator.PitchPhase:
+        return orchestrator.PitchPhase(ps.phase)
+
+    async def _set_phase(self, ps: PitchSession, target: orchestrator.PitchPhase) -> None:
+        orchestrator.assert_transition(self._phase(ps), target)  # saut illégal → 422
+        ps.phase = target.value
+        await self.session.flush()
+
+    async def start_pitch(self, ctx: AuthContext, session_id: UUID) -> SessionOut:
+        ps = await self._load_owned(ctx, session_id)
+        await self._set_phase(ps, orchestrator.PitchPhase.PITCHING)
+        await self.session.commit()
+        return await self._out(ps)
+
+    async def narrate(self, ctx: AuthContext, session_id: UUID, narration: str, slide_id: UUID | None) -> SessionOut:
+        ps = await self._load_owned(ctx, session_id)
+        if self._phase(ps) != orchestrator.PitchPhase.PITCHING:
+            raise BusinessRuleError("Le pitch n'est pas en cours.")
+        personas = self._personas(ps.committee_key)
+        weak = scenario.assess_weakness(narration)
+        # Comité SILENCIEUX : on renvoie des réactions visuelles, jamais de parole.
+        reactions = orchestrator.micro_reactions(personas, weak)
+        convictions = orchestrator.update_convictions(ps.orch.get("convictions", {}), personas, weak)
+        fillers = scenario.count_fillers(narration)
+        indicators = {
+            "confiance": max(0, 10 - fillers),
+            "clarte": 10 if len(narration.split()) >= 12 else 5,
+        }
+        await self._add(
+            ps,
+            actor="porteur",
+            kind="narration",
+            content=narration,
+            slide_id=slide_id,
+            meta={"reactions": reactions, "indicators": indicators},
+        )
+        ps.orch = {**ps.orch, "convictions": convictions}
+        await self.session.commit()
+        return await self._out(ps)
+
+    async def end_pitch(self, ctx: AuthContext, session_id: UUID) -> SessionOut:
+        ps = await self._load_owned(ctx, session_id)
+        turns = await self.repo.turns_for_session(ps.id)
+        if not any(t.kind == "narration" for t in turns):
+            raise BusinessRuleError("Présentez votre pitch avant de dire « j'ai terminé ».")
+        await self._set_phase(ps, orchestrator.PitchPhase.QA)
+        personas = self._personas(ps.committee_key)
+        ps.orch = {**ps.orch, "qa_order": orchestrator.qa_order(personas), "qa_index": 0, "asked": {}}
+        await self._serve_question(ps, personas)
+        await self.session.commit()
+        return await self._out(ps)
+
+    async def _serve_question(self, ps: PitchSession, personas: list[dict]) -> None:
+        # Donne la parole au juge courant (ordre QA) avec une question d'angle varié.
+        order = ps.orch["qa_order"]
+        idx = ps.orch["qa_index"]
+        name = orchestrator.next_speaker(order, idx)
+        if name is None:
+            return
+        persona = next(p for p in personas if p["name"] == name)
+        q = orchestrator.next_question(persona, ps.orch.get("asked", {}), seed_key=f"{ps.id}:{idx}")
+        if q is None:
+            return
+        asked = {**ps.orch.get("asked", {})}
+        asked[q["axis"]] = [*asked.get(q["axis"], []), q["angle"]]
+        ps.orch = {**ps.orch, "asked": asked, "current_speaker": name}
+        await self._add(
+            ps,
+            actor=name,
+            kind="question",
+            content=q["content"],
+            meta={"axis": q["axis"], "angle": q["angle"]},
+        )
+
+    async def respond(self, ctx: AuthContext, session_id: UUID, answer: str, shown_slide_id: UUID | None) -> SessionOut:
+        ps = await self._load_owned(ctx, session_id)
+        if self._phase(ps) != orchestrator.PitchPhase.QA:
+            raise BusinessRuleError("Ce n'est pas la phase de questions.")
+        await self._add(ps, actor="porteur", kind="answer", content=answer, slide_id=shown_slide_id)
+        personas = self._personas(ps.committee_key)
+        # Skeleton : 1 question par agent → on passe au juge suivant.
+        ps.orch = {**ps.orch, "qa_index": ps.orch.get("qa_index", 0) + 1}
+        if orchestrator.next_speaker(ps.orch["qa_order"], ps.orch["qa_index"]) is not None:
+            await self._serve_question(ps, personas)
+        else:
+            await self._set_phase(ps, orchestrator.PitchPhase.FREE_ROUND)
+        await self.session.commit()
+        return await self._out(ps)
+
+    async def deliberate(self, ctx: AuthContext, session_id: UUID) -> SessionOut:
+        ps = await self._load_owned(ctx, session_id)
+        if self._phase(ps) == orchestrator.PitchPhase.QA:
+            await self._set_phase(ps, orchestrator.PitchPhase.FREE_ROUND)  # tour libre (vide au skeleton)
+        await self._set_phase(ps, orchestrator.PitchPhase.DELIBERATING)
+        turns = await self.repo.turns_for_session(ps.id)
+        weak: set[str] = set()
+        for t in turns:
+            if t.kind == "narration":
+                weak.update(scenario.assess_weakness(t.content))
+        for v in scenario.deliberation(self._personas(ps.committee_key), list(weak)):
+            await self._add(ps, actor=v["actor"], kind="deliberation", content=v["content"])
+        await self._score(ps, turns)  # réutilise le scoring Fond/Forme de PITCH-04
+        await self._set_phase(ps, orchestrator.PitchPhase.COMPLETED)
+        ps.status = PitchStatus.COMPLETED
+        await self.session.commit()
+        return await self._out(ps)

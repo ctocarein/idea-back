@@ -80,6 +80,10 @@ class PitchSession(Base):
     rubric_version: Mapped[str] = mapped_column(String(40))
     config: Mapped[dict] = mapped_column(JSONB, default=dict)  # imprevus, hard_questions, silence, duration_min
     status: Mapped[PitchStatus] = mapped_column(default=PitchStatus.IN_PROGRESS, index=True)
+    # PITCH-06 « comité silencieux » (additif) : sous-phase fine + état d'orchestration.
+    phase: Mapped[str] = mapped_column(String(20), default="briefing", index=True)
+    # orch = { convictions:{agent:int}, qa_order:[noms], qa_index:int, asked:{axis:[angle]} }
+    orch: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(default=None)
 

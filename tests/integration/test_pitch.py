@@ -148,3 +148,55 @@ async def test_pitch_session_flow_with_committee(client) -> None:
         json={"narration": "encore"},
     )
     assert r.status_code == 422
+
+
+async def test_silent_committee_flow(client) -> None:
+    # Parcours « comité silencieux » (PITCH-06) bout en bout sur le Postgres de test.
+    headers = await _register(client, "silent@ideaxion.io")
+    base = "/api/v1/pitchsim/sessions"
+
+    r = await client.post(base, headers=headers, json={"committee_key": "incubateur", "mode": "slides"})
+    assert r.status_code == 200, r.text
+    sid = r.json()["id"]
+    assert r.json()["phase"] == "briefing"
+
+    # BRIEFING → PITCHING
+    r = await client.post(f"{base}/{sid}/start-pitch", headers=headers)
+    assert r.status_code == 200 and r.json()["phase"] == "pitching"
+
+    # Narration → réactions SILENCIEUSES (aucune interruption), indicateurs en meta.
+    r = await client.post(f"{base}/{sid}/narrate", headers=headers, json={"narration": "Bonjour, voici mon projet."})
+    s = r.json()
+    assert s["phase"] == "pitching"
+    assert not any(t["kind"] == "interruption" for t in s["turns"])  # règle d'or n°1
+    last_narr = [t for t in s["turns"] if t["kind"] == "narration"][-1]
+    assert last_narr["meta"].get("reactions")
+
+    # « J'ai terminé » → QA + 1re question servie.
+    r = await client.post(f"{base}/{sid}/end-pitch", headers=headers)
+    s = r.json()
+    assert s["phase"] == "qa"
+    assert any(t["kind"] == "question" for t in s["turns"])
+
+    # Répond à chaque juge dans l'ordre jusqu'à épuisement → tour libre.
+    for _ in range(8):
+        cur = (await client.get(f"{base}/{sid}", headers=headers)).json()
+        if cur["phase"] != "qa":
+            break
+        r = await client.post(
+            f"{base}/{sid}/respond",
+            headers=headers,
+            json={"answer": "Réponse chiffrée et sourcée."},
+        )
+        assert r.status_code == 200, r.text
+    assert (await client.get(f"{base}/{sid}", headers=headers)).json()["phase"] == "free_round"
+
+    # Délibération + scoring → COMPLETED.
+    r = await client.post(f"{base}/{sid}/deliberate", headers=headers)
+    s = r.json()
+    assert s["phase"] == "completed" and s["status"] == "completed"
+    assert any(t["kind"] == "deliberation" for t in s["turns"])
+
+    # Le score (credential) et le post-mortem sont disponibles.
+    assert (await client.get(f"{base}/{sid}/run", headers=headers)).status_code == 200
+    assert (await client.get(f"{base}/{sid}/post-mortem", headers=headers)).status_code == 200

@@ -85,6 +85,7 @@ class SessionOut(BaseModel):
     committee_key: str
     mode: str
     status: str
+    phase: str = "briefing"  # PITCH-06 : sous-phase « comité silencieux »
     config: dict
     turns: list[TurnOut] = []
 

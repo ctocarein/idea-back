@@ -157,6 +157,61 @@ async def get_run(
     return await svc.get_run(ctx, session_id)
 
 
+# --- Flux « comité silencieux » (PITCH-06) ---
+
+
+@router.post("/sessions/{session_id}/start-pitch", response_model=SessionOut)
+async def start_pitch(
+    session_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
+    svc: PitchSessionService = Depends(get_session_service),
+) -> SessionOut:
+    # BRIEFING → PITCHING : le porteur prend la parole, le comité écoute en silence.
+    return await svc.start_pitch(ctx, session_id)
+
+
+@router.post("/sessions/{session_id}/narrate", response_model=SessionOut)
+async def narrate(
+    session_id: UUID,
+    body: SlideSubmitIn,
+    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
+    svc: PitchSessionService = Depends(get_session_service),
+) -> SessionOut:
+    # Narration d'une slide → micro-réactions silencieuses (jamais d'interruption).
+    return await svc.narrate(ctx, session_id, body.narration, body.slide_id)
+
+
+@router.post("/sessions/{session_id}/end-pitch", response_model=SessionOut)
+async def end_pitch(
+    session_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
+    svc: PitchSessionService = Depends(get_session_service),
+) -> SessionOut:
+    # « J'ai terminé » → PITCHING → QA : la première question est servie.
+    return await svc.end_pitch(ctx, session_id)
+
+
+@router.post("/sessions/{session_id}/respond", response_model=SessionOut)
+async def respond(
+    session_id: UUID,
+    body: AnswerIn,
+    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
+    svc: PitchSessionService = Depends(get_session_service),
+) -> SessionOut:
+    # Réponse au juge au micro → question suivante ou passage au juge suivant / tour libre.
+    return await svc.respond(ctx, session_id, body.answer, body.shown_slide_id)
+
+
+@router.post("/sessions/{session_id}/deliberate", response_model=SessionOut)
+async def deliberate(
+    session_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
+    svc: PitchSessionService = Depends(get_session_service),
+) -> SessionOut:
+    # Délibération + scoring Fond/Forme → COMPLETED.
+    return await svc.deliberate(ctx, session_id)
+
+
 @router.get("/sessions/{session_id}/post-mortem", response_model=PostMortemOut)
 async def get_post_mortem(
     session_id: UUID,
