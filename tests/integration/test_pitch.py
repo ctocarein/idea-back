@@ -73,3 +73,59 @@ async def test_upload_deck_rejects_bad_type(client) -> None:
         data={"title": "x"},
     )
     assert r.status_code == 422, r.text
+
+
+async def test_pitch_session_flow_with_committee(client) -> None:
+    headers = await _register(client, "pitch-session@ideaxion.io")
+
+    # Démarrer une session devant le comité Incubateur.
+    r = await client.post(
+        "/api/v1/pitchsim/sessions",
+        headers=headers,
+        json={"committee_key": "incubateur", "mode": "slides"},
+    )
+    assert r.status_code == 200, r.text
+    ps = r.json()
+    assert ps["status"] == "in_progress"
+    sid = ps["id"]
+    assert any(t["kind"] == "deliberation" for t in ps["turns"])  # briefing
+
+    # Narration faible (courte, sans chiffres) → un juge interrompt sur sa faiblesse.
+    r = await client.post(
+        f"/api/v1/pitchsim/sessions/{sid}/slide",
+        headers=headers,
+        json={"narration": "Bonjour, voici mon projet."},
+    )
+    assert r.status_code == 200, r.text
+    turns = r.json()["turns"]
+    interruptions = [t for t in turns if t["kind"] == "interruption"]
+    assert interruptions, "une faiblesse aurait dû déclencher une interruption"
+    assert interruptions[0]["meta"].get("axis")
+
+    # Le porteur répond.
+    r = await client.post(
+        f"/api/v1/pitchsim/sessions/{sid}/answer",
+        headers=headers,
+        json={"answer": "Le marché fait 500M€ selon l'étude McKinsey 2025."},
+    )
+    assert r.status_code == 200
+
+    # Imprévu forcé (entraînement).
+    r = await client.post(f"/api/v1/pitchsim/sessions/{sid}/imprevu", headers=headers)
+    assert r.status_code == 200
+    assert any(t["kind"] == "imprevu" for t in r.json()["turns"])
+
+    # Fin → délibération + statut completed.
+    r = await client.post(f"/api/v1/pitchsim/sessions/{sid}/finish", headers=headers)
+    assert r.status_code == 200, r.text
+    final = r.json()
+    assert final["status"] == "completed"
+    assert any(t["kind"] == "deliberation" for t in final["turns"])
+
+    # Action après finish interdite (machine à états).
+    r = await client.post(
+        f"/api/v1/pitchsim/sessions/{sid}/slide",
+        headers=headers,
+        json={"narration": "encore"},
+    )
+    assert r.status_code == 422

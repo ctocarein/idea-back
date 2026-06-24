@@ -4,10 +4,18 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.pitchsim.models import PitchDeck, PitchRubric, PitchSlide, SlideKind
+from app.pitchsim.models import (
+    PitchDeck,
+    PitchRubric,
+    PitchSession,
+    PitchSlide,
+    PitchStatus,
+    PitchTurn,
+    SlideKind,
+)
 
 
 class PitchDeckRepository:
@@ -41,6 +49,84 @@ class PitchDeckRepository:
             select(PitchSlide).where(PitchSlide.deck_id == deck_id).order_by(PitchSlide.kind, PitchSlide.position)
         )
         return list(result.scalars())
+
+
+class PitchSessionRepository:
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def create_session(
+        self,
+        *,
+        owner_id: UUID,
+        project_id: UUID | None,
+        deck_id: UUID | None,
+        committee_key: str,
+        mode: str,
+        rubric_version: str,
+        config: dict,
+    ) -> PitchSession:
+        ps = PitchSession(
+            owner_id=owner_id,
+            project_id=project_id,
+            deck_id=deck_id,
+            committee_key=committee_key,
+            mode=mode,
+            rubric_version=rubric_version,
+            config=config,
+        )
+        self.session.add(ps)
+        await self.session.flush()
+        return ps
+
+    async def get_session(self, session_id: UUID) -> PitchSession | None:
+        return await self.session.get(PitchSession, session_id)
+
+    async def list_for_project(self, project_id: UUID) -> list[PitchSession]:
+        result = await self.session.execute(
+            select(PitchSession).where(PitchSession.project_id == project_id).order_by(PitchSession.created_at.desc())
+        )
+        return list(result.scalars())
+
+    async def set_status(self, ps: PitchSession, status: PitchStatus) -> None:
+        ps.status = status
+        await self.session.flush()
+
+    async def add_turn(
+        self,
+        session_id: UUID,
+        *,
+        seq: int,
+        actor: str,
+        kind: str,
+        content: str,
+        slide_id: UUID | None = None,
+        meta: dict | None = None,
+    ) -> PitchTurn:
+        turn = PitchTurn(
+            session_id=session_id,
+            seq=seq,
+            actor=actor,
+            kind=kind,
+            content=content,
+            slide_id=slide_id,
+            meta=meta or {},
+        )
+        self.session.add(turn)
+        await self.session.flush()
+        return turn
+
+    async def turns_for_session(self, session_id: UUID) -> list[PitchTurn]:
+        result = await self.session.execute(
+            select(PitchTurn).where(PitchTurn.session_id == session_id).order_by(PitchTurn.seq)
+        )
+        return list(result.scalars())
+
+    async def turn_count(self, session_id: UUID) -> int:
+        result = await self.session.execute(
+            select(func.count()).select_from(PitchTurn).where(PitchTurn.session_id == session_id)
+        )
+        return int(result.scalar_one())
 
 
 class PitchRubricRepository:

@@ -57,3 +57,44 @@ class PitchRubric(Base):
     # axes Fond ancrés (notés par le LLM) : [{key,label,kind,source,weight,central_question,anchors}]
     axes: Mapped[list[dict]] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class PitchStatus(str, Enum):
+    IN_PROGRESS = "in_progress"  # pitch ↔ questions/imprévus (le front pilote les tours)
+    DELIBERATING = "deliberating"  # finish déclenché, scoring en cours (PITCH-04)
+    COMPLETED = "completed"  # post-mortem disponible
+    ABANDONED = "abandoned"  # terminal
+
+
+class PitchSession(Base):
+    __tablename__ = "pitch_sessions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    owner_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("projects.id", ondelete="SET NULL"), default=None, index=True
+    )
+    deck_id: Mapped[UUID | None] = mapped_column(ForeignKey("pitch_decks.id", ondelete="SET NULL"), default=None)
+    committee_key: Mapped[str] = mapped_column(String(40))
+    mode: Mapped[str] = mapped_column(String(20), default="slides")  # slides | camera
+    rubric_version: Mapped[str] = mapped_column(String(40))
+    config: Mapped[dict] = mapped_column(JSONB, default=dict)  # imprevus, hard_questions, silence, duration_min
+    status: Mapped[PitchStatus] = mapped_column(default=PitchStatus.IN_PROGRESS, index=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(default=None)
+
+
+class PitchTurn(Base):
+    # Un tour = une prise de parole. La SUITE des tours EST la timeline du post-mortem.
+    __tablename__ = "pitch_turns"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(ForeignKey("pitch_sessions.id", ondelete="CASCADE"), index=True)
+    seq: Mapped[int] = mapped_column(default=0)  # ordre dans la session
+    actor: Mapped[str] = mapped_column(String(60))  # porteur | <nom juge> | systeme
+    # narration | question | interruption | imprevu | answer | slide_shown | deliberation
+    kind: Mapped[str] = mapped_column(String(20))
+    content: Mapped[str] = mapped_column(Text, default="")
+    slide_id: Mapped[UUID | None] = mapped_column(default=None)
+    meta: Mapped[dict] = mapped_column(JSONB, default=dict)  # axis, imprevu_type…
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())

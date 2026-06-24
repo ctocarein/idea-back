@@ -7,9 +7,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_session
 from app.core.storage import get_storage
-from app.pitchsim.repository import PitchDeckRepository
-from app.pitchsim.service import PitchDeckService
+from app.pitchsim.repository import (
+    PitchDeckRepository,
+    PitchRubricRepository,
+    PitchSessionRepository,
+)
+from app.pitchsim.service import PitchDeckService, PitchSessionService
 
 
 def get_deck_service(session: AsyncSession = Depends(get_session)) -> PitchDeckService:
     return PitchDeckService(PitchDeckRepository(session), get_storage())
+
+
+def get_session_service(session: AsyncSession = Depends(get_session)) -> PitchSessionService:
+    return PitchSessionService(PitchSessionRepository(session), PitchRubricRepository(session))
