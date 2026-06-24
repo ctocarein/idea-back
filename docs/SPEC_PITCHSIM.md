@@ -368,3 +368,56 @@ Le scoring **Fond/Forme** (inchangé) est calculé en parallèle sur le transcri
 
 **PITCH-06 ≈ 26 pts** (texte d'abord). Réutilise tout le socle 4A ; ne touche pas au scoring Fond/Forme.
 Le realtime/voix/avatars/ambiance restent **V2 « La Salle »** (transport, pas logique).
+
+---
+
+## 15. Voix des agents (TTS — couche V2 « La Salle »)
+
+> Côté **sortie** (la voix des juges). À distinguer du côté **entrée** (la voix du porteur → STT/Whisper,
+> couche 4B). La voix est **additive** : PITCH-06 produit déjà le *texte* ; le TTS le met en son.
+
+### 15.1 Pipeline
+```
+texte de l'agent (PITCH-06)  →  TTSProvider (synthèse)  →  audio  →  streaming au porteur
+                                                                      (sync avatar = front)
+```
+
+### 15.2 Seam `TTSProvider` (+ mock) — comme le LLM
+Abstraction provider-agnostique : `synthesize(text, *, voice_id, style) -> bytes | stream`. **Mock
+déterministe** (stub court) pour dev/tests → la logique PITCH-06 reste testable **sans vrai TTS**.
+Providers réels :
+- **ElevenLabs** (primaire) : voix réalistes **distinctes**, bon **français**, mode *Flash* basse latence,
+  prosodie réglable ;
+- **OpenAI TTS** (repli économique).
+Config : clé par provider + voix par défaut.
+
+### 15.3 Une voix par persona
+Chaque persona (y compris l'**expert métier**) porte un `voice_id` + un style de base (Diallo chaleureuse,
+Morel sèche, Chen posée, Koné rapide). Le mapping est **snapshotté sur la session** → **rejouable**.
+
+### 15.4 Latence — la pré-génération (la parade clé)
+Pendant le **PITCHING silencieux**, l'orchestrateur **prépare déjà les questions** (§14.3) → on
+**pré-synthétise leur audio en parallèle**, mis en cache par `(session, agent, question)`. Au tour de
+l'agent → **audio prêt → parole instantanée**. Les **lignes fixes** (briefing, « passons aux questions »)
+sont **pré-rendues une fois et mises en cache global**. Le reste passe en **TTS streaming** (jouer avant
+la fin de génération).
+
+### 15.5 Prosodie = persona + conviction
+Les paramètres de style (stabilité / émotion / vitesse) dérivent du **persona + son niveau de conviction**
+(déjà suivi dans la mémoire de session, §14.4) → chaque voix est *vivante*, pas robotique.
+
+### 15.6 Transport & stockage
+- **Pré-généré** : audio dans **MinIO** (presigned, cacheable).
+- **Temps réel** : streaming **WebRTC/WebSocket** ; synchro labiale de l'avatar = **front**.
+
+### 15.7 Coût & RGPD
+Facturé au caractère → **V2 / premium** (le gratuit reste **texte**, cohérent avec « le coût suit le
+revenu », §1). Les voix d'agents sont **synthétiques** (aucune donnée perso). La donnée sensible reste la
+**voix du porteur en entrée** (STT/4B) → consentement explicite.
+
+### 15.8 Stories (V2 « La Salle »)
+| Code | Story |
+| :-- | :-- |
+| IDX-PITCH-V2-tts-a | Seam `TTSProvider` + mock + ElevenLabs/OpenAI ; `voice_id` par persona (snapshot) |
+| IDX-PITCH-V2-tts-b | **Pré-génération** pendant le pitch + cache des lignes fixes (anti-latence) |
+| IDX-PITCH-V2-tts-c | Prosodie pilotée par conviction + transport streaming (avec WebRTC « La Salle ») |
