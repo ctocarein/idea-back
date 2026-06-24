@@ -51,6 +51,8 @@ class SessionStartIn(BaseModel):
     mode: str = Field(default="slides", pattern="^(slides|camera)$")
     deck_id: UUID | None = None
     project_id: UUID | None = None
+    # Format (timing) — défaut du comité si absent ; validé contre allowed_formats.
+    format: str | None = Field(default=None, pattern="^(elevator|standard|long)$")
     # Options (Écran 1) :
     imprevus: bool = True
     hard_questions: bool = True

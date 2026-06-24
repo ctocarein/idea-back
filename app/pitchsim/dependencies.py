@@ -16,6 +16,7 @@ from app.pitchsim.repository import (
     PitchSessionRepository,
 )
 from app.pitchsim.service import PitchDeckService, PitchSessionService
+from app.projects.repository import ProjectRepository
 
 
 def get_deck_service(session: AsyncSession = Depends(get_session)) -> PitchDeckService:
@@ -28,5 +29,6 @@ def get_session_service(session: AsyncSession = Depends(get_session)) -> PitchSe
         PitchRubricRepository(session),
         PitchRunRepository(session),
         PitchDeckRepository(session),
+        ProjectRepository(session),
         get_llm(get_settings()),
     )

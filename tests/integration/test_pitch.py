@@ -159,6 +159,8 @@ async def test_silent_committee_flow(client) -> None:
     assert r.status_code == 200, r.text
     sid = r.json()["id"]
     assert r.json()["phase"] == "briefing"
+    # Comité résolu = 4 fixes + expert métier (ici « Expert Secteur » car pas de projet).
+    assert any("Expert Secteur" in t["content"] for t in r.json()["turns"])
 
     # BRIEFING → PITCHING
     r = await client.post(f"{base}/{sid}/start-pitch", headers=headers)
@@ -178,8 +180,8 @@ async def test_silent_committee_flow(client) -> None:
     assert s["phase"] == "qa"
     assert any(t["kind"] == "question" for t in s["turns"])
 
-    # Répond à chaque juge dans l'ordre jusqu'à épuisement → tour libre.
-    for _ in range(8):
+    # Répond à chaque juge dans l'ordre (jusqu'à 2 questions/juge) → tour libre.
+    for _ in range(20):
         cur = (await client.get(f"{base}/{sid}", headers=headers)).json()
         if cur["phase"] != "qa":
             break

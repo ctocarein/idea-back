@@ -261,3 +261,96 @@ COMMITTEES: list[dict] = [
 
 def committee(key: str) -> dict | None:
     return next((c for c in COMMITTEES if c["key"] == key), None)
+
+
+# --- Timing par comité (PITCH-06 §14.5) : contexte × format ---
+FORMATS = {"elevator": 1, "standard": 3, "long": 5}  # minutes
+
+COMMITTEE_TIMING: dict[str, dict] = {
+    "incubateur": {
+        "default_format": "long",
+        "qa_questions_per_agent": 2,
+        "allowed_formats": ["standard", "long"],
+        "tour_libre": True,
+    },
+    "concours": {
+        "default_format": "standard",
+        "qa_questions_per_agent": 1,
+        "allowed_formats": ["elevator", "standard"],
+        "tour_libre": False,
+    },
+    "investisseur": {
+        "default_format": "standard",
+        "qa_questions_per_agent": 2,
+        "allowed_formats": ["standard"],
+        "tour_libre": True,
+    },
+}
+
+
+def committee_timing(key: str) -> dict:
+    return COMMITTEE_TIMING.get(
+        key,
+        {
+            "default_format": "standard",
+            "qa_questions_per_agent": 1,
+            "allowed_formats": ["standard"],
+            "tour_libre": False,
+        },
+    )
+
+
+# --- Expert métier : 5ᵉ juge dynamique injecté selon project.sector (placeholder v1) ---
+SECTOR_EXPERTS: dict[str, dict] = {
+    "fintech": {
+        "name": "Mme Sow (Fintech)",
+        "role": "Experte fintech",
+        "personality": "Pointue sur le risque",
+        "style": "Sonde la régulation et les unit economics",
+        "obsession": "business_model",
+        "concerns": ["régulation / agrément", "confiance", "unit economics"],
+    },
+    "agritech": {
+        "name": "M. Bah (AgriTech)",
+        "role": "Expert agritech",
+        "personality": "Pragmatique terrain",
+        "style": "Confronte à la réalité de la chaîne d'appro",
+        "obsession": "marche",
+        "concerns": ["chaîne d'approvisionnement", "saisonnalité", "logistique"],
+    },
+    "sante": {
+        "name": "Dr Mensah (Santé)",
+        "role": "Expert santé",
+        "personality": "Rigoureux",
+        "style": "Exige la preuve et le cadre réglementaire",
+        "obsession": "traction",
+        "concerns": ["preuve clinique", "régulation", "remboursement"],
+    },
+    "edtech": {
+        "name": "Mme Traoré (EdTech)",
+        "role": "Experte edtech",
+        "personality": "Exigeante sur l'usage",
+        "style": "Challenge l'apprentissage réel et le modèle",
+        "obsession": "traction",
+        "concerns": ["preuve d'apprentissage", "engagement", "modèle B2B2C"],
+    },
+    "_default": {
+        "name": "Expert Secteur",
+        "role": "Expert métier",
+        "personality": "Exigeant sur le terrain",
+        "style": "Confronte aux réalités du secteur",
+        "obsession": "solution",
+        "concerns": ["spécificités du secteur"],
+    },
+}
+
+
+def expert_for(sector: str | None) -> dict:
+    return SECTOR_EXPERTS.get((sector or "").lower(), SECTOR_EXPERTS["_default"])
+
+
+def resolve_personas(committee_key: str, sector: str | None) -> list[dict]:
+    # Comité = personas fixes + expert sectoriel (→ « 3 à 5 juges »). Snapshotté sur la session.
+    c = committee(committee_key)
+    base = c["personas"] if c else []
+    return [*base, expert_for(sector)]
