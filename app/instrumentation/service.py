@@ -16,6 +16,7 @@ from app.instrumentation.models import Event
 # Catalogue des noms d'événements (le funnel du maillon bilan → action).
 BILAN_VIEWED = "bilan_viewed"
 ACTION_STARTED = "action_started"
+OPPORTUNITY_INTEREST = "opportunity_interest"  # le porteur exprime un intérêt → signal B2B
 
 
 class InstrumentationService:

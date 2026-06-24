@@ -27,6 +27,13 @@ class MockProvider:
         self._settings = settings
 
     async def complete(self, prompt: str, *, max_tokens: int = 1024) -> LLMResult:
+        if "FORMAT=coach" in prompt:
+            text = (
+                "(mock) Bonne base. Souviens-toi : c'est TOI qui écris, je t'aide à clarifier. "
+                "Qui paie concrètement, et pourquoi maintenant ? Quelle est la plus petite preuve "
+                "que tu pourrais obtenir cette semaine ?"
+            )
+            return LLMResult(text=text, model=self.model)
         return LLMResult(text="(mock)", model=self.model)
 
     async def analyze_json(self, prompt: str, *, schema: dict | None = None) -> dict:

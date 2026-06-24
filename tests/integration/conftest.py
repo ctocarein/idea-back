@@ -59,6 +59,7 @@ async def client():
         SCALE_MAX,
     )
     from app.scoring.repository import ScoringRepository
+    from app.seed import _seed_lessons, _seed_opportunities
 
     async with get_session_factory()() as session:
         async with session.begin():
@@ -70,6 +71,9 @@ async def client():
                 is_active=True,
                 scale_max=SCALE_MAX,
             )
+            # Sprint 3 : leçons (topics alignés aux leviers) + catalogue d'opportunités.
+            await _seed_lessons(session)
+            await _seed_opportunities(session)
 
     from httpx import ASGITransport, AsyncClient
 

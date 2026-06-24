@@ -42,6 +42,17 @@ class ObjectStorage:
             self._bucket, key, expires=timedelta(seconds=expires_seconds)
         )
 
+    def presigned_put(self, key: str, *, expires_seconds: int = 300) -> str:
+        # URL d'upload signée (5 min) : le client PUT directement sur MinIO ; l'API ne fait
+        # jamais transiter les octets. La signature est calculée localement (pas d'appel réseau).
+        self.ensure_bucket()
+        return self._client.presigned_put_object(  # type: ignore[attr-defined]
+            self._bucket, key, expires=timedelta(seconds=expires_seconds)
+        )
+
+    def remove_object(self, key: str) -> None:
+        self._client.remove_object(self._bucket, key)  # type: ignore[attr-defined]
+
 
 def get_storage() -> ObjectStorage | None:
     global _storage

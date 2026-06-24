@@ -13,6 +13,27 @@ import json
 
 PROMPT_VERSION = "scoring-v2"
 REPORT_PROMPT_VERSION = "report-v1"
+COACH_PROMPT_VERSION = "coach-v1"
+
+
+def build_coach_prompt(*, section: str, draft: str, message: str) -> str:
+    # « Construire guidé » : garde-fou central — le porteur RESTE l'auteur. Le coach
+    # explique, questionne, structure, donne des exemples — il NE rédige JAMAIS la section
+    # à sa place (frontière gratuit/payant : « apprendre à faire », pas « faire avec toi »).
+    return "\n".join(
+        [
+            "FORMAT=coach.",
+            "Tu es un coach entrepreneurial bienveillant et exigeant. Le porteur travaille la",
+            f"section « {section} » de son projet. **Le porteur reste l'auteur** : tu EXPLIQUES,",
+            "tu QUESTIONNES, tu donnes des repères et des exemples — tu ne rédiges JAMAIS la",
+            "section à sa place, tu ne produis pas le livrable. Pose des questions qui le font avancer.",
+            "",
+            f"Son brouillon actuel : {draft or '(vide)'}",
+            f"Son message : {message}",
+            "",
+            "Réponds en 3-5 phrases : une explication courte + 1-2 questions précises pour qu'il progresse.",
+        ]
+    )
 
 
 def build_scoring_prompt(

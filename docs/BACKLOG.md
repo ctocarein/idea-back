@@ -30,8 +30,9 @@ de l'exécution ; le GUIDE reste la spec. Périmètre : **stories à dominante b
 | **DIAG** | Diagnostic 2 flows + bilan (`app/diagnostics`, `app/reports`) | S2 | 🟡 | 18 |
 | (DOC seam) | Storage MinIO (`app/core/storage.py`) — amorce DOC-01 | S3 | 🟡 | — |
 | **JOB** | Worker & file de jobs (`app/jobs`, `app.worker`) | S2 | 🟡 | 8 |
-| **ACADEMY** | Apprendre (`app/academy`) | S3 | ⬜ | 16 |
-| **DOC** | Documents presigned (`app/documents`) | S3 | ⬜ | 5 |
+| **ACADEMY** | Apprendre (`app/academy`) | S3 | ✅ | 16 |
+| **DOC** | Documents presigned (`app/documents`) | S3 | ✅ | 5 |
+| **OPP** | Espace opportunités (éligibilité déterministe) | S3 | ✅ | 5 |
 | **PITCHSIM** | Simulateur de pitch (`app/pitchsim`) | S4 | ⬜ | 19 |
 | **MENTOR** | Onboarding & marketplace mentors (`app/mentors`) | S5 | ⬜ | 15 |
 | **ADMIN** | Back-office (`app/projects`, `app/audit`) | S5 | ⬜ | 16 |
@@ -39,7 +40,7 @@ de l'exécution ; le GUIDE reste la spec. Périmètre : **stories à dominante b
 | **OPS** | Tests, sécurité, RGPD, monitoring, prod | S6 | ⬜ | 23 |
 | **PAY/SIGN/CERTIF/DEALFLOW** | Monétisation & industrialisation (`app/_v2/`) | — | ⏳ | — |
 
-**Total backend MVP ≈ 164 pts** (hors stories front DS/DASH suivies dans `idea-front`).
+**Total backend MVP ≈ 169 pts** (hors stories front DS/DASH suivies dans `idea-front`).
 
 ---
 
@@ -52,7 +53,7 @@ de l'exécution ; le GUIDE reste la spec. Périmètre : **stories à dominante b
 | :--- | :--- | ---: | :--- | :--- | :--- |
 | IDX-FND-01 | Dépôt & environnement Docker | 5 | ✅ | — | docker-compose (+ bucket MinIO), Dockerfile (api+worker, WeasyPrint), Makefile, `.env.example`, **CI GitHub Actions** (ruff+mypy+pytest+intégration) ✅ |
 | IDX-FND-02 | DB, migrations, logger | 3 | ✅ | FND-01 | `app/core/{database,logging,config}` ✅ · Alembic async configuré · **migration initiale à générer** |
-| IDX-FND-03 | Health check | 2 | 🟡 | FND-02 | `/api/v1/health` DB+Redis ✅ · **check MinIO ⬜** |
+| IDX-FND-03 | Health check | 2 | ✅ | FND-02 | `/api/v1/health` agrège **DB + Redis + MinIO** (non configuré = non bloquant) → 200/503 |
 | IDX-FND-04 | Schéma de données MVP | 5 | 🟡 | FND-02 | Tables socle (users, permission_grants, refresh_tokens, invitations, audit_logs, jobs, projects) ✅ · seed comptes ✅ · **tables features (diagnostics, reports, scoring_grids, academy_lessons, learning_progress, practice_sessions, mentors, documents) livrées avec leurs sprints** · **grille Radar v1 ⬜** |
 | IDX-AUTH-01 | Inscription & login (Argon2id + JWT) | 5 | ✅ | FND-04 | `app/iam` register/login, access 15 min |
 | IDX-AUTH-02 | Refresh token & logout | 3 | ✅ | AUTH-01 | refresh rotatif haché + détection de vol, `/auth/me` GET/PATCH · *cookie HttpOnly = BFF front* |
@@ -95,20 +96,27 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | 5. Calibration (preuve) | golden set + accord IA↔expert (MAE/corrélation) + **porte de non-régression** (`make calibrate`, exit 0/1) | 🟡 machinerie ✅ (stdlib, hors-ligne) · **vrais cas experts ⬜** · branchement scorer LLM live ⬜ |
 | 6. Résilience | **timeout + retry transitoire + circuit breaker** par modèle, **fallback multi-provider** (DeepSeek→Mistral→…), sortie malformée → `LLMParseError` → rejeu ; bilan reste `pending`, jamais de faux score | ✅ |
 
+> **Pilier 7 (vision) — comparabilité / credential portable.** Le score circule dans l'écosystème
+> (porteur → jury/incubateur → investisseur) : il doit être **comparable entre porteurs et entre
+> `grid_version`**. À ajouter à la calibration : une **normalisation cross-version** (un score v1 et un
+> score v2 ne se rangent pas dans le même classement sans elle). C'est ce qui fait du « score Ideaxion »
+> un credential dont la valeur croît avec l'usage. Cf. mémoire `vision-actif-strategique`. ⬜
+
 ---
 
-## SPRINT 3 — Academy & Dashboard : « apprendre et progresser »
+## SPRINT 3 — Academy, Documents & Opportunités : « apprendre, progresser, devenir visible »
 
 > 🎯 Modules pédagogiques, construire guidé (l'IA explique, le porteur écrit), documents.
 
 | Code | Story | Pts | Statut | Dépend de | Note |
 | :--- | :--- | ---: | :--- | :--- | :--- |
-| IDX-ACADEMY-01 | Modules pédagogiques | 5 | ⬜ | FND-04 | `academy_lessons`, `GET /academy/lessons` |
-| IDX-ACADEMY-02 | Progression & suivi | 3 | ⬜ | ACADEMY-01 | `learning_progress`, `GET /academy/progress` |
-| IDX-ACADEMY-03 | Construire guidé (assistant IA) | 8 | ⬜ | LLM-01 | sessions guidées · garde-fous anti-production complète (frontière gratuit) |
-| IDX-DOC-01 | Upload documents (presigned MinIO) | 5 | ⬜ | FND-04 | `POST /documents/upload-url` (5 min) → confirm · ≤ 20 Mo · `GET/DELETE` |
+| IDX-ACADEMY-01 | Modules pédagogiques | 5 | ✅ | FND-04 | `academy_lessons`, `GET /academy/lessons` (filtre `?topic=` → résout les next_actions) |
+| IDX-ACADEMY-02 | Progression & suivi | 3 | ✅ | ACADEMY-01 | `learning_progress`, `POST /lessons/{slug}/complete` (idempotent), `GET /academy/progress` |
+| IDX-ACADEMY-03 | Construire guidé (assistant IA) | 8 | ✅ | LLM-01 | `guided_sessions` · prompt coach (FORMAT=coach) **le porteur reste l'auteur** · brouillon + tours |
+| IDX-DOC-01 | Upload documents (presigned MinIO) | 5 | ✅ | FND-04 | `POST /documents/upload-url` (5 min) → confirm · ≤ 20 Mo · types validés · `GET/DELETE` · storage injecté |
+| IDX-OPP-01 | Espace opportunités (catalogue + éligibilité) | 5 | ✅ | SCORING, DIAG | `opportunities` · `GET /opportunities` filtré par **éligibilité déterministe** (`score + D11 + secteur`, pure, zéro LLM) · « ce qu'il te manque » · intérêt → event `opportunity_interest` |
 
-**Sprint 3 backend : 21 pts.**
+**Sprint 3 backend : 26 pts.** *(la « visibilité » côté porteur — orientation vers les opportunités — ferme la boucle diagnostic→score→recos→parcours→**opportunités**.)*
 
 ---
 
@@ -140,8 +148,9 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-ADMIN-01 | Back-office projets (liste, détail, pilotage) | 8 | ⬜ | AUTH-03, projects | `GET /projects` filtré · `PATCH /projects/{id}/status` (machine à états + audit) · assignation |
 | IDX-ADMIN-02 | Curation mentors & gouvernance grille | 5 | ⬜ | MENTOR-01, SCORING-01 | activer/suspendre mentor · **versionner la grille Radar** + catégories |
 | IDX-ADMIN-03 | Audit logs & timeline | 3 | ⬜ | audit | `GET /projects/{id}/timeline`, `GET /admin/audit-logs` |
+| IDX-OPP-02 | Fiche projet partageable (B2B) + visibilité | 5 | ⬜ | reports, OPS-03 | **export/partage du rapport** pensé jury/incubateur (la *triple-lecture* : porteur/analyste/jury) · **visibilité contrôlée par le porteur** (consentement explicite, ce qui est partagé) · base du sourcing B2B (vue organisateur = post-MVP) |
 
-**Sprint 5 backend : 31 pts.**
+**Sprint 5 backend : 36 pts.**
 
 ---
 

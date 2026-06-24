@@ -6,14 +6,14 @@ le périmètre et les critères d'acceptation détaillés dans `GUIDE.md`.
 
 | Sprint | Thème | Capacité back | Statut |
 | :--- | :--- | ---: | :--- |
-| [S1](S1-socle.md) | Socle (FND, AUTH) | 31 | 🟡 en cours (≈ 21 livrés au socle) |
-| [S2](S2-diagnostic-radar.md) | Diagnostic & Radar (LLM, SCORING, DIAG, JOB) | 39 | 🟡 amorcé (JOB, LLM) |
-| [S3](S3-academy-documents.md) | Academy & Documents (ACADEMY, DOC) | 21 | ⬜ |
+| [S1](S1-socle.md) | Socle (FND, AUTH) | 31 | ✅ |
+| [S2](S2-diagnostic-radar.md) | Diagnostic & Radar (LLM, SCORING, DIAG, JOB) | 39 | ✅ |
+| [S3](S3-academy-documents.md) | Academy, Documents & Opportunités (ACADEMY, DOC, OPP) | 26 | ✅ |
 | [S4](S4-pitch-simulator.md) | Simulateur de pitch (PITCHSIM) | 19 | ⬜ |
 | [S5](S5-mentors-admin.md) | Mentors & Admin (MENTOR, ADMIN) | 31 | ⬜ |
 | [S6](S6-instrumentation-ops.md) | Instrumentation, sécurité, RGPD, prod (INSTRUM, OPS) | 31 | ⬜ |
 
-**Total backend MVP ≈ 164 pts** (hors stories front DS/DASH suivies dans `idea-front`).
+**Total backend MVP ≈ 169 pts** (hors stories front DS/DASH suivies dans `idea-front`).
 
 ## Rituels (rappel GUIDE §2.3)
 Planning (lundi J1) · Daily (15 min) · Refinement (milieu) · Review/démo (vendredi J10) · Rétro.
