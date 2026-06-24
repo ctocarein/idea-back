@@ -21,6 +21,8 @@ from app.core.security import hash_password
 from app.iam.models import AccountStatus, Role
 from app.iam.repository import UserRepository
 from app.opportunities.models import Opportunity, OpportunityKind
+from app.pitchsim.constants import PITCH_AXES, PITCH_RUBRIC_VERSION, PITCH_SCALE_MAX
+from app.pitchsim.repository import PitchRubricRepository
 from app.scoring import engine
 from app.scoring.constants import (
     AXES,
@@ -168,6 +170,21 @@ async def _seed_lessons(session: AsyncSession) -> None:
         logger.info("seed_lesson_created", slug=slug)
 
 
+async def _seed_pitch_rubric(repo: PitchRubricRepository) -> None:
+    # Rubrique de pitch v1 (placeholder) — ancres validées avant activation, comme la grille Radar.
+    if await repo.get_by_version(PITCH_RUBRIC_VERSION) is not None:
+        logger.info("seed_pitch_rubric_skipped", version=PITCH_RUBRIC_VERSION)
+        return
+    engine.validate_grid(PITCH_AXES, PITCH_SCALE_MAX)  # les 8 axes Fond couvrent 0..10
+    await repo.create(
+        version=PITCH_RUBRIC_VERSION,
+        axes=PITCH_AXES,
+        is_active=True,
+        scale_max=PITCH_SCALE_MAX,
+    )
+    logger.info("seed_pitch_rubric_created", version=PITCH_RUBRIC_VERSION)
+
+
 async def _seed_opportunities(session: AsyncSession) -> None:
     for title, kind, desc, sector, min_overall, min_maturity in DEMO_OPPORTUNITIES:
         exists = (await session.execute(select(Opportunity.id).where(Opportunity.title == title))).first()
@@ -195,6 +212,7 @@ async def seed() -> None:
             await _seed_grid(ScoringRepository(session))
             await _seed_lessons(session)
             await _seed_opportunities(session)
+            await _seed_pitch_rubric(PitchRubricRepository(session))
     await dispose_engine()
     logger.info("seed_done")
 

@@ -1,0 +1,263 @@
+"""Rubrique de pitch (placeholder v1) + comités virtuels.
+
+Même robustesse que la grille Radar : axes ANCRÉS (paliers contigus 0..10), versionnés.
+- `PITCH_AXES` : 8 axes **Fond** notés par le LLM → le credential portable.
+- `BIO_AXES`   : 2 axes biométriques (ton/voix, posture/regard) → Mode Caméra (Premium/V2),
+  renvoyés `null` au MVP.
+- `COMMITTEES` : 3 comités, chaque juge a une **obsession = un axe Fond** → c'est le lien
+  « faiblesse détectée → juge qui attaque » (moteur de scénario, PITCH-03).
+
+Les ancres/personas sont *placeholder* : à figer en atelier produit, comme la grille Radar.
+"""
+
+from __future__ import annotations
+
+PITCH_RUBRIC_VERSION = "pitch-v1-placeholder"
+PITCH_SCALE_MAX = 10
+
+
+def _bands(b0: str, b1: str, b2: str, b3: str) -> list[dict]:
+    # 4 paliers contigus couvrant 0..10 (max exclusif sauf le plus haut) — cf. engine.anchors_cover_range.
+    return [
+        {"min": 0, "max": 3, "label": b0},
+        {"min": 3, "max": 6, "label": b1},
+        {"min": 6, "max": 8, "label": b2},
+        {"min": 8, "max": 10, "label": b3},
+    ]
+
+
+# --- 8 axes Fond (notés par le LLM, ancrés) ---
+PITCH_AXES: list[dict] = [
+    {
+        "key": "clarte_probleme",
+        "label": "Clarté du problème",
+        "kind": "fond",
+        "source": "llm",
+        "weight": 0.15,
+        "central_question": "Le problème est-il compris en 30 secondes ?",
+        "anchors": _bands(
+            "Problème absent ou confus.",
+            "Problème évoqué mais vague ou non incarné.",
+            "Problème clair, cible identifiée.",
+            "Problème limpide, ressenti, chiffré et incarné.",
+        ),
+    },
+    {
+        "key": "solution",
+        "label": "Solution",
+        "kind": "fond",
+        "source": "llm",
+        "weight": 0.15,
+        "central_question": "La solution est-elle pertinente et faisable ?",
+        "anchors": _bands(
+            "Solution floue ou hors-sujet.",
+            "Solution plausible mais générique.",
+            "Solution pertinente et différenciée.",
+            "Solution évidente, différenciée et défendable.",
+        ),
+    },
+    {
+        "key": "marche",
+        "label": "Marché",
+        "kind": "fond",
+        "source": "llm",
+        "weight": 0.12,
+        "central_question": "Les chiffres de marché sont-ils crédibles et sourcés ?",
+        "anchors": _bands(
+            "Aucun dimensionnement.",
+            "Chiffres avancés sans source.",
+            "Marché dimensionné, sources partielles.",
+            "TAM/SAM/SOM sourcés et défendables.",
+        ),
+    },
+    {
+        "key": "business_model",
+        "label": "Business model",
+        "kind": "fond",
+        "source": "llm",
+        "weight": 0.15,
+        "central_question": "Qui paie, combien, pourquoi — et est-ce viable ?",
+        "anchors": _bands(
+            "Modèle économique absent.",
+            "Source de revenus citée sans logique de marge.",
+            "Modèle cohérent, unit economics esquissés.",
+            "Modèle viable, marge et coût d'acquisition tenus.",
+        ),
+    },
+    {
+        "key": "traction",
+        "label": "Traction / preuves",
+        "kind": "fond",
+        "source": "llm",
+        "weight": 0.15,
+        "central_question": "Y a-t-il des preuves d'usage ou de demande ?",
+        "anchors": _bands(
+            "Aucune preuve.",
+            "Intérêt déclaratif, pas de preuve.",
+            "Premières preuves (pilotes, usagers).",
+            "Traction mesurée et croissante.",
+        ),
+    },
+    {
+        "key": "equipe",
+        "label": "Équipe",
+        "kind": "fond",
+        "source": "llm",
+        "weight": 0.12,
+        "central_question": "L'équipe est-elle crédible pour exécuter ?",
+        "anchors": _bands(
+            "Équipe non présentée.",
+            "Profils cités sans adéquation claire.",
+            "Équipe complémentaire et engagée.",
+            "Équipe complémentaire, légitime et qui a déjà exécuté.",
+        ),
+    },
+    {
+        "key": "gestion_questions",
+        "label": "Gestion des questions",
+        "kind": "fond",
+        "source": "llm",
+        "weight": 0.08,
+        "central_question": "Les réponses aux juges sont-elles solides et chiffrées ?",
+        "anchors": _bands(
+            "Réponses évasives ou hors-sujet.",
+            "Réponses partielles, peu étayées.",
+            "Réponses claires et argumentées.",
+            "Réponses précises, chiffrées, qui désamorcent le doute.",
+        ),
+    },
+    {
+        "key": "resilience",
+        "label": "Résilience sous pression",
+        "kind": "fond",
+        "source": "llm",
+        "weight": 0.08,
+        "central_question": "Le porteur garde-t-il son calme et sa clarté sous pression ?",
+        "anchors": _bands(
+            "Se déstabilise, perd le fil.",
+            "Tient mais se crispe sous la pression.",
+            "Reste clair et posé face aux objections.",
+            "Transforme l'objection en force, garde le cap.",
+        ),
+    },
+]
+
+# --- 2 axes biométriques (Mode Caméra — Premium/V2), null au MVP ---
+BIO_AXES: list[dict] = [
+    {
+        "key": "impact_emotionnel",
+        "label": "Impact émotionnel (ton, voix)",
+        "kind": "bio",
+        "source": "biometric",
+        "central_question": "Le ton est-il engageant et confiant ?",
+        "available": "camera",  # nécessite l'audio/vidéo + consentement RGPD
+    },
+    {
+        "key": "posture_regard",
+        "label": "Posture & regard",
+        "kind": "bio",
+        "source": "biometric",
+        "central_question": "Le langage non-verbal est-il maîtrisé ?",
+        "available": "camera",
+    },
+]
+
+# Mots de remplissage pour le score de Forme-texte (déterministe, PITCH-04).
+FILLER_WORDS = ["euh", "ben", "en fait", "du coup", "voilà", "genre", "tu vois", "bah"]
+
+
+# --- 3 comités virtuels (chaque juge : obsession = un axe Fond) ---
+COMMITTEES: list[dict] = [
+    {
+        "key": "incubateur",
+        "label": "Comité Incubateur",
+        "personas": [
+            {
+                "name": "Mme Diallo",
+                "role": "Directrice d'incubateur",
+                "personality": "Visionnaire, bienveillante mais exigeante sur le fond",
+                "style": "Encourage, puis pousse sur la mission et l'équipe",
+                "obsession": "equipe",
+            },
+            {
+                "name": "M. Morel",
+                "role": "Serial entrepreneur",
+                "personality": "Cynique, pragmatique",
+                "style": "Déstabilise, coupe la parole, traque l'irréalisme",
+                "obsession": "marche",
+            },
+            {
+                "name": "Mme Chen",
+                "role": "Experte financière",
+                "personality": "Analytique, froide",
+                "style": "Demande des preuves et des chiffres",
+                "obsession": "business_model",
+            },
+            {
+                "name": "M. Koné",
+                "role": "Investisseur early-stage",
+                "personality": "Impatient",
+                "style": "Veut l'essentiel, coupe le blabla",
+                "obsession": "traction",
+            },
+        ],
+    },
+    {
+        "key": "concours",
+        "label": "Comité Concours",
+        "personas": [
+            {
+                "name": "Expert Innovation",
+                "role": "Juré innovation",
+                "personality": "Curieux, rigoureux",
+                "style": "Sonde le problème et la solution",
+                "obsession": "clarte_probleme",
+            },
+            {
+                "name": "Expert Marché",
+                "role": "Juré marché",
+                "personality": "Sceptique",
+                "style": "Challenge le marché et la concurrence",
+                "obsession": "marche",
+            },
+            {
+                "name": "Expert Impact",
+                "role": "Juré impact",
+                "personality": "Engagé",
+                "style": "Interroge la mission et l'équipe",
+                "obsession": "equipe",
+            },
+        ],
+    },
+    {
+        "key": "investisseur",
+        "label": "Comité Investisseur",
+        "personas": [
+            {
+                "name": "VC Growth",
+                "role": "VC croissance",
+                "personality": "Ambitieux",
+                "style": "Veut de la scalabilité et de la traction",
+                "obsession": "traction",
+            },
+            {
+                "name": "VC Deeptech",
+                "role": "VC deeptech",
+                "personality": "Exigeant techniquement",
+                "style": "Sonde la différenciation et la défensibilité",
+                "obsession": "solution",
+            },
+            {
+                "name": "Business Angel",
+                "role": "Business angel",
+                "personality": "Humain, intuitif",
+                "style": "Mise sur l'équipe et l'exécution",
+                "obsession": "equipe",
+            },
+        ],
+    },
+]
+
+
+def committee(key: str) -> dict | None:
+    return next((c for c in COMMITTEES if c["key"] == key), None)

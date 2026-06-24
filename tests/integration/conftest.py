@@ -74,6 +74,16 @@ async def client():
             # Sprint 3 : leçons (topics alignés aux leviers) + catalogue d'opportunités.
             await _seed_lessons(session)
             await _seed_opportunities(session)
+            # Sprint 4 : rubrique de pitch active.
+            from app.pitchsim.constants import PITCH_AXES, PITCH_RUBRIC_VERSION, PITCH_SCALE_MAX
+            from app.pitchsim.repository import PitchRubricRepository
+
+            await PitchRubricRepository(session).create(
+                version=PITCH_RUBRIC_VERSION,
+                axes=PITCH_AXES,
+                is_active=True,
+                scale_max=PITCH_SCALE_MAX,
+            )
 
     from httpx import ASGITransport, AsyncClient
 

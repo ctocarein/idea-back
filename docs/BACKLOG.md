@@ -33,14 +33,14 @@ de l'exécution ; le GUIDE reste la spec. Périmètre : **stories à dominante b
 | **ACADEMY** | Apprendre (`app/academy`) | S3 | ✅ | 16 |
 | **DOC** | Documents presigned (`app/documents`) | S3 | ✅ | 5 |
 | **OPP** | Espace opportunités (éligibilité déterministe) | S3 | ✅ | 5 |
-| **PITCHSIM** | Simulateur de pitch (`app/pitchsim`) | S4 | ⬜ | 19 |
+| **PITCH** | Simulateur de pitch « Le Comité » (`app/pitchsim`) | S4 | ⬜ | 28 |
 | **MENTOR** | Onboarding & marketplace mentors (`app/mentors`) | S5 | ⬜ | 15 |
 | **ADMIN** | Back-office (`app/projects`, `app/audit`) | S5 | ⬜ | 16 |
 | **INSTRUM** | Instrumentation d'apprentissage (transverse) | S6 | 🟡 | 8 |
 | **OPS** | Tests, sécurité, RGPD, monitoring, prod | S6 | ⬜ | 23 |
 | **PAY/SIGN/CERTIF/DEALFLOW** | Monétisation & industrialisation (`app/_v2/`) | — | ⏳ | — |
 
-**Total backend MVP ≈ 169 pts** (hors stories front DS/DASH suivies dans `idea-front`).
+**Total backend MVP ≈ 178 pts** (hors stories front DS/DASH suivies dans `idea-front`).
 
 ---
 
@@ -120,18 +120,22 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 
 ---
 
-## SPRINT 4 — Simulateur de pitch : « s'exercer et perdre la peur »
+## SPRINT 4 — Simulateur de pitch « Le Comité » : « recréer la pression, en sécurité »
 
-> 🎯 Pièce maîtresse : l'IA joue l'investisseur, feedback Radar, rejeu, progression.
+> 🎯 Comité virtuel multi-personnalités, imprévus déclenchés par les faiblesses, double évaluation
+> Fond/Forme, post-mortem. **Spec figée :** [SPEC_PITCHSIM.md](SPEC_PITCHSIM.md).
+> Couche **4A (texte, Mode Slides, tour-par-tour)** ci-dessous ; 4B audio (Whisper) et V2 (realtime,
+> Mode Caméra, biométrie) = épics séparées, derrière le paywall.
 
 | Code | Story | Pts | Statut | Dépend de | Note |
 | :--- | :--- | ---: | :--- | :--- | :--- |
-| IDX-PITCHSIM-01 | Moteur de session conversationnelle | 8 | ⬜ | LLM-01 | `practice_sessions`, `POST /pitch-sim/start`, `/{id}/turn` · prompt versionné |
-| IDX-PITCHSIM-02 | Feedback structuré sur le Radar | 5 | ⬜ | PITCHSIM-01, SCORING-01 | 6 axes + forts/à-travailler, `pitch_feedback` |
-| IDX-PITCHSIM-03 | Rejeu & historique | 3 | ⬜ | PITCHSIM-01 | `GET /pitch-sim/sessions` |
-| IDX-PITCHSIM-04 | Progression (boussole avant/après) | 3 | ⬜ | PITCHSIM-02 | *front-dominant* · backend = série temporelle des scores |
+| IDX-PITCH-01 | Rubrique de pitch (3 comités, 10 axes ancrés placeholder) | 5 | ✅ | SCORING | `PitchRubric` versionnée (8 axes Fond ancrés + 2 bio différés) · 3 comités/personas (obsession = axe) · seed + 15 tests |
+| IDX-PITCH-02 | Deck : upload + parsing PDF/PPTX → slides typées | 5 | ⬜ | DOC-01 | `pitch_decks`/`pitch_slides` (main/backup/synthèse) · `pypdf`+`python-pptx` |
+| IDX-PITCH-03 | Session + tours + **moteur de scénario** | 8 | ⬜ | PITCH-01, LLM-01 | `pitch_sessions`/`pitch_turns` · interruptions **déclenchées par les faiblesses** · imprévus configurables |
+| IDX-PITCH-04 | Scoring Fond (LLM ancré, `PitchRun` rejouable) + Forme-texte | 5 | ⬜ | PITCH-03 | Fond = credential · Forme = proxies déterministes (concision, tics, complétude) |
+| IDX-PITCH-05 | Post-mortem + progression + plan→Academy/OPP | 5 | ⬜ | PITCH-04, reports | réutilise report+PDF · timeline = `pitch_turns` · plan via next_actions + opportunités |
 
-**Sprint 4 backend : 19 pts.**
+**Sprint 4 backend (4A) : 28 pts.** *(4B audio + V2 realtime/caméra/bio = épics séparées, payantes.)*
 
 ---
 
