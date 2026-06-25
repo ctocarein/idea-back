@@ -166,7 +166,7 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-MENTOR-03 | Marketplace découverte (côté porteur) | 5 | ⬜ | MENTOR-02 | `GET /mentors` filtrable · `POST /mentors/{id}/request` *(booking/paiement = v2)* |
 | IDX-ADMIN-01 | Back-office projets (liste, détail, pilotage) | 8 | ✅ | AUTH-03, projects | `GET /admin/projects` filtré · `PATCH /admin/projects/{id}/review-status` (machine REVIEW_TRANSITIONS + audit) · `PATCH .../assignee` (admin) · garde rôle |
 | IDX-ADMIN-02 | Curation mentors & gouvernance grille | 5 | ⬜ | MENTOR-01, SCORING-01 | activer/suspendre mentor · **versionner la grille Radar** + catégories |
-| IDX-ADMIN-03 | Audit logs & timeline | 3 | ⬜ | audit | `GET /projects/{id}/timeline`, `GET /admin/audit-logs` |
+| IDX-ADMIN-03 | Audit logs & timeline | 3 | ✅ | audit | `GET /admin/projects/{id}/timeline` + `GET /admin/audit-logs` filtrable (AUDIT_READ) |
 | IDX-OPP-02 | Fiche projet partageable (B2B) + visibilité | 5 | ⬜ | reports, OPS-03 | **export/partage du rapport** pensé jury/incubateur (la *triple-lecture* : porteur/analyste/jury) · **visibilité contrôlée par le porteur** (consentement explicite, ce qui est partagé) · base du sourcing B2B (vue organisateur = post-MVP) |
 
 **Sprint 5 backend : 36 pts.**

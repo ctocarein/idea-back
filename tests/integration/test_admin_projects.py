@@ -92,3 +92,27 @@ async def test_back_office_list_detail_transition_assign(client) -> None:
         f"/api/v1/admin/projects/{pid}/assignee", headers=admin, json={"assignee_id": str(founder_id)}
     )
     assert r.status_code == 422, r.text
+
+
+async def test_audit_timeline_and_logs(client) -> None:
+    # ADMIN-03 : chaque action de curation laisse une trace lisible (timeline + journal).
+    from app.iam.models import Role
+
+    founder = await _register_founder(client, "awa-audit@ideaxion.io")
+    pid = await _make_project(client, founder)
+    _, admin = await _staff("admin-audit@ideaxion.io", Role.ADMIN)
+
+    r = await client.patch(f"/api/v1/admin/projects/{pid}/review-status", headers=admin, json={"target": "in_review"})
+    assert r.status_code == 200, r.text
+
+    # Timeline du projet : contient l'action de curation auditée.
+    r = await client.get(f"/api/v1/admin/projects/{pid}/timeline", headers=admin)
+    assert r.status_code == 200, r.text
+    assert "project.review_status" in [e["action"] for e in r.json()]
+
+    # Journal global filtré par entité.
+    r = await client.get("/api/v1/admin/audit-logs?entity=project", headers=admin)
+    assert r.status_code == 200 and any(e["entity"] == "project" for e in r.json())
+
+    # Le porteur n'a pas AUDIT_READ.
+    assert (await client.get("/api/v1/admin/audit-logs", headers=founder)).status_code == 403

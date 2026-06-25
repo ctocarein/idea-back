@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.academy.router import router as academy_router
+from app.audit.router import router as audit_router
 from app.diagnostics.router import router as diagnostics_router
 from app.documents.router import router as documents_router
 from app.iam.router import router as iam_router
@@ -35,6 +36,7 @@ api_router.include_router(documents_router)  # /documents/*   (Sprint 3)
 api_router.include_router(opportunities_router)  # /opportunities/* (Sprint 3)
 api_router.include_router(pitchsim_router)  # /pitchsim/*       (Sprint 4)
 api_router.include_router(projects_admin_router)  # /admin/projects/* (Sprint 5)
+api_router.include_router(audit_router)  # /admin/audit-logs   (Sprint 5)
 
 # Sprints suivants (à monter quand prêts) :
 #   from app.mentors.router import router as mentors_router          # Sprint 5

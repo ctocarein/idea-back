@@ -6,6 +6,9 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends
 
+from app.audit.dependencies import get_audit_repo
+from app.audit.repository import AuditRepository
+from app.audit.schemas import AuditLogOut
 from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
 from app.projects.dependencies import get_project_admin_service
@@ -62,3 +65,14 @@ async def assign_project(
 ) -> ProjectAdminOut:
     # Assignation à un analyste/mentor (admin uniquement).
     return await svc.assign(ctx, project_id, body.assignee_id)
+
+
+@router.get("/{project_id}/timeline", response_model=list[AuditLogOut])
+async def project_timeline(
+    project_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.AUDIT_READ)),
+    audit: AuditRepository = Depends(get_audit_repo),
+) -> list[AuditLogOut]:
+    # Journal d'audit du projet (transitions, assignations…).
+    rows = await audit.list_for_entity("project", project_id)
+    return [AuditLogOut.model_validate(a) for a in rows]
