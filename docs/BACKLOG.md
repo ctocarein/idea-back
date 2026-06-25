@@ -34,7 +34,7 @@ de l'exécution ; le GUIDE reste la spec. Périmètre : **stories à dominante b
 | **DOC** | Documents presigned (`app/documents`) | S3 | ✅ | 5 |
 | **OPP** | Espace opportunités (éligibilité déterministe) | S3 | ✅ | 5 |
 | **PITCH** | Simulateur de pitch « Le Comité » (`app/pitchsim`) | S4 | ✅ | 28 |
-| **MENTOR** | Onboarding & marketplace mentors (`app/mentors`) | S5 | ⬜ | 15 |
+| **MENTOR** | Onboarding & marketplace mentors (`app/mentors`) | S5 | ✅ | 15 |
 | **ADMIN** | Back-office (`app/projects`, `app/audit`) | S5 | ⬜ | 16 |
 | **INSTRUM** | Instrumentation d'apprentissage (transverse) | S6 | 🟡 | 8 |
 | **OPS** | Tests, sécurité, RGPD, monitoring, prod | S6 | ⬜ | 23 |
@@ -165,7 +165,7 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-MENTOR-02 | Profil mentor | 5 | ✅ | MENTOR-01 | `GET/PATCH /mentors/me` (secteurs, bio, honoraires, dispo) |
 | IDX-MENTOR-03 | Marketplace découverte (côté porteur) | 5 | ✅ | MENTOR-02 | `GET /mentors` filtrable secteur · `POST /mentors/{id}/request` (booking/paiement = v2) |
 | IDX-ADMIN-01 | Back-office projets (liste, détail, pilotage) | 8 | ✅ | AUTH-03, projects | `GET /admin/projects` filtré · `PATCH /admin/projects/{id}/review-status` (machine REVIEW_TRANSITIONS + audit) · `PATCH .../assignee` (admin) · garde rôle |
-| IDX-ADMIN-02 | Curation mentors & gouvernance grille | 5 | ⬜ | MENTOR-01, SCORING-01 | activer/suspendre mentor · **versionner la grille Radar** + catégories |
+| IDX-ADMIN-02 | Curation mentors & gouvernance grille | 5 | ✅ | MENTOR-01, SCORING-01 | suspend/activate mentor (statut + marketplace, audité) · `GET /admin/scoring/grids` + `POST ./{version}/activate` (une seule active, audité) |
 | IDX-ADMIN-03 | Audit logs & timeline | 3 | ✅ | audit | `GET /admin/projects/{id}/timeline` + `GET /admin/audit-logs` filtrable (AUDIT_READ) |
 | IDX-OPP-02 | Fiche projet partageable (B2B) + visibilité | 5 | ⬜ | reports, OPS-03 | **export/partage du rapport** pensé jury/incubateur (la *triple-lecture* : porteur/analyste/jury) · **visibilité contrôlée par le porteur** (consentement explicite, ce qui est partagé) · base du sourcing B2B (vue organisateur = post-MVP) |
 

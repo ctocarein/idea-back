@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.scoring.models import ScoreRun, ScoreSource, ScoringGrid
@@ -17,6 +17,16 @@ class ScoringRepository:
     async def get_active(self) -> ScoringGrid | None:
         result = await self.session.execute(select(ScoringGrid).where(ScoringGrid.is_active.is_(True)).limit(1))
         return result.scalar_one_or_none()
+
+    async def list_grids(self) -> list[ScoringGrid]:
+        result = await self.session.execute(select(ScoringGrid).order_by(ScoringGrid.created_at.desc()))
+        return list(result.scalars())
+
+    async def activate(self, grid: ScoringGrid) -> None:
+        # Une seule grille active : on désactive les autres puis on active celle-ci.
+        await self.session.execute(update(ScoringGrid).values(is_active=False).where(ScoringGrid.is_active.is_(True)))
+        grid.is_active = True
+        await self.session.flush()
 
     async def get_by_version(self, version: str) -> ScoringGrid | None:
         result = await self.session.execute(select(ScoringGrid).where(ScoringGrid.version == version))

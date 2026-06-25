@@ -108,3 +108,21 @@ async def reject(
     svc: MentorService = Depends(get_mentor_service),
 ) -> MentorApplicationOut:
     return await svc.reject(ctx, application_id)
+
+
+@router.post("/admin/mentors/{user_id}/suspend", status_code=204)
+async def suspend_mentor(
+    user_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.USER_MANAGE)),
+    svc: MentorService = Depends(get_mentor_service),
+) -> None:
+    await svc.set_mentor_status(ctx, user_id, suspend=True)
+
+
+@router.post("/admin/mentors/{user_id}/activate", status_code=204)
+async def activate_mentor(
+    user_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.USER_MANAGE)),
+    svc: MentorService = Depends(get_mentor_service),
+) -> None:
+    await svc.set_mentor_status(ctx, user_id, suspend=False)

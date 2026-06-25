@@ -124,6 +124,36 @@ async def test_mentor_profile_and_marketplace(client) -> None:
     assert not any(m["user_id"] == mentor_id for m in r.json())
 
 
+async def test_mentor_suspend_and_activate(client) -> None:
+    import uuid
+
+    from app.iam.models import Role
+
+    mentor_id, _ = await _onboard_mentor(client, "koffi-susp@ideaxion.io", ["fintech"])
+    founder = await _register_founder(client, "awa-susp@ideaxion.io")
+    admin = await _staff_headers("admin-susp@ideaxion.io", Role.ADMIN)
+
+    # Visible avant suspension.
+    r = await client.get("/api/v1/mentors?sector=fintech", headers=founder)
+    assert any(m["user_id"] == mentor_id for m in r.json())
+
+    # Suspension → retiré de la marketplace.
+    r = await client.post(f"/api/v1/admin/mentors/{mentor_id}/suspend", headers=admin)
+    assert r.status_code == 204, r.text
+    r = await client.get("/api/v1/mentors?sector=fintech", headers=founder)
+    assert not any(m["user_id"] == mentor_id for m in r.json())
+
+    # Réactivation → de nouveau visible.
+    r = await client.post(f"/api/v1/admin/mentors/{mentor_id}/activate", headers=admin)
+    assert r.status_code == 204
+    r = await client.get("/api/v1/mentors?sector=fintech", headers=founder)
+    assert any(m["user_id"] == mentor_id for m in r.json())
+
+    # Utilisateur inexistant → 404 ; un porteur ne peut pas curer → 403.
+    assert (await client.post(f"/api/v1/admin/mentors/{uuid.uuid4()}/suspend", headers=admin)).status_code == 404
+    assert (await client.post(f"/api/v1/admin/mentors/{mentor_id}/suspend", headers=founder)).status_code == 403
+
+
 async def test_mentor_applications_require_permission(client) -> None:
     # Un porteur n'a pas accès à la revue des candidatures.
     r = await client.post(

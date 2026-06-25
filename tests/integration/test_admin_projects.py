@@ -94,6 +94,30 @@ async def test_back_office_list_detail_transition_assign(client) -> None:
     assert r.status_code == 422, r.text
 
 
+async def test_grid_governance(client) -> None:
+    # ADMIN-02 (gouvernance grille) : lister les versions + activer.
+    from app.iam.models import Role
+
+    _, admin = await _staff("admin-grid@ideaxion.io", Role.ADMIN)
+
+    r = await client.get("/api/v1/admin/scoring/grids", headers=admin)
+    assert r.status_code == 200, r.text
+    grids = r.json()
+    assert grids and any(g["is_active"] for g in grids)
+    version = next(g["version"] for g in grids if g["is_active"])
+
+    # (Ré)activer une version → 200.
+    r = await client.post(f"/api/v1/admin/scoring/grids/{version}/activate", headers=admin)
+    assert r.status_code == 200 and r.json()["is_active"]
+
+    # Version inconnue → 404.
+    assert (await client.post("/api/v1/admin/scoring/grids/inconnue/activate", headers=admin)).status_code == 404
+
+    # Un porteur n'a pas accès à la gouvernance.
+    founder = await _register_founder(client, "awa-grid@ideaxion.io")
+    assert (await client.get("/api/v1/admin/scoring/grids", headers=founder)).status_code == 403
+
+
 async def test_audit_timeline_and_logs(client) -> None:
     # ADMIN-03 : chaque action de curation laisse une trace lisible (timeline + journal).
     from app.iam.models import Role

@@ -19,6 +19,7 @@ from app.pitchsim.router import router as pitchsim_router
 from app.platform.router import router as platform_router
 from app.projects.router import router as projects_admin_router
 from app.reports.router import router as reports_router
+from app.scoring.governance import router as scoring_admin_router
 from app.scoring.router import router as scoring_router
 
 # Routeur racine de l'API versionnée.
@@ -39,6 +40,7 @@ api_router.include_router(pitchsim_router)  # /pitchsim/*       (Sprint 4)
 api_router.include_router(projects_admin_router)  # /admin/projects/* (Sprint 5)
 api_router.include_router(audit_router)  # /admin/audit-logs   (Sprint 5)
 api_router.include_router(mentors_router)  # /mentors/*, /admin/mentor-applications/* (Sprint 5)
+api_router.include_router(scoring_admin_router)  # /admin/scoring/grids/* (Sprint 5)
 
 # Sprints suivants (à monter quand prêts) :
 #   from app.mentors.router import router as mentors_router          # Sprint 5

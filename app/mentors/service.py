@@ -187,3 +187,23 @@ class MentorService:
         )
         await self.session.commit()
         return MentorRequestOut.model_validate(req)
+
+    # --- Curation admin (ADMIN-02) ---
+
+    async def set_mentor_status(self, ctx: AuthContext, user_id: UUID, *, suspend: bool) -> None:
+        user = await self.users.get_by_id(user_id)
+        if user is None:
+            raise NotFoundError("user")
+        if user.role is not Role.MENTOR:
+            raise BusinessRuleError("Cet utilisateur n'est pas un mentor.")
+        user.status = AccountStatus.SUSPENDED if suspend else AccountStatus.ACTIVE
+        profile = await self.repo.get_profile_by_user(user_id)
+        if profile is not None:
+            profile.is_active = not suspend  # retiré de la marketplace si suspendu
+        await self.auditor.record(
+            actor_id=ctx.user.id,
+            action="mentor.suspended" if suspend else "mentor.activated",
+            entity="user",
+            entity_id=user_id,
+        )
+        await self.session.commit()
