@@ -29,6 +29,31 @@ class ProjectRepository:
         )
         return list(result.scalars())
 
+    async def list_filtered(
+        self,
+        *,
+        review_status: ReviewStatus | None = None,
+        diagnostic_status: DiagnosticStatus | None = None,
+        sector: str | None = None,
+        assignee_id: UUID | None = None,
+    ) -> list[Project]:
+        # Back-office admin/analyste : liste filtrable de TOUS les projets.
+        stmt = select(Project).order_by(Project.created_at.desc())
+        if review_status is not None:
+            stmt = stmt.where(Project.review_status == review_status)
+        if diagnostic_status is not None:
+            stmt = stmt.where(Project.diagnostic_status == diagnostic_status)
+        if sector is not None:
+            stmt = stmt.where(Project.sector == sector)
+        if assignee_id is not None:
+            stmt = stmt.where(Project.assignee_id == assignee_id)
+        result = await self.session.execute(stmt)
+        return list(result.scalars())
+
+    async def set_assignee(self, project: Project, assignee_id: UUID | None) -> None:
+        project.assignee_id = assignee_id
+        await self.session.flush()
+
     async def create(
         self,
         *,

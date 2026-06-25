@@ -15,6 +15,7 @@ from app.iam.router import router as iam_router
 from app.opportunities.router import router as opportunities_router
 from app.pitchsim.router import router as pitchsim_router
 from app.platform.router import router as platform_router
+from app.projects.router import router as projects_admin_router
 from app.reports.router import router as reports_router
 from app.scoring.router import router as scoring_router
 
@@ -33,6 +34,7 @@ api_router.include_router(academy_router)  # /academy/*       (Sprint 3)
 api_router.include_router(documents_router)  # /documents/*   (Sprint 3)
 api_router.include_router(opportunities_router)  # /opportunities/* (Sprint 3)
 api_router.include_router(pitchsim_router)  # /pitchsim/*       (Sprint 4)
+api_router.include_router(projects_admin_router)  # /admin/projects/* (Sprint 5)
 
 # Sprints suivants (à monter quand prêts) :
 #   from app.mentors.router import router as mentors_router          # Sprint 5
