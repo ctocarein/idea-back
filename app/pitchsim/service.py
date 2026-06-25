@@ -397,6 +397,7 @@ class PitchSessionService:
             status=ps.status.value,
             phase=ps.phase,
             config=ps.config,
+            convictions=ps.orch.get("convictions", {}),
             turns=[TurnOut.model_validate(t) for t in turns],
         )
 
@@ -422,9 +423,10 @@ class PitchSessionService:
             raise BusinessRuleError("Le pitch n'est pas en cours.")
         personas = self._session_personas(ps)
         weak = scenario.assess_weakness(narration)
-        # Comité SILENCIEUX : on renvoie des réactions visuelles, jamais de parole.
-        reactions = orchestrator.micro_reactions(personas, weak)
-        convictions = orchestrator.update_convictions(ps.orch.get("convictions", {}), personas, weak)
+        current = ps.orch.get("convictions", {})
+        # Comité SILENCIEUX : réactions visuelles (obsession + humeur accumulée), jamais de parole.
+        reactions = orchestrator.micro_reactions(personas, weak, current)
+        convictions = orchestrator.update_convictions(current, personas, weak)
         fillers = scenario.count_fillers(narration)
         indicators = {
             "confiance": max(0, 10 - fillers),

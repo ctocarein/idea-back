@@ -65,6 +65,13 @@ def test_micro_reactions_one_per_agent_and_silent():
     assert morel["reaction"] in ("frown", "note")
 
 
+def test_micro_reactions_reflect_accumulated_conviction():
+    # Un juge déjà refroidi (conviction -2), dont l'obsession n'est PAS faible ici → "glance".
+    diallo = next(p for p in INCUB if p["name"] == "Mme Diallo")  # obsession equipe
+    reactions = orch.micro_reactions([diallo], [], {"Mme Diallo": -2})
+    assert reactions[0]["reaction"] == "glance"
+
+
 # --- Conviction ---
 
 

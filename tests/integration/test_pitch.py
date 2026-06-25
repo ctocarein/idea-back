@@ -173,6 +173,7 @@ async def test_silent_committee_flow(client) -> None:
     assert not any(t["kind"] == "interruption" for t in s["turns"])  # règle d'or n°1
     last_narr = [t for t in s["turns"] if t["kind"] == "narration"][-1]
     assert last_narr["meta"].get("reactions")
+    assert s["convictions"]  # l'humeur du comité évolue et est exposée au front
 
     # « J'ai terminé » → QA + 1re question servie.
     r = await client.post(f"{base}/{sid}/end-pitch", headers=headers)

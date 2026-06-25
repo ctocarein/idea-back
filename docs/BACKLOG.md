@@ -144,13 +144,13 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 
 | Code | Story | Pts | Statut |
 | :--- | :--- | ---: | :--- |
-| IDX-PITCH-06a | Machine à **phases** + Orchestrateur (parole/ordre/anti-doublon, pur) | 8 | ⬜ |
-| IDX-PITCH-06b | **Expert métier** par secteur + comité snapshotté + timing (contexte×format×niveau×palier) | 5 | ⬜ |
-| IDX-PITCH-06c | **Questionnement varié** (pool d'angles + seed + mémoire inter-sessions) | 5 | ⬜ |
-| IDX-PITCH-06d | **Tour libre** + **délibération verbatim** → rapport « mots des agents » | 5 | ⬜ |
-| IDX-PITCH-06e | **Micro-réactions** + conviction (signaux front) | 3 | ⬜ |
+| IDX-PITCH-06a | Machine à **phases** + Orchestrateur (parole/ordre/anti-doublon, pur) | 8 | ✅ |
+| IDX-PITCH-06b | **Expert métier** par secteur + comité snapshotté + timing (contexte×format) | 5 | ✅ |
+| IDX-PITCH-06c | **Questionnement varié** (pool d'angles + seed + mémoire inter-sessions) | 5 | ✅ |
+| IDX-PITCH-06d | **Tour libre** + **délibération verbatim** → rapport « mots des agents » | 5 | ✅ |
+| IDX-PITCH-06e | **Micro-réactions** + conviction (signaux front) | 3 | ✅ |
 
-**PITCH-06 ≈ 26 pts** (texte d'abord ; realtime/voix/avatars = V2 « La Salle »).
+**PITCH-06 ≈ 26 pts — ✅ LIVRÉ** (texte ; gating niveau/palier = hook ; realtime/voix/avatars/TTS = V2 « La Salle »). Le flux 4A (interruption) coexiste, à retirer en nettoyage ultérieur.
 
 ---
 

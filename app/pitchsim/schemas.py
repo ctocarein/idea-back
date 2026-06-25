@@ -89,6 +89,7 @@ class SessionOut(BaseModel):
     status: str
     phase: str = "briefing"  # PITCH-06 : sous-phase « comité silencieux »
     config: dict
+    convictions: dict = {}  # humeur du comité par juge (−2..+2), pour le front
     turns: list[TurnOut] = []
 
 

@@ -90,15 +90,27 @@ ANGLE_POOL: dict[str, list[dict]] = {
 REACTIONS = ("nod", "frown", "note", "glance", "impatient", "none")
 
 
-def micro_reactions(personas: list[dict], weak_axes: list[str]) -> list[dict]:
-    """Pour chaque agent : un signal silencieux selon son obsession (jamais de parole)."""
+def micro_reactions(
+    personas: list[dict], weak_axes: list[str], convictions: dict[str, int] | None = None
+) -> list[dict]:
+    """Pour chaque agent : un signal silencieux (jamais de parole).
+
+    Combine l'obsession (faiblesse sur SON axe → doute) ET la conviction accumulée (un juge
+    déjà refroidi jette un regard, un juge convaincu acquiesce).
+    """
     weak = set(weak_axes)
+    conv = convictions or {}
     out: list[dict] = []
     for p in personas:
+        c = conv.get(p["name"], 0)
         if p["obsession"] in weak:
             reaction = "note" if _seed(p["name"], p["obsession"]) % 2 else "frown"
-        else:
+        elif c <= -1:
+            reaction = "glance"  # déjà sceptique → coup d'œil à un autre juge
+        elif c >= 1:
             reaction = "nod"
+        else:
+            reaction = "nod" if _seed(p["name"]) % 2 else "none"
         out.append({"agent": p["name"], "reaction": reaction})
     return out
 
