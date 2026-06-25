@@ -1,0 +1,88 @@
+# Déploiement continu — develop → staging, main → production.
+# Construit l'image, la pousse sur GHCR, puis déploie par SSH (docker compose) et vérifie /health.
+#
+# Prérequis (cf. docs/DEPLOYMENT.md) — secrets/vars par ENVIRONNEMENT GitHub (staging, production) :
+#   secrets : DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY, DEPLOY_PATH
+#   variables (vars) : APP_URL  (ex. https://api.ideaxion.app)
+# Le serveur possède un `.env` (secrets applicatifs) dans DEPLOY_PATH (jamais versionné).
+#
+# ⚠️ Template self-hosted (SSH + compose) : remplace l'étape « Déploiement » si tu cibles
+# une PaaS (Fly.io, Render, Scalingo…). Le reste (build, push, health) est réutilisable.
+
+name: Deploy
+
+on:
+  push:
+    branches: [develop, main]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        run: echo "image=ghcr.io/${{ github.repository_owner }}/idea-back:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}
+            ghcr.io/${{ github.repository_owner }}/idea-back:${{ github.ref_name }}
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-latest
+    # Secrets/vars scopés par environnement : staging (develop) ou production (main).
+    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Le serveur a besoin du compose à jour.
+      - name: Copier docker-compose.prod.yml
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: docker-compose.prod.yml
+          target: ${{ secrets.DEPLOY_PATH }}
+
+      - name: Déploiement (migrate → up)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+            export IMAGE=${{ needs.build-push.outputs.image }}
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml run --rm migrate
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
+
+      - name: Health post-déploiement
+        run: |
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.APP_URL }}/api/v1/health" || true)
+            echo "tentative $i → HTTP $code"
+            [ "$code" = "200" ] && echo "✅ déploiement sain" && exit 0
+            sleep 6
+          done
+          echo "❌ /health non OK après déploiement"; exit 1

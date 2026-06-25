@@ -1,0 +1,104 @@
+# Stack de PRODUCTION (self-hosted). On TIRE une image pré-construite (GHCR) au lieu de build
+# sur le serveur. Adapter/retirer postgres|redis|minio si tu utilises des services managés.
+#
+# Sur le serveur : un fichier `.env` (jamais versionné) fournit les secrets (cf. .env.production.example).
+#   export IMAGE=ghcr.io/<owner>/idea-back:<tag>
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml run --rm migrate   # alembic upgrade head
+#   docker compose -f docker-compose.prod.yml up -d
+
+x-app-env: &app-env
+  DATABASE_URL: postgresql://ideaxion:${POSTGRES_PASSWORD:?set in .env}@postgres:5432/ideaxion
+  REDIS_URL: redis://redis:6379/0
+  MINIO_ENDPOINT: minio:9000
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ideaxion
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: ideaxion
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ideaxion"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?set in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?set in .env}
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # One-shot : applique les migrations AVANT de (re)démarrer l'API. `restart: "no"`.
+  migrate:
+    image: ${IMAGE:-ghcr.io/ctocarein/idea-back:latest}
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    restart: "no"
+    env_file: .env
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    image: ${IMAGE:-ghcr.io/ctocarein/idea-back:latest}
+    restart: unless-stopped
+    # Gunicorn + workers Uvicorn (production). Ajuster `-w` selon les CPU.
+    command: ["uv", "run", "gunicorn", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8080"]
+    env_file: .env
+    environment: *app-env
+    ports:
+      - "8080:8080"  # à placer derrière un reverse-proxy TLS (Caddy/Traefik/nginx)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      # Liveness : l'app répond (openapi = 200 quand l'app est up).
+      test: ["CMD", "uv", "run", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v1/openapi.json')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    image: ${IMAGE:-ghcr.io/ctocarein/idea-back:latest}
+    restart: unless-stopped
+    command: ["uv", "run", "python", "-m", "app.worker"]
+    env_file: .env
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pg_data:
+  minio_data:

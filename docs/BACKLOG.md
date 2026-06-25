@@ -36,8 +36,8 @@ de l'exécution ; le GUIDE reste la spec. Périmètre : **stories à dominante b
 | **PITCH** | Simulateur de pitch « Le Comité » (`app/pitchsim`) | S4 | ✅ | 28 |
 | **MENTOR** | Onboarding & marketplace mentors (`app/mentors`) | S5 | ✅ | 15 |
 | **ADMIN** | Back-office (`app/projects`, `app/audit`) | S5 | ✅ | 16 |
-| **INSTRUM** | Instrumentation d'apprentissage (transverse) | S6 | 🟡 | 8 |
-| **OPS** | Tests, sécurité, RGPD, monitoring, prod | S6 | ⬜ | 23 |
+| **INSTRUM** | Instrumentation d'apprentissage (transverse) | S6 | ✅ | 8 |
+| **OPS** | Tests, sécurité, RGPD, monitoring, prod | S6 | ✅ | 23 |
 | **PAY/SIGN/CERTIF/DEALFLOW** | Monétisation & industrialisation (`app/_v2/`) | — | ⏳ | — |
 
 **Total backend MVP ≈ 178 pts** (hors stories front DS/DASH suivies dans `idea-front`).
@@ -184,9 +184,9 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-OPS-02 | Durcissement sécurité | 5 | ✅ | AUTH-04 | en-têtes (même sur erreur) + rate-limit (AUTH-04) · **tests 401/403 exhaustifs** sur la surface admin + token invalide |
 | IDX-OPS-03 | Conformité RGPD | 5 | ✅ | tout | `app/gdpr` : `GET /me/export` (portabilité JSON) · `DELETE /me` effacement cascade SQL (projets/diag/bilans/docs) + objets MinIO best-effort, audité (trace survit) |
 | IDX-OPS-04 | Monitoring & supervision jobs | 3 | ✅ | JOB-01 | `GET /admin/jobs` filtrable + `/stats` (compteurs) + `POST /admin/jobs/{id}/retry` (relance, audité), JOBS_MANAGE · Sentry = hook |
-| IDX-OPS-05 | CI/CD & mise en production | 5 | ⬜ | FND-01 | push `develop`→staging · merge `main`→prod · health post-déploiement |
+| IDX-OPS-05 | CI/CD & mise en production | 5 | ✅* | FND-01 | **config livrée** : `deploy.yml` (develop→staging, main→prod, build GHCR + SSH compose + health), `docker-compose.prod.yml` (gunicorn, migrate one-shot), `.env.production.example`, [DEPLOYMENT.md](DEPLOYMENT.md) · *déploiement effectif = infra/secrets exploitant* |
 
-**Sprint 6 backend : 31 pts.**
+**Sprint 6 backend : 31 pts — ✅ LIVRÉ** (déploiement effectif = infra exploitant).
 
 ---
 

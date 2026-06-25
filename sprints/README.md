@@ -11,7 +11,7 @@ le périmètre et les critères d'acceptation détaillés dans `GUIDE.md`.
 | [S3](S3-academy-documents.md) | Academy, Documents & Opportunités (ACADEMY, DOC, OPP) | 26 | ✅ |
 | [S4](S4-pitch-simulator.md) | Simulateur de pitch « Le Comité » (PITCH, 4A) | 28 | ✅ |
 | [S5](S5-mentors-admin.md) | Mentors & Admin (MENTOR, ADMIN, OPP-02) | 36 | ✅ |
-| [S6](S6-instrumentation-ops.md) | Instrumentation, sécurité, RGPD, prod (INSTRUM, OPS) | 31 | ⬜ |
+| [S6](S6-instrumentation-ops.md) | Instrumentation, sécurité, RGPD, prod (INSTRUM, OPS) | 31 | ✅ |
 
 **Total backend MVP ≈ 178 pts** (hors stories front DS/DASH suivies dans `idea-front`).
 
