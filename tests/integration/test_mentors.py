@@ -73,6 +73,57 @@ async def test_mentor_onboarding_end_to_end(client) -> None:
     assert r.status_code == 422
 
 
+async def _register_founder(client, email: str) -> dict:
+    r = await client.post(
+        "/api/v1/auth/register",
+        json={"name": "Awa", "email": email, "password": "s3cret-pwd", "consent": True},
+    )
+    assert r.status_code == 201, r.text
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+async def _onboard_mentor(client, email: str, sectors: list) -> tuple:
+    from app.iam.models import Role
+
+    r = await client.post(
+        "/api/v1/mentors/apply",
+        json={"full_name": "Mentor X", "email": email, "sectors": sectors, "bio": "bio"},
+    )
+    app_id = r.json()["id"]
+    admin = await _staff_headers(f"admin-onb-{email}", Role.ADMIN)
+    r = await client.post(f"/api/v1/admin/mentor-applications/{app_id}/approve", headers=admin)
+    user_id, token = r.json()["user_id"], r.json()["invitation_token"]
+    await client.post("/api/v1/mentors/accept-invitation", json={"token": token, "password": "mentor-pass-1"})
+    r = await client.post("/api/v1/auth/login", json={"email": email, "password": "mentor-pass-1"})
+    return user_id, {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+async def test_mentor_profile_and_marketplace(client) -> None:
+    mentor_id, mentor = await _onboard_mentor(client, "koffi-mk@ideaxion.io", ["fintech"])
+
+    # Profil « me » (créé à l'approbation).
+    r = await client.get("/api/v1/mentors/me", headers=mentor)
+    assert r.status_code == 200 and "fintech" in r.json()["sectors"]
+
+    # Mise à jour partielle.
+    r = await client.patch("/api/v1/mentors/me", headers=mentor, json={"bio": "Expert paiement", "hourly_rate": 120})
+    assert r.status_code == 200 and r.json()["hourly_rate"] == 120.0
+
+    # Marketplace (côté porteur) filtrée par secteur.
+    founder = await _register_founder(client, "awa-mk@ideaxion.io")
+    r = await client.get("/api/v1/mentors?sector=fintech", headers=founder)
+    assert r.status_code == 200 and any(m["user_id"] == mentor_id for m in r.json())
+
+    # Demande d'accompagnement.
+    r = await client.post(f"/api/v1/mentors/{mentor_id}/request", headers=founder, json={"message": "Besoin d'aide"})
+    assert r.status_code == 201, r.text
+
+    # Le mentor se rend indisponible → disparaît de la marketplace.
+    await client.patch("/api/v1/mentors/me", headers=mentor, json={"is_active": False})
+    r = await client.get("/api/v1/mentors?sector=fintech", headers=founder)
+    assert not any(m["user_id"] == mentor_id for m in r.json())
+
+
 async def test_mentor_applications_require_permission(client) -> None:
     # Un porteur n'a pas accès à la revue des candidatures.
     r = await client.post(

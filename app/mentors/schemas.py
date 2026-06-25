@@ -38,3 +38,48 @@ class ApproveOut(BaseModel):
 class AcceptInvitationIn(BaseModel):
     token: str = Field(min_length=10)
     password: str = Field(min_length=8, max_length=200)
+
+
+# --- Profil & marketplace ---
+
+
+class MentorProfileMeOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: UUID
+    sectors: list
+    bio: str
+    cv_url: str | None
+    hourly_rate: float | None
+    is_active: bool
+
+
+class MentorProfileUpdateIn(BaseModel):
+    sectors: list[str] | None = None
+    bio: str | None = Field(default=None, max_length=4000)
+    cv_url: str | None = Field(default=None, max_length=500)
+    hourly_rate: float | None = Field(default=None, ge=0)
+    is_active: bool | None = None  # le mentor peut se rendre indisponible
+
+
+class MentorPublicOut(BaseModel):
+    # Carte marketplace (côté porteur).
+    user_id: UUID
+    full_name: str
+    sectors: list
+    bio: str
+    hourly_rate: float | None
+
+
+class MentorRequestIn(BaseModel):
+    project_id: UUID | None = None
+    message: str = Field(default="", max_length=2000)
+
+
+class MentorRequestOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    mentor_user_id: UUID
+    project_id: UUID | None
+    status: str

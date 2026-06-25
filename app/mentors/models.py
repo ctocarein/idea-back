@@ -52,3 +52,16 @@ class MentorProfile(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)  # visible marketplace
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+
+class MentorRequest(Base):
+    # Demande d'accompagnement d'un porteur vers un mentor (booking/paiement = v2).
+    __tablename__ = "mentor_requests"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    founder_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    mentor_user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[UUID | None] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), default=None)
+    message: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(20), default="requested", index=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())

@@ -162,8 +162,8 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | Code | Story | Pts | Statut | Dépend de | Note |
 | :--- | :--- | ---: | :--- | :--- | :--- |
 | IDX-MENTOR-01 | Candidature & création de compte par l'admin | 5 | ✅ | AUTH, DOC-01 | `POST /mentors/apply` (public, cv_url) · `/admin/mentor-applications` (liste/approve/reject, MENTOR_APPROVE) · approbation → compte INVITED + profil + **invitation à token** · `POST /mentors/accept-invitation` (active) · audité *(CV presigned = refinement)* |
-| IDX-MENTOR-02 | Profil mentor | 5 | ⬜ | MENTOR-01 | secteurs, bio, agenda, honoraires (champ), `GET/PATCH /mentors/me` |
-| IDX-MENTOR-03 | Marketplace découverte (côté porteur) | 5 | ⬜ | MENTOR-02 | `GET /mentors` filtrable · `POST /mentors/{id}/request` *(booking/paiement = v2)* |
+| IDX-MENTOR-02 | Profil mentor | 5 | ✅ | MENTOR-01 | `GET/PATCH /mentors/me` (secteurs, bio, honoraires, dispo) |
+| IDX-MENTOR-03 | Marketplace découverte (côté porteur) | 5 | ✅ | MENTOR-02 | `GET /mentors` filtrable secteur · `POST /mentors/{id}/request` (booking/paiement = v2) |
 | IDX-ADMIN-01 | Back-office projets (liste, détail, pilotage) | 8 | ✅ | AUTH-03, projects | `GET /admin/projects` filtré · `PATCH /admin/projects/{id}/review-status` (machine REVIEW_TRANSITIONS + audit) · `PATCH .../assignee` (admin) · garde rôle |
 | IDX-ADMIN-02 | Curation mentors & gouvernance grille | 5 | ⬜ | MENTOR-01, SCORING-01 | activer/suspendre mentor · **versionner la grille Radar** + catégories |
 | IDX-ADMIN-03 | Audit logs & timeline | 3 | ✅ | audit | `GET /admin/projects/{id}/timeline` + `GET /admin/audit-logs` filtrable (AUDIT_READ) |

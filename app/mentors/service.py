@@ -20,7 +20,16 @@ from app.iam.models import AccountStatus, Role
 from app.iam.repository import UserRepository
 from app.mentors.models import MentorApplicationStatus
 from app.mentors.repository import MentorRepository
-from app.mentors.schemas import ApproveOut, MentorApplicationOut, MentorApplyIn
+from app.mentors.schemas import (
+    ApproveOut,
+    MentorApplicationOut,
+    MentorApplyIn,
+    MentorProfileMeOut,
+    MentorProfileUpdateIn,
+    MentorPublicOut,
+    MentorRequestIn,
+    MentorRequestOut,
+)
 
 INVITATION_TTL_DAYS = 7
 
@@ -126,3 +135,55 @@ class MentorService:
         await self.repo.mark_invitation_accepted(inv)
         await self.auditor.record(actor_id=user.id, action="invitation.accepted", entity="invitation", entity_id=inv.id)
         await self.session.commit()
+
+    # --- Profil (MENTOR-02) ---
+
+    async def get_my_profile(self, ctx: AuthContext) -> MentorProfileMeOut:
+        profile = await self.repo.get_profile_by_user(ctx.user.id)
+        if profile is None:
+            raise NotFoundError("mentor_profile")
+        return MentorProfileMeOut.model_validate(profile)
+
+    async def update_my_profile(self, ctx: AuthContext, data: MentorProfileUpdateIn) -> MentorProfileMeOut:
+        profile = await self.repo.get_profile_by_user(ctx.user.id)
+        if profile is None:
+            raise NotFoundError("mentor_profile")
+        for field, value in data.model_dump(exclude_unset=True).items():
+            setattr(profile, field, value)
+        await self.session.commit()
+        return MentorProfileMeOut.model_validate(profile)
+
+    # --- Marketplace (MENTOR-03) ---
+
+    async def list_marketplace(self, sector: str | None = None) -> list[MentorPublicOut]:
+        rows = await self.repo.list_active_profiles(sector)
+        return [
+            MentorPublicOut(
+                user_id=p.user_id,
+                full_name=name,
+                sectors=p.sectors,
+                bio=p.bio,
+                hourly_rate=float(p.hourly_rate) if p.hourly_rate is not None else None,
+            )
+            for p, name in rows
+        ]
+
+    async def request_mentor(self, ctx: AuthContext, mentor_user_id: UUID, data: MentorRequestIn) -> MentorRequestOut:
+        profile = await self.repo.get_profile_by_user(mentor_user_id)
+        if profile is None or not profile.is_active:
+            raise NotFoundError("mentor")
+        req = await self.repo.create_request(
+            founder_id=ctx.user.id,
+            mentor_user_id=mentor_user_id,
+            project_id=data.project_id,
+            message=data.message,
+        )
+        await self.auditor.record(
+            actor_id=ctx.user.id,
+            action="mentor.requested",
+            entity="mentor_request",
+            entity_id=req.id,
+            new_value={"mentor_user_id": str(mentor_user_id)},
+        )
+        await self.session.commit()
+        return MentorRequestOut.model_validate(req)

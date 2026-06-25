@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from app.iam.dependencies import AuthContext, require
+from app.iam.dependencies import AuthContext, get_current_user, require
 from app.iam.permissions import Permission
 from app.mentors.dependencies import get_mentor_service
 from app.mentors.models import MentorApplicationStatus
@@ -15,6 +15,11 @@ from app.mentors.schemas import (
     ApproveOut,
     MentorApplicationOut,
     MentorApplyIn,
+    MentorProfileMeOut,
+    MentorProfileUpdateIn,
+    MentorPublicOut,
+    MentorRequestIn,
+    MentorRequestOut,
 )
 from app.mentors.service import MentorService
 
@@ -37,6 +42,44 @@ async def accept_invitation(
 ) -> None:
     # Activation : pose le mot de passe et active le compte (token usage unique).
     await svc.accept_invitation(body.token, body.password)
+
+
+@router.get("/mentors/me", response_model=MentorProfileMeOut)
+async def get_my_profile(
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> MentorProfileMeOut:
+    return await svc.get_my_profile(ctx)
+
+
+@router.patch("/mentors/me", response_model=MentorProfileMeOut)
+async def update_my_profile(
+    body: MentorProfileUpdateIn,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> MentorProfileMeOut:
+    return await svc.update_my_profile(ctx, body)
+
+
+@router.get("/mentors", response_model=list[MentorPublicOut])
+async def list_mentors(
+    sector: str | None = None,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> list[MentorPublicOut]:
+    # Marketplace découverte (côté porteur) — profils actifs, filtrables par secteur.
+    return await svc.list_marketplace(sector)
+
+
+@router.post("/mentors/{mentor_user_id}/request", response_model=MentorRequestOut, status_code=201)
+async def request_mentor(
+    mentor_user_id: UUID,
+    body: MentorRequestIn,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> MentorRequestOut:
+    # Demande d'accompagnement (booking/paiement = v2).
+    return await svc.request_mentor(ctx, mentor_user_id, body)
 
 
 @router.get("/admin/mentor-applications", response_model=list[MentorApplicationOut])
