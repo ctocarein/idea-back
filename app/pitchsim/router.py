@@ -88,47 +88,6 @@ async def start_session(
     return await svc.start_session(ctx, body)
 
 
-@router.post("/sessions/{session_id}/slide", response_model=SessionOut)
-async def submit_slide(
-    session_id: UUID,
-    body: SlideSubmitIn,
-    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
-    svc: PitchSessionService = Depends(get_session_service),
-) -> SessionOut:
-    # Narration d'une slide → réactions du comité (interruption si faiblesse détectée).
-    return await svc.submit_slide(ctx, session_id, body.narration, body.slide_id)
-
-
-@router.post("/sessions/{session_id}/answer", response_model=SessionOut)
-async def answer(
-    session_id: UUID,
-    body: AnswerIn,
-    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
-    svc: PitchSessionService = Depends(get_session_service),
-) -> SessionOut:
-    return await svc.answer(ctx, session_id, body.answer, body.shown_slide_id)
-
-
-@router.post("/sessions/{session_id}/imprevu", response_model=SessionOut)
-async def force_imprevu(
-    session_id: UUID,
-    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
-    svc: PitchSessionService = Depends(get_session_service),
-) -> SessionOut:
-    # « Imprévu forcé » (entraînement) — l'investisseur surprise.
-    return await svc.force_imprevu(ctx, session_id)
-
-
-@router.post("/sessions/{session_id}/finish", response_model=SessionOut)
-async def finish_session(
-    session_id: UUID,
-    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
-    svc: PitchSessionService = Depends(get_session_service),
-) -> SessionOut:
-    # Délibération du comité (le scoring Fond/Forme arrive en PITCH-04).
-    return await svc.finish(ctx, session_id)
-
-
 @router.post("/sessions/{session_id}/abandon", status_code=204)
 async def abandon_session(
     session_id: UUID,

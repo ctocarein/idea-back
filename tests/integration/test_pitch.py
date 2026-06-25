@@ -75,81 +75,6 @@ async def test_upload_deck_rejects_bad_type(client) -> None:
     assert r.status_code == 422, r.text
 
 
-async def test_pitch_session_flow_with_committee(client) -> None:
-    headers = await _register(client, "pitch-session@ideaxion.io")
-
-    # Démarrer une session devant le comité Incubateur.
-    r = await client.post(
-        "/api/v1/pitchsim/sessions",
-        headers=headers,
-        json={"committee_key": "incubateur", "mode": "slides"},
-    )
-    assert r.status_code == 200, r.text
-    ps = r.json()
-    assert ps["status"] == "in_progress"
-    sid = ps["id"]
-    assert any(t["kind"] == "deliberation" for t in ps["turns"])  # briefing
-
-    # Narration faible (courte, sans chiffres) → un juge interrompt sur sa faiblesse.
-    r = await client.post(
-        f"/api/v1/pitchsim/sessions/{sid}/slide",
-        headers=headers,
-        json={"narration": "Bonjour, voici mon projet."},
-    )
-    assert r.status_code == 200, r.text
-    turns = r.json()["turns"]
-    interruptions = [t for t in turns if t["kind"] == "interruption"]
-    assert interruptions, "une faiblesse aurait dû déclencher une interruption"
-    assert interruptions[0]["meta"].get("axis")
-
-    # Le porteur répond.
-    r = await client.post(
-        f"/api/v1/pitchsim/sessions/{sid}/answer",
-        headers=headers,
-        json={"answer": "Le marché fait 500M€ selon l'étude McKinsey 2025."},
-    )
-    assert r.status_code == 200
-
-    # Imprévu forcé (entraînement).
-    r = await client.post(f"/api/v1/pitchsim/sessions/{sid}/imprevu", headers=headers)
-    assert r.status_code == 200
-    assert any(t["kind"] == "imprevu" for t in r.json()["turns"])
-
-    # Fin → délibération + scoring + statut completed.
-    r = await client.post(f"/api/v1/pitchsim/sessions/{sid}/finish", headers=headers)
-    assert r.status_code == 200, r.text
-    final = r.json()
-    assert final["status"] == "completed"
-    assert any(t["kind"] == "deliberation" for t in final["turns"])
-
-    # Le score (Fond credential + Forme coaching) est disponible.
-    r = await client.get(f"/api/v1/pitchsim/sessions/{sid}/run", headers=headers)
-    assert r.status_code == 200, r.text
-    run = r.json()
-    assert len(run["fond_scores"]) == 8  # 8 axes Fond
-    assert 0 <= run["overall_fond"] <= 10
-    assert set(run["forme_scores"]) == {"concision", "fluidite", "completude", "structure"}
-    assert 0 <= run["overall_global"] <= 10
-    assert len(run["strengths"]) == 3 and len(run["weaknesses"]) == 3
-
-    # Post-mortem : radar 10 axes, progression, plan d'entraînement → Academy/OPP.
-    r = await client.get(f"/api/v1/pitchsim/sessions/{sid}/post-mortem", headers=headers)
-    assert r.status_code == 200, r.text
-    pm = r.json()
-    assert len(pm["radar"]) == 10  # 8 Fond + 2 bio
-    assert pm["scores"]["level"]["title"]
-    assert pm["training_plan"][-1]["type"] == "opportunity"
-    assert pm["progression"]
-
-    # Action après finish interdite (machine à états).
-    r = await client.post(
-        f"/api/v1/pitchsim/sessions/{sid}/slide",
-        headers=headers,
-        json={"narration": "encore"},
-    )
-    assert r.status_code == 422
-
-
 async def test_silent_committee_flow(client) -> None:
     # Parcours « comité silencieux » (PITCH-06) bout en bout sur le Postgres de test.
     headers = await _register(client, "silent@ideaxion.io")
@@ -201,10 +126,15 @@ async def test_silent_committee_flow(client) -> None:
     assert any(t["kind"] == "free_round" for t in s["turns"])  # les agents se sont parlé
     assert any(t["kind"] == "deliberation" for t in s["turns"])
 
-    # Le score + les VERDICTS VERBATIM (Règle d'or n°5) sont disponibles.
+    # Le score (Fond credential + Forme) + les VERDICTS VERBATIM (Règle d'or n°5).
     run = (await client.get(f"{base}/{sid}/run", headers=headers)).json()
+    assert len(run["fond_scores"]) == 8 and 0 <= run["overall_fond"] <= 10
+    assert set(run["forme_scores"]) == {"concision", "fluidite", "completude", "structure"}
     assert run["verdicts"] and all(v.get("text") and v.get("agent") for v in run["verdicts"])
+    # Post-mortem : radar 10 axes, niveau, progression, plan → Academy/OPP, mots des agents.
     pm = (await client.get(f"{base}/{sid}/post-mortem", headers=headers)).json()
+    assert len(pm["radar"]) == 10 and pm["scores"]["level"]["title"]
+    assert pm["training_plan"][-1]["type"] == "opportunity" and pm["progression"]
     assert pm["verdicts"]
 
 

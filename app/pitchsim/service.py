@@ -146,10 +146,6 @@ class PitchSessionService:
         guard_owner_access(owner_id=ps.owner_id, ctx=ctx)
         return ps
 
-    def _require_in_progress(self, ps: PitchSession) -> None:
-        if ps.status != PitchStatus.IN_PROGRESS:
-            raise BusinessRuleError(f"Session {ps.status.value} : action impossible.")
-
     def _personas(self, committee_key: str) -> list[dict]:
         committee = get_committee(committee_key)
         if committee is None:
@@ -205,74 +201,6 @@ class PitchSessionService:
         ps.orch = {"personas": personas}
         names = ", ".join(p["name"] for p in personas)
         await self._add(ps, actor="systeme", kind="deliberation", content=f"Le comité : {names}. Vous avez la parole.")
-        await self.session.commit()
-        return await self._out(ps)
-
-    async def submit_slide(
-        self, ctx: AuthContext, session_id: UUID, narration: str, slide_id: UUID | None
-    ) -> SessionOut:
-        ps = await self._load_owned(ctx, session_id)
-        self._require_in_progress(ps)
-        await self._add(ps, actor="porteur", kind="narration", content=narration, slide_id=slide_id)
-        # Pré-notation heuristique → un juge interrompt si une faiblesse touche son obsession.
-        weak = scenario.assess_weakness(narration)
-        interruption = scenario.choose_interruption(
-            self._personas(ps.committee_key),
-            weak,
-            imprevus_enabled=ps.config.get("imprevus", True) and not ps.config.get("silence", False),
-            hard_questions=ps.config.get("hard_questions", True),
-            seed_key=f"{ps.id}:{await self.repo.turn_count(ps.id)}",
-        )
-        if interruption is not None:
-            await self._add(
-                ps,
-                actor=interruption["actor"],
-                kind="interruption",
-                content=interruption["content"],
-                meta={"axis": interruption["axis"], "imprevu_type": interruption["type"]},
-            )
-        await self.session.commit()
-        return await self._out(ps)
-
-    async def answer(self, ctx: AuthContext, session_id: UUID, answer: str, shown_slide_id: UUID | None) -> SessionOut:
-        ps = await self._load_owned(ctx, session_id)
-        self._require_in_progress(ps)
-        await self._add(ps, actor="porteur", kind="answer", content=answer, slide_id=shown_slide_id)
-        await self.session.commit()
-        return await self._out(ps)
-
-    async def force_imprevu(self, ctx: AuthContext, session_id: UUID) -> SessionOut:
-        ps = await self._load_owned(ctx, session_id)
-        self._require_in_progress(ps)
-        surprise = scenario.investor_surprise()
-        await self._add(
-            ps,
-            actor=surprise["actor"],
-            kind="imprevu",
-            content=surprise["content"],
-            meta={"imprevu_type": surprise["type"]},
-        )
-        await self.session.commit()
-        return await self._out(ps)
-
-    async def finish(self, ctx: AuthContext, session_id: UUID) -> SessionOut:
-        ps = await self._load_owned(ctx, session_id)
-        self._require_in_progress(ps)
-        await self.repo.set_status(ps, PitchStatus.DELIBERATING)
-        turns = await self.repo.turns_for_session(ps.id)
-
-        # Verdicts du comité (déterministes), à partir des faiblesses cumulées.
-        weak: set[str] = set()
-        for t in turns:
-            if t.kind == "narration":
-                weak.update(scenario.assess_weakness(t.content))
-        for v in scenario.deliberation(self._personas(ps.committee_key), list(weak)):
-            await self._add(ps, actor=v["actor"], kind="deliberation", content=v["content"])
-
-        # Scoring à finish : Fond (LLM ancré) + Forme (déterministe).
-        await self._score(ps, turns)
-
-        await self.repo.set_status(ps, PitchStatus.COMPLETED)
         await self.session.commit()
         return await self._out(ps)
 

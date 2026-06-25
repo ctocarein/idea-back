@@ -150,7 +150,7 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-PITCH-06d | **Tour libre** + **délibération verbatim** → rapport « mots des agents » | 5 | ✅ |
 | IDX-PITCH-06e | **Micro-réactions** + conviction (signaux front) | 3 | ✅ |
 
-**PITCH-06 ≈ 26 pts — ✅ LIVRÉ** (texte ; gating niveau/palier = hook ; realtime/voix/avatars/TTS = V2 « La Salle »). Le flux 4A (interruption) coexiste, à retirer en nettoyage ultérieur.
+**PITCH-06 ≈ 26 pts — ✅ LIVRÉ** (texte ; gating niveau/palier = hook ; realtime/voix/avatars/TTS = V2 « La Salle »). **Nettoyage fait** : l'ancien flux 4A (interruption) a été retiré → le « comité silencieux » est le seul modèle d'interaction (single source of truth).
 
 ---
 
