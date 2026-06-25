@@ -45,6 +45,7 @@ def _sample() -> PostMortemOut:
         timeline=[],
         strengths=[{"axis": "solution", "label": "Solution", "score": 7, "note": ""}],
         weaknesses=[{"axis": "marche", "label": "Marché", "score": 3, "note": ""}],
+        verdicts=[{"agent": "M. Morel", "text": "Marché flou.", "vote": "nogo"}],
         progression=[{"global": 4.0}, {"global": 5.1}],
         training_plan=postmortem.training_plan([{"axis": "marche"}]),
     )
@@ -57,3 +58,4 @@ def test_render_html_contains_key_sections():
     assert "Marché" in html
     assert "Mode Caméra" in html  # axe biométrique non noté
     assert "Plan d'entraînement" in html
+    assert "Les mots du comité" in html and "Marché flou." in html  # verdicts verbatim

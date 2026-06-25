@@ -197,11 +197,14 @@ async def test_silent_committee_flow(client) -> None:
     r = await client.post(f"{base}/{sid}/deliberate", headers=headers)
     s = r.json()
     assert s["phase"] == "completed" and s["status"] == "completed"
+    assert any(t["kind"] == "free_round" for t in s["turns"])  # les agents se sont parlé
     assert any(t["kind"] == "deliberation" for t in s["turns"])
 
-    # Le score (credential) et le post-mortem sont disponibles.
-    assert (await client.get(f"{base}/{sid}/run", headers=headers)).status_code == 200
-    assert (await client.get(f"{base}/{sid}/post-mortem", headers=headers)).status_code == 200
+    # Le score + les VERDICTS VERBATIM (Règle d'or n°5) sont disponibles.
+    run = (await client.get(f"{base}/{sid}/run", headers=headers)).json()
+    assert run["verdicts"] and all(v.get("text") and v.get("agent") for v in run["verdicts"])
+    pm = (await client.get(f"{base}/{sid}/post-mortem", headers=headers)).json()
+    assert pm["verdicts"]
 
 
 async def _run_silent_qa(client, headers, project_id) -> set:

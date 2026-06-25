@@ -118,6 +118,31 @@ def qa_order(personas: list[dict]) -> list[str]:
     return [p["name"] for p in personas]
 
 
+def free_round(personas: list[dict], convictions: dict[str, int]) -> list[dict]:
+    """Tour libre : les agents se parlent (déterministe, d'après les convictions).
+
+    Le plus sceptique exprime un doute ; le plus convaincu rebondit. Donne le *débat* sans LLM.
+    """
+    if not personas:
+        return []
+    skeptic = min(personas, key=lambda p: convictions.get(p["name"], 0))
+    champion = max(personas, key=lambda p: convictions.get(p["name"], 0))
+    out = [
+        {
+            "actor": skeptic["name"],
+            "content": f"{skeptic['name']} : Je reste sceptique sur {skeptic['obsession'].replace('_', ' ')}.",
+        }
+    ]
+    if champion["name"] != skeptic["name"]:
+        out.append(
+            {
+                "actor": champion["name"],
+                "content": f"{champion['name']} : Sa remarque est dure mais juste — j'aimerais entendre votre réponse.",
+            }
+        )
+    return out
+
+
 def next_speaker(order: list[str], index: int) -> str | None:
     return order[index] if 0 <= index < len(order) else None
 

@@ -105,6 +105,7 @@ class PitchRunOut(BaseModel):
     overall_global: float
     strengths: list
     weaknesses: list
+    verdicts: list = []  # les mots des agents (délibération verbatim)
 
 
 class PostMortemOut(BaseModel):
@@ -114,5 +115,6 @@ class PostMortemOut(BaseModel):
     timeline: list[TurnOut]
     strengths: list
     weaknesses: list
+    verdicts: list = []  # les mots exacts des agents (délibération verbatim)
     progression: list[dict]  # [{global}] des sessions du projet
     training_plan: list[dict]  # routage faiblesses → academy/preuves/mentor/session/opportunités

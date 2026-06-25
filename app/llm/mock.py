@@ -37,7 +37,12 @@ class MockProvider:
         return LLMResult(text="(mock)", model=self.model)
 
     async def analyze_json(self, prompt: str, *, schema: dict | None = None) -> dict:
-        # Deux formats selon le marqueur du prompt (axes scorés vs rapport structuré).
+        # Plusieurs formats selon le marqueur du prompt.
+        if "FORMAT=verdict" in prompt:
+            return {
+                "verdict": "(mock) Du potentiel, mais des points à confirmer avant de m'engager.",
+                "vote": "conditional",
+            }
         if "FORMAT=report" in prompt:
             return self._mock_report()
         # Extrait les clés d'axes ("- <key> (Label) — …") → score stable 30-90.

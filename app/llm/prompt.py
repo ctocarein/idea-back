@@ -15,6 +15,21 @@ PROMPT_VERSION = "scoring-v2"
 REPORT_PROMPT_VERSION = "report-v1"
 COACH_PROMPT_VERSION = "coach-v1"
 PITCH_PROMPT_VERSION = "pitch-v1"
+VERDICT_PROMPT_VERSION = "verdict-v1"
+
+
+def build_verdict_prompt(*, persona: dict, transcript: str, conviction: int) -> str:
+    # Délibération : l'agent donne SON verdict, avec SES mots et son style (Règle d'or n°5).
+    return "\n".join(
+        [
+            "FORMAT=verdict.",
+            f"Tu es {persona['name']}, {persona.get('role', '')} ({persona.get('personality', '')}).",
+            f"Ton obsession : {persona.get('obsession', '')}. Ta conviction (−2 à +2) : {conviction}.",
+            "Après ce pitch, donne TON verdict en 1-2 phrases, avec TES mots et ton style — franc et utile.",
+            f"Pitch (transcript) : {transcript[:2000]}",
+            'Réponds STRICTEMENT en JSON : { "verdict": "<1-2 phrases>", "vote": "go|conditional|nogo" }',
+        ]
+    )
 
 
 def build_pitch_prompt(

@@ -36,6 +36,9 @@ def render_postmortem_html(pm: PostMortemOut) -> str:
 
     strengths = "".join(f"<li>✅ {escape(w['label'])} ({w['score']}/10)</li>" for w in pm.strengths)
     weaknesses = "".join(f"<li>⚠️ {escape(w['label'])} ({w['score']}/10)</li>" for w in pm.weaknesses)
+    verdicts = "".join(
+        f"<li><b>{escape(v.get('agent', ''))}</b> : {escape(v.get('text', ''))}</li>" for v in pm.verdicts
+    )
     plan = "".join(f"<li>{escape(p['label'])}</li>" for p in pm.training_plan)
     progression = " → ".join(f"{p['global']}" for p in pm.progression)
 
@@ -56,6 +59,7 @@ def render_postmortem_html(pm: PostMortemOut) -> str:
   <table>{radar}</table>
   <h2>Forces</h2><ul>{strengths or "<li>—</li>"}</ul>
   <h2>À travailler</h2><ul>{weaknesses or "<li>—</li>"}</ul>
+  <h2>Les mots du comité</h2><ul>{verdicts or "<li>—</li>"}</ul>
   <h2>Progression</h2><p>{progression}</p>
   <h2>Plan d'entraînement</h2><ul>{plan}</ul>
 </body></html>"""

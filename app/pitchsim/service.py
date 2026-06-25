@@ -13,7 +13,7 @@ from app.core.errors import BusinessRuleError, NotFoundError
 from app.core.storage import ObjectStorage
 from app.iam.dependencies import AuthContext, guard_owner_access
 from app.llm.base import LLMProvider
-from app.llm.prompt import build_pitch_prompt
+from app.llm.prompt import build_pitch_prompt, build_verdict_prompt
 from app.pitchsim import evaluate, forme, orchestrator, postmortem, scenario
 from app.pitchsim.constants import BIO_AXES, FORMATS, committee_timing, resolve_personas
 from app.pitchsim.constants import committee as get_committee
@@ -276,7 +276,7 @@ class PitchSessionService:
         await self.session.commit()
         return await self._out(ps)
 
-    async def _score(self, ps: PitchSession, turns: list[PitchTurn]) -> None:
+    async def _score(self, ps: PitchSession, turns: list[PitchTurn], verdicts: list[dict] | None = None) -> None:
         rubric = await self.rubrics.get_active()
         if rubric is None:
             raise BusinessRuleError("Aucune rubrique de pitch active.")
@@ -328,6 +328,7 @@ class PitchSessionService:
             overall_global=overall_global,
             strengths=strengths,
             weaknesses=weaknesses,
+            verdicts=verdicts or [],
         )
 
     async def get_run(self, ctx: AuthContext, session_id: UUID) -> PitchRunOut:
@@ -373,6 +374,7 @@ class PitchSessionService:
             timeline=[TurnOut.model_validate(t) for t in turns],
             strengths=run.strengths,
             weaknesses=run.weaknesses,
+            verdicts=run.verdicts,
             progression=progression,
             training_plan=postmortem.training_plan(run.weaknesses),
         )
@@ -515,17 +517,28 @@ class PitchSessionService:
 
     async def deliberate(self, ctx: AuthContext, session_id: UUID) -> SessionOut:
         ps = await self._load_owned(ctx, session_id)
+        personas = self._session_personas(ps)
+        convictions = ps.orch.get("convictions", {})
         if self._phase(ps) == orchestrator.PitchPhase.QA:
-            await self._set_phase(ps, orchestrator.PitchPhase.FREE_ROUND)  # tour libre (vide au skeleton)
+            await self._set_phase(ps, orchestrator.PitchPhase.FREE_ROUND)
+        # Tour libre : les agents se parlent (déterministe, d'après les convictions).
+        for ex in orchestrator.free_round(personas, convictions):
+            await self._add(ps, actor=ex["actor"], kind="free_round", content=ex["content"])
         await self._set_phase(ps, orchestrator.PitchPhase.DELIBERATING)
+
         turns = await self.repo.turns_for_session(ps.id)
-        weak: set[str] = set()
-        for t in turns:
-            if t.kind == "narration":
-                weak.update(scenario.assess_weakness(t.content))
-        for v in scenario.deliberation(self._session_personas(ps), list(weak)):
-            await self._add(ps, actor=v["actor"], kind="deliberation", content=v["content"])
-        await self._score(ps, turns)  # réutilise le scoring Fond/Forme de PITCH-04
+        transcript = "\n".join(t.content for t in turns if t.kind in ("narration", "answer"))
+        # Verdicts VERBATIM : un appel LLM par persona (ses mots, son style — Règle d'or n°5).
+        verdicts: list[dict] = []
+        for p in personas:
+            raw = await self.provider.analyze_json(
+                build_verdict_prompt(persona=p, transcript=transcript, conviction=int(convictions.get(p["name"], 0)))
+            )
+            text = raw.get("verdict", "")
+            verdicts.append({"agent": p["name"], "text": text, "vote": raw.get("vote", "conditional")})
+            await self._add(ps, actor=p["name"], kind="deliberation", content=text)
+
+        await self._score(ps, turns, verdicts=verdicts)
         await self._set_phase(ps, orchestrator.PitchPhase.COMPLETED)
         ps.status = PitchStatus.COMPLETED
         await self.session.commit()

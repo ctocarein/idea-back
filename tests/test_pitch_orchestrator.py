@@ -107,6 +107,14 @@ def test_next_question_none_when_all_angles_used():
     assert orch.next_question(diallo, used, "s") is None
 
 
+def test_free_round_skeptic_speaks_first():
+    convictions = {"M. Morel": -2, "Mme Diallo": 2}  # Morel le plus sceptique, Diallo la plus convaincue
+    out = orch.free_round(INCUB, convictions)
+    assert out and out[0]["actor"] == "M. Morel"
+    assert any(p["name"] == "Mme Diallo" for p in INCUB)  # garde-fou données
+    assert len(out) >= 2  # le sceptique + un rebond
+
+
 def test_pick_angle_avoids_history_but_falls_back():
     # L'historique inter-sessions est évité si possible…
     res = orch.pick_angle("marche", [], "s", history=["source"])

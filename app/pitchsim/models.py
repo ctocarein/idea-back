@@ -127,4 +127,6 @@ class PitchRun(Base):
 
     strengths: Mapped[list] = mapped_column(JSONB, default=list)
     weaknesses: Mapped[list] = mapped_column(JSONB, default=list)
+    # Les mots EXACTS de chaque agent en délibération (Règle d'or n°5) : [{agent, text, vote}].
+    verdicts: Mapped[list] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), index=True)
