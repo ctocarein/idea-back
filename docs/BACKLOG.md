@@ -183,7 +183,7 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-OPS-01 | Tests de recette | 5 | 🟡 | tout | **test d'intégration du parcours porteur** (register→diagnostic→worker→bilan, LLM mock, `tests/integration`) ✅ · scénarios `CAHIER_RECETTE` complets + couverture ≥ 70 % ⬜ |
 | IDX-OPS-02 | Durcissement sécurité | 5 | ⬜ | AUTH-04 | headers, sanitization, rate-limit effectif · **tests 401/403 exhaustifs** |
 | IDX-OPS-03 | Conformité RGPD | 5 | ✅ | tout | `app/gdpr` : `GET /me/export` (portabilité JSON) · `DELETE /me` effacement cascade SQL (projets/diag/bilans/docs) + objets MinIO best-effort, audité (trace survit) |
-| IDX-OPS-04 | Monitoring & supervision jobs | 3 | ⬜ | JOB-01 | Sentry + métriques · `GET /admin/jobs` + relance · alerte job échoué |
+| IDX-OPS-04 | Monitoring & supervision jobs | 3 | ✅ | JOB-01 | `GET /admin/jobs` filtrable + `/stats` (compteurs) + `POST /admin/jobs/{id}/retry` (relance, audité), JOBS_MANAGE · Sentry = hook |
 | IDX-OPS-05 | CI/CD & mise en production | 5 | ⬜ | FND-01 | push `develop`→staging · merge `main`→prod · health post-déploiement |
 
 **Sprint 6 backend : 31 pts.**

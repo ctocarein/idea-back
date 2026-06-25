@@ -15,6 +15,7 @@ from app.documents.router import router as documents_router
 from app.gdpr.router import router as gdpr_router
 from app.iam.router import router as iam_router
 from app.instrumentation.router import router as analytics_router
+from app.jobs.router import router as jobs_admin_router
 from app.mentors.router import router as mentors_router
 from app.opportunities.router import router as opportunities_router
 from app.pitchsim.router import router as pitchsim_router
@@ -47,6 +48,7 @@ api_router.include_router(scoring_admin_router)  # /admin/scoring/grids/* (Sprin
 api_router.include_router(sharing_router)  # /projects/{id}/share, /shared/{token} (Sprint 5)
 api_router.include_router(analytics_router)  # /admin/learning-dashboard (Sprint 6)
 api_router.include_router(gdpr_router)  # /me/export, DELETE /me (Sprint 6)
+api_router.include_router(jobs_admin_router)  # /admin/jobs/* (Sprint 6)
 
 # Sprints suivants (à monter quand prêts) :
 #   from app.mentors.router import router as mentors_router          # Sprint 5

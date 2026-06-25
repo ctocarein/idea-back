@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.jobs.models import Job, JobStatus
@@ -67,6 +67,27 @@ class JobRepository:
 
     async def get_by_id(self, job_id: UUID) -> Job | None:
         return await self.session.get(Job, job_id)
+
+    async def list_filtered(self, status: JobStatus | None = None, *, limit: int = 100) -> list[Job]:
+        stmt = select(Job).order_by(Job.created_at.desc()).limit(limit)
+        if status is not None:
+            stmt = stmt.where(Job.status == status)
+        result = await self.session.execute(stmt)
+        return list(result.scalars())
+
+    async def counts_by_status(self) -> dict[str, int]:
+        result = await self.session.execute(select(Job.status, func.count()).group_by(Job.status))
+        return {status.value: int(count) for status, count in result.all()}
+
+    async def requeue(self, job: Job) -> None:
+        # Relance manuelle (admin) : on remet le job en file, compteur et erreurs réinitialisés.
+        job.status = JobStatus.PENDING
+        job.retry_count = 0
+        job.error_message = None
+        job.started_at = None
+        job.finished_at = None
+        job.scheduled_at = datetime.now(UTC)
+        await self.session.flush()
 
     async def mark_completed(self, job: Job) -> None:
         job.status = JobStatus.COMPLETED
