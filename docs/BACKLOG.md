@@ -35,7 +35,7 @@ de l'exécution ; le GUIDE reste la spec. Périmètre : **stories à dominante b
 | **OPP** | Espace opportunités (éligibilité déterministe) | S3 | ✅ | 5 |
 | **PITCH** | Simulateur de pitch « Le Comité » (`app/pitchsim`) | S4 | ✅ | 28 |
 | **MENTOR** | Onboarding & marketplace mentors (`app/mentors`) | S5 | ✅ | 15 |
-| **ADMIN** | Back-office (`app/projects`, `app/audit`) | S5 | ⬜ | 16 |
+| **ADMIN** | Back-office (`app/projects`, `app/audit`) | S5 | ✅ | 16 |
 | **INSTRUM** | Instrumentation d'apprentissage (transverse) | S6 | 🟡 | 8 |
 | **OPS** | Tests, sécurité, RGPD, monitoring, prod | S6 | ⬜ | 23 |
 | **PAY/SIGN/CERTIF/DEALFLOW** | Monétisation & industrialisation (`app/_v2/`) | — | ⏳ | — |
@@ -167,9 +167,9 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-ADMIN-01 | Back-office projets (liste, détail, pilotage) | 8 | ✅ | AUTH-03, projects | `GET /admin/projects` filtré · `PATCH /admin/projects/{id}/review-status` (machine REVIEW_TRANSITIONS + audit) · `PATCH .../assignee` (admin) · garde rôle |
 | IDX-ADMIN-02 | Curation mentors & gouvernance grille | 5 | ✅ | MENTOR-01, SCORING-01 | suspend/activate mentor (statut + marketplace, audité) · `GET /admin/scoring/grids` + `POST ./{version}/activate` (une seule active, audité) |
 | IDX-ADMIN-03 | Audit logs & timeline | 3 | ✅ | audit | `GET /admin/projects/{id}/timeline` + `GET /admin/audit-logs` filtrable (AUDIT_READ) |
-| IDX-OPP-02 | Fiche projet partageable (B2B) + visibilité | 5 | ⬜ | reports, OPS-03 | **export/partage du rapport** pensé jury/incubateur (la *triple-lecture* : porteur/analyste/jury) · **visibilité contrôlée par le porteur** (consentement explicite, ce qui est partagé) · base du sourcing B2B (vue organisateur = post-MVP) |
+| IDX-OPP-02 | Fiche projet partageable (B2B) + visibilité | 5 | ✅ | reports, OPS-03 | `app/sharing` : `POST/DELETE /projects/{id}/share` (consentement explicite, révocable) · `GET /shared/{token}` **fiche publique jury/incubateur** (score + synthèse + forces, pas d'internes) |
 
-**Sprint 5 backend : 36 pts.**
+**Sprint 5 backend : 36 pts — ✅ LIVRÉ.**
 
 ---
 
