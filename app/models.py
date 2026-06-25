@@ -20,6 +20,7 @@ from app.iam.invitations import Invitation  # noqa: F401
 from app.iam.models import PermissionGrant, RefreshToken, User  # noqa: F401
 from app.instrumentation.models import Event  # noqa: F401
 from app.jobs.models import Job  # noqa: F401
+from app.mentors.models import MentorApplication, MentorProfile  # noqa: F401
 from app.opportunities.models import Opportunity  # noqa: F401
 from app.pitchsim.models import (  # noqa: F401
     PitchDeck,
@@ -43,6 +44,8 @@ __all__ = [
     "Job",
     "LearningProgress",
     "Lesson",
+    "MentorApplication",
+    "MentorProfile",
     "Opportunity",
     "PermissionGrant",
     "PitchDeck",

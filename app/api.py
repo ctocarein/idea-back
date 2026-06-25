@@ -13,6 +13,7 @@ from app.audit.router import router as audit_router
 from app.diagnostics.router import router as diagnostics_router
 from app.documents.router import router as documents_router
 from app.iam.router import router as iam_router
+from app.mentors.router import router as mentors_router
 from app.opportunities.router import router as opportunities_router
 from app.pitchsim.router import router as pitchsim_router
 from app.platform.router import router as platform_router
@@ -37,6 +38,7 @@ api_router.include_router(opportunities_router)  # /opportunities/* (Sprint 3)
 api_router.include_router(pitchsim_router)  # /pitchsim/*       (Sprint 4)
 api_router.include_router(projects_admin_router)  # /admin/projects/* (Sprint 5)
 api_router.include_router(audit_router)  # /admin/audit-logs   (Sprint 5)
+api_router.include_router(mentors_router)  # /mentors/*, /admin/mentor-applications/* (Sprint 5)
 
 # Sprints suivants (à monter quand prêts) :
 #   from app.mentors.router import router as mentors_router          # Sprint 5
