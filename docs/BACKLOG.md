@@ -182,7 +182,7 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | IDX-INSTRUM-01 ★ | Tableau de bord d'apprentissage | 8 | ✅ | tout S2-S5 | **socle d'événements posé** (`app/instrumentation` : table `events` + `emit`) + **funnel maillon** (`bilan_viewed` à la lecture, `action_started` sur `POST /reports/{id}/actions/{key}/start`) ✅ · **agrégations + `GET /admin/learning-dashboard`** (funnel bilan_viewed→action_started→opportunity_interest + taux de conversion) ✅ |
 | IDX-OPS-01 | Tests de recette | 5 | 🟡 | tout | **test d'intégration du parcours porteur** (register→diagnostic→worker→bilan, LLM mock, `tests/integration`) ✅ · scénarios `CAHIER_RECETTE` complets + couverture ≥ 70 % ⬜ |
 | IDX-OPS-02 | Durcissement sécurité | 5 | ⬜ | AUTH-04 | headers, sanitization, rate-limit effectif · **tests 401/403 exhaustifs** |
-| IDX-OPS-03 | Conformité RGPD | 5 | ⬜ | tout | export JSON · effacement cascade (projet/diag/docs + objets MinIO) · transactionnel |
+| IDX-OPS-03 | Conformité RGPD | 5 | ✅ | tout | `app/gdpr` : `GET /me/export` (portabilité JSON) · `DELETE /me` effacement cascade SQL (projets/diag/bilans/docs) + objets MinIO best-effort, audité (trace survit) |
 | IDX-OPS-04 | Monitoring & supervision jobs | 3 | ⬜ | JOB-01 | Sentry + métriques · `GET /admin/jobs` + relance · alerte job échoué |
 | IDX-OPS-05 | CI/CD & mise en production | 5 | ⬜ | FND-01 | push `develop`→staging · merge `main`→prod · health post-déploiement |
 
