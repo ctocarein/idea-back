@@ -180,8 +180,8 @@ Le score est traité comme un **système mesuré**, pas un appel LLM (cf. mémoi
 | Code | Story | Pts | Statut | Dépend de | Note |
 | :--- | :--- | ---: | :--- | :--- | :--- |
 | IDX-INSTRUM-01 ★ | Tableau de bord d'apprentissage | 8 | ✅ | tout S2-S5 | **socle d'événements posé** (`app/instrumentation` : table `events` + `emit`) + **funnel maillon** (`bilan_viewed` à la lecture, `action_started` sur `POST /reports/{id}/actions/{key}/start`) ✅ · **agrégations + `GET /admin/learning-dashboard`** (funnel bilan_viewed→action_started→opportunity_interest + taux de conversion) ✅ |
-| IDX-OPS-01 | Tests de recette | 5 | 🟡 | tout | **test d'intégration du parcours porteur** (register→diagnostic→worker→bilan, LLM mock, `tests/integration`) ✅ · scénarios `CAHIER_RECETTE` complets + couverture ≥ 70 % ⬜ |
-| IDX-OPS-02 | Durcissement sécurité | 5 | ⬜ | AUTH-04 | headers, sanitization, rate-limit effectif · **tests 401/403 exhaustifs** |
+| IDX-OPS-01 | Tests de recette | 5 | 🟡 | tout | **test d'intégration du parcours porteur** (register→diagnostic→worker→bilan, LLM mock, `tests/integration`) ✅ · **large couverture d'intégration** (parcours porteur, pitch, mentors, admin, RGPD, jobs, sécurité — 153 tests) ✅ · cahier de recette formel ⬜ |
+| IDX-OPS-02 | Durcissement sécurité | 5 | ✅ | AUTH-04 | en-têtes (même sur erreur) + rate-limit (AUTH-04) · **tests 401/403 exhaustifs** sur la surface admin + token invalide |
 | IDX-OPS-03 | Conformité RGPD | 5 | ✅ | tout | `app/gdpr` : `GET /me/export` (portabilité JSON) · `DELETE /me` effacement cascade SQL (projets/diag/bilans/docs) + objets MinIO best-effort, audité (trace survit) |
 | IDX-OPS-04 | Monitoring & supervision jobs | 3 | ✅ | JOB-01 | `GET /admin/jobs` filtrable + `/stats` (compteurs) + `POST /admin/jobs/{id}/retry` (relance, audité), JOBS_MANAGE · Sentry = hook |
 | IDX-OPS-05 | CI/CD & mise en production | 5 | ⬜ | FND-01 | push `develop`→staging · merge `main`→prod · health post-déploiement |
