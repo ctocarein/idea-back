@@ -263,26 +263,46 @@ def committee(key: str) -> dict | None:
     return next((c for c in COMMITTEES if c["key"] == key), None)
 
 
-# --- Timing par comité (PITCH-06 §14.5) : contexte × format ---
-FORMATS = {"elevator": 1, "standard": 3, "long": 5}  # minutes
+# --- Timing : format (taxonomie réelle des concours/comités) ---
+# Speed-pitching, Standard, Approfondi : durée de pitch (minutes).
+FORMATS = {"speed": 3, "standard": 5, "approfondi": 10}
+
+# Profondeur de Q&A pilotée par le FORMAT (décision produit 2026-06-26) : le format pilote le
+# nombre de questions par juge ; le comité ne fait que colorer le ton. Plus le format est court,
+# plus les réponses doivent être concises (règle d'or : viser `answer_target_s`).
+FORMAT_QA: dict[str, dict] = {
+    "speed": {"qa_questions_per_agent": 1, "qa_minutes": 3, "answer_target_s": 45},
+    "standard": {"qa_questions_per_agent": 2, "qa_minutes": 6, "answer_target_s": 45},
+    "approfondi": {"qa_questions_per_agent": 3, "qa_minutes": 12, "answer_target_s": 60},
+}
+
+
+def format_qa(fmt: str) -> dict:
+    return FORMAT_QA.get(fmt, FORMAT_QA["standard"])
+
+
+# --- Contexte par comité : ton + format conseillé (PITCH-06 §14.5) ---
+# Le comité ne fait que colorer le ton (décision produit 2026-06-26) : tous les formats sont
+# permis partout ; `default_format` n'est que le format conseillé pour ce contexte.
+_ALL_FORMATS = ["speed", "standard", "approfondi"]
 
 COMMITTEE_TIMING: dict[str, dict] = {
+    # Incubateurs / concours classiques → standard conseillé.
     "incubateur": {
-        "default_format": "long",
-        "qa_questions_per_agent": 2,
-        "allowed_formats": ["standard", "long"],
+        "default_format": "standard",
+        "allowed_formats": _ALL_FORMATS,
         "tour_libre": True,
     },
+    # Concours de pitch → speed/standard, conseillé standard.
     "concours": {
         "default_format": "standard",
-        "qa_questions_per_agent": 1,
-        "allowed_formats": ["elevator", "standard"],
+        "allowed_formats": _ALL_FORMATS,
         "tour_libre": False,
     },
+    # Comités d'investissement / grandes finales → approfondi conseillé.
     "investisseur": {
-        "default_format": "standard",
-        "qa_questions_per_agent": 2,
-        "allowed_formats": ["standard"],
+        "default_format": "approfondi",
+        "allowed_formats": _ALL_FORMATS,
         "tour_libre": True,
     },
 }
@@ -293,7 +313,6 @@ def committee_timing(key: str) -> dict:
         key,
         {
             "default_format": "standard",
-            "qa_questions_per_agent": 1,
             "allowed_formats": ["standard"],
             "tour_libre": False,
         },

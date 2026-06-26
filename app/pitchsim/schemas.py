@@ -52,7 +52,7 @@ class SessionStartIn(BaseModel):
     deck_id: UUID | None = None
     project_id: UUID | None = None
     # Format (timing) — défaut du comité si absent ; validé contre allowed_formats.
-    format: str | None = Field(default=None, pattern="^(elevator|standard|long)$")
+    format: str | None = Field(default=None, pattern="^(speed|standard|approfondi)$")
     # Options (Écran 1) :
     imprevus: bool = True
     hard_questions: bool = True

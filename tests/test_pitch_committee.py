@@ -6,6 +6,7 @@ from app.pitchsim.constants import (
     committee,
     committee_timing,
     expert_for,
+    format_qa,
     resolve_personas,
 )
 
@@ -35,8 +36,16 @@ def test_resolve_personas_injects_expert_as_extra_judge():
 
 def test_committee_timing_defaults_and_bounds():
     incub = committee_timing("incubateur")
-    assert incub["qa_questions_per_agent"] == 2
-    assert "long" in incub["allowed_formats"]
+    assert "approfondi" in incub["allowed_formats"]
     # Comité inconnu → repli sûr.
     fallback = committee_timing("inexistant")
     assert fallback["allowed_formats"] == ["standard"]
+
+
+def test_format_drives_qa_depth():
+    # Le format pilote la profondeur de Q&A : 1 / 2 / 3 questions par juge.
+    assert format_qa("speed")["qa_questions_per_agent"] == 1
+    assert format_qa("standard")["qa_questions_per_agent"] == 2
+    assert format_qa("approfondi")["qa_questions_per_agent"] == 3
+    # Format inconnu → repli standard.
+    assert format_qa("inconnu")["qa_questions_per_agent"] == 2

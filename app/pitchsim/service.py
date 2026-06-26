@@ -15,7 +15,7 @@ from app.iam.dependencies import AuthContext, guard_owner_access
 from app.llm.base import LLMProvider
 from app.llm.prompt import build_pitch_prompt, build_verdict_prompt
 from app.pitchsim import evaluate, forme, orchestrator, postmortem, scenario
-from app.pitchsim.constants import BIO_AXES, FORMATS, committee_timing, resolve_personas
+from app.pitchsim.constants import BIO_AXES, FORMATS, committee_timing, format_qa, resolve_personas
 from app.pitchsim.constants import committee as get_committee
 from app.pitchsim.models import PitchSession, PitchStatus, PitchTurn, SlideKind
 from app.pitchsim.parser import ALLOWED_DECK_TYPES, MAX_MAIN_SLIDES, parse_deck
@@ -179,6 +179,7 @@ class PitchSessionService:
         fmt = data.format or timing["default_format"]
         if fmt not in timing["allowed_formats"]:
             raise BusinessRuleError(f"Format « {fmt} » non autorisé pour ce comité.")
+        qa = format_qa(fmt)  # profondeur Q&A pilotée par le format
         personas = resolve_personas(data.committee_key, sector)
         ps = await self.repo.create_session(
             owner_id=ctx.user.id,
@@ -192,8 +193,10 @@ class PitchSessionService:
                 "hard_questions": data.hard_questions,
                 "silence": data.silence,
                 "format": fmt,
-                "duration_min": FORMATS.get(fmt, 3),
-                "qa_questions_per_agent": timing["qa_questions_per_agent"],
+                "duration_min": FORMATS.get(fmt, 5),
+                "qa_questions_per_agent": qa["qa_questions_per_agent"],
+                "qa_minutes": qa["qa_minutes"],
+                "answer_target_s": qa["answer_target_s"],
                 "tour_libre": timing["tour_libre"],
             },
         )
