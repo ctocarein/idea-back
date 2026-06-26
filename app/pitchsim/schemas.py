@@ -24,6 +24,9 @@ class DeckOut(BaseModel):
     title: str
     project_id: UUID | None
     slides: list[SlideOut] = []
+    # Présentation persistée : URL présignée du fichier source (PDF/image) + son type.
+    file_url: str | None = None
+    content_type: str | None = None
 
 
 # --- Rubrique & comités (lecture) ---
@@ -91,6 +94,7 @@ class SessionOut(BaseModel):
     config: dict
     convictions: dict = {}  # humeur du comité par juge (−2..+2), pour le front
     turns: list[TurnOut] = []
+    deck: DeckOut | None = None  # deck partagé persisté (ré-affiché au reload)
 
 
 class PitchRunOut(BaseModel):

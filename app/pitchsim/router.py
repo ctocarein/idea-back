@@ -88,6 +88,18 @@ async def start_session(
     return await svc.start_session(ctx, body)
 
 
+@router.post("/sessions/{session_id}/deck", response_model=SessionOut)
+async def attach_session_deck(
+    session_id: UUID,
+    file: UploadFile = File(...),
+    ctx: AuthContext = Depends(require(Permission.PITCHSIM_RUN)),
+    svc: PitchSessionService = Depends(get_session_service),
+) -> SessionOut:
+    # Le porteur partage son deck (PDF/image) dans le salon → persisté + rattaché à la session.
+    data = await file.read()
+    return await svc.attach_deck(ctx, session_id, content_type=file.content_type or "", data=data)
+
+
 @router.post("/sessions/{session_id}/abandon", status_code=204)
 async def abandon_session(
     session_id: UUID,
