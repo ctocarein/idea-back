@@ -14,19 +14,23 @@ import json
 PROMPT_VERSION = "scoring-v2"
 REPORT_PROMPT_VERSION = "report-v1"
 COACH_PROMPT_VERSION = "coach-v1"
-PITCH_PROMPT_VERSION = "pitch-v1"
-VERDICT_PROMPT_VERSION = "verdict-v1"
+PITCH_PROMPT_VERSION = "pitch-v2"  # v2 : cohérence dit/montré
+VERDICT_PROMPT_VERSION = "verdict-v2"  # v2 : le verdict voit le deck + juge la cohérence
 
 
-def build_verdict_prompt(*, persona: dict, transcript: str, conviction: int) -> str:
+def build_verdict_prompt(*, persona: dict, transcript: str, slide_text: str, conviction: int) -> str:
     # Délibération : l'agent donne SON verdict, avec SES mots et son style (Règle d'or n°5).
+    # Il juge AUSSI la cohérence entre ce qui est dit (pitch) et ce qui est montré (deck).
     return "\n".join(
         [
             "FORMAT=verdict.",
             f"Tu es {persona['name']}, {persona.get('role', '')} ({persona.get('personality', '')}).",
             f"Ton obsession : {persona.get('obsession', '')}. Ta conviction (−2 à +2) : {conviction}.",
             "Après ce pitch, donne TON verdict en 1-2 phrases, avec TES mots et ton style — franc et utile.",
-            f"Pitch (transcript) : {transcript[:2000]}",
+            "Juge AUSSI la COHÉRENCE entre ce qui est DIT et ce qui est MONTRÉ : relève tout écart "
+            "(un chiffre annoncé absent du deck, une slide qui contredit le pitch, une promesse non étayée).",
+            f"Ce qui est DIT (transcript) : {transcript[:2000]}",
+            f"Ce qui est MONTRÉ (slides du deck) : {(slide_text or '(aucun deck partagé)')[:1500]}",
             'Réponds STRICTEMENT en JSON : { "verdict": "<1-2 phrases>", "vote": "go|conditional|nogo" }',
         ]
     )
@@ -54,11 +58,14 @@ def build_pitch_prompt(
         lines.append(f"- {axis['key']} ({axis['label']}) — {cq} Ancres : {bands}")
     lines += [
         "",
-        "PITCH (transcript du porteur) :",
+        "PITCH (transcript du porteur — ce qui est DIT) :",
         transcript or "(vide)",
         "",
-        "SLIDES :",
+        "SLIDES (le deck — ce qui est MONTRÉ) :",
         slide_text or "(aucune)",
+        "",
+        "COHÉRENCE : si le PITCH et les SLIDES se contredisent (chiffres divergents, promesse non",
+        "étayée par le deck, slide hors-sujet), PÉNALISE l'axe concerné et dis-le dans sa justification.",
         "",
         'Réponds STRICTEMENT en JSON : { "axes": { "<key>": <0-10> }, '
         '"justifications": { "<key>": "<raison courte>" } }',

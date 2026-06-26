@@ -178,6 +178,13 @@ class PitchSessionService:
         snap = ps.orch.get("personas")
         return snap if snap else self._personas(ps.committee_key)
 
+    async def _deck_text(self, ps: PitchSession) -> str:
+        """Texte des slides du deck partagé (ce que les juges « voient ») — vide si aucun deck."""
+        if ps.deck_id is None:
+            return ""
+        slides = await self.decks.slides_for_deck(ps.deck_id)
+        return "\n".join(s.extracted_text for s in slides if s.extracted_text)
+
     async def _load_owned(self, ctx: AuthContext, session_id: UUID) -> PitchSession:
         ps = await self.repo.get_session(session_id)
         if ps is None:
@@ -256,10 +263,7 @@ class PitchSessionService:
         n_answers = sum(1 for t in turns if t.kind == "answer")
 
         # Texte des slides du deck (les juges « voient » les slides).
-        slide_text = ""
-        if ps.deck_id is not None:
-            slides = await self.decks.slides_for_deck(ps.deck_id)
-            slide_text = "\n".join(s.extracted_text for s in slides)
+        slide_text = await self._deck_text(ps)
 
         committee = get_committee(ps.committee_key)
         label = committee["label"] if committee else ps.committee_key
@@ -534,11 +538,17 @@ class PitchSessionService:
 
         turns = await self.repo.turns_for_session(ps.id)
         transcript = "\n".join(t.content for t in turns if t.kind in ("narration", "answer"))
+        slide_text = await self._deck_text(ps)  # le verdict juge AUSSI la cohérence dit/montré
         # Verdicts VERBATIM : un appel LLM par persona (ses mots, son style — Règle d'or n°5).
         verdicts: list[dict] = []
         for p in personas:
             raw = await self.provider.analyze_json(
-                build_verdict_prompt(persona=p, transcript=transcript, conviction=int(convictions.get(p["name"], 0)))
+                build_verdict_prompt(
+                    persona=p,
+                    transcript=transcript,
+                    slide_text=slide_text,
+                    conviction=int(convictions.get(p["name"], 0)),
+                )
             )
             text = raw.get("verdict", "")
             verdicts.append({"agent": p["name"], "text": text, "vote": raw.get("vote", "conditional")})
