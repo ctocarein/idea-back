@@ -16,6 +16,38 @@ REPORT_PROMPT_VERSION = "report-v1"
 COACH_PROMPT_VERSION = "coach-v1"
 PITCH_PROMPT_VERSION = "pitch-v2"  # v2 : cohérence dit/montré
 VERDICT_PROMPT_VERSION = "verdict-v2"  # v2 : le verdict voit le deck + juge la cohérence
+EXTRACTION_PROMPT_VERSION = "extract-v1"  # récit libre → 12 dimensions captées / manquantes
+
+
+def build_extraction_prompt(
+    *, idea: str, axes: list[dict], project_name: str | None = None
+) -> str:
+    # « Raconte, on structure » : depuis le RÉCIT LIBRE, on repère pour chaque dimension si
+    # l'info est déjà là (preuve) ou s'il faut la demander (question). On n'INVENTE jamais.
+    lines = [
+        "FORMAT=extraction.",
+        "Tu es un analyste de projets. À partir du RÉCIT LIBRE du porteur, traite CHAQUE dimension :",
+        "- si le récit donne assez d'info → captured=true + 'evidence' (courte preuve tirée du récit) ;",
+        "- sinon → captured=false + 'question' (UNE question courte et simple pour combler le manque).",
+        "N'INVENTE rien : si ce n'est pas dans le récit, c'est un manque (captured=false).",
+        "",
+        f"NOM du projet fourni : {project_name or '(aucun — déduis-le du récit s’il est nommé, sinon null)'}",
+        "",
+        "DIMENSIONS À COUVRIR :",
+    ]
+    for a in axes:
+        pistes = " / ".join(a.get("guiding_questions", []))
+        lines.append(f"- {a['key']} ({a['label']}) — {a['central_question']} Pistes : {pistes}")
+    lines += [
+        "",
+        "RÉCIT DU PORTEUR :",
+        idea,
+        "",
+        "Réponds STRICTEMENT en JSON : { \"project_name\": \"<nom ou null>\", \"dimensions\": {",
+        '  "<key d1..d12>": { "captured": <true|false>, "evidence": "<preuve si captured, sinon \\"\\">", '
+        '"question": "<question courte si manquant, sinon \\"\\">" } } }',
+    ]
+    return "\n".join(lines)
 
 
 def build_verdict_prompt(*, persona: dict, transcript: str, slide_text: str, conviction: int) -> str:

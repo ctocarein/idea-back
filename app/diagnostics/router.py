@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
 
-from app.diagnostics.dependencies import get_diagnostic_service
+from app.diagnostics.dependencies import get_diagnostic_service, get_extraction_service
+from app.diagnostics.extraction import IdeaExtractionService
 from app.diagnostics.schemas import (
     DiagnosticCreatedOut,
+    IdeaExtractIn,
+    IdeaExtractOut,
     ManualDiagnosticIn,
     UploadDiagnosticIn,
 )
@@ -15,6 +18,16 @@ from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
 
 router = APIRouter(prefix="/diagnostics", tags=["diagnostics"])
+
+
+@router.post("/extract", response_model=IdeaExtractOut)
+async def extract_idea(
+    body: IdeaExtractIn,
+    ctx: AuthContext = Depends(require(Permission.DIAGNOSTIC_RUN)),
+    svc: IdeaExtractionService = Depends(get_extraction_service),
+) -> IdeaExtractOut:
+    # « Raconte, on structure » : récit libre → 12 dimensions captées / manquantes (synchrone).
+    return await svc.extract(body.idea, body.project_name)
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED, response_model=DiagnosticCreatedOut)

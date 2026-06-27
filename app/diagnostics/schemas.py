@@ -79,3 +79,31 @@ class DiagnosticCreatedOut(BaseModel):
     mode: EntryMode
     diagnostic_status: DiagnosticStatus
     review_status: ReviewStatus
+
+
+# --- « Raconte, on structure » : extraction du récit libre → 12 dimensions ---
+
+
+class IdeaExtractIn(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+    # Le récit brut du porteur (texte ou dictée). Le nom est optionnel — on le déduit sinon.
+    idea: str = Field(min_length=20, max_length=5000)
+    project_name: str | None = Field(
+        default=None, max_length=120, validation_alias=AliasChoices("project_name", "projectName")
+    )
+
+
+class ExtractedDimension(BaseModel):
+    key: str  # d1..d12
+    label: str
+    captured: bool  # le récit donne assez d'info ?
+    evidence: str = ""  # preuve tirée du récit (si captured)
+    question: str = ""  # question courte à poser (si manquant)
+
+
+class IdeaExtractOut(BaseModel):
+    project_name: str | None = None  # déduit du récit si non fourni
+    captured_count: int
+    total: int
+    dimensions: list[ExtractedDimension]
+    gaps: list[ExtractedDimension]  # les dimensions à compléter (captured=false)
