@@ -31,6 +31,15 @@ class ObjectStorage:
         )
         return key
 
+    def get_bytes(self, key: str) -> bytes:
+        # Télécharge l'objet (octets). Le client minio renvoie une réponse urllib3 à fermer.
+        resp = self._client.get_object(self._bucket, key)  # type: ignore[attr-defined]
+        try:
+            return resp.read()
+        finally:
+            resp.close()
+            resp.release_conn()
+
     def health_ok(self) -> bool:
         # Ping léger : lister les buckets valide la connexion + les credentials.
         self._client.list_buckets()  # type: ignore[attr-defined]

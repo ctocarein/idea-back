@@ -7,6 +7,8 @@ MinIO (best-effort, pour les vignettes en V2) ; le texte par slide est persisté
 
 from __future__ import annotations
 
+import asyncio
+import base64
 from uuid import UUID
 
 from app.core.errors import BusinessRuleError, NotFoundError
@@ -25,6 +27,7 @@ from app.pitchsim.parser import (
     PRESENTABLE_TYPES,
     parse_deck,
 )
+from app.pitchsim.render import png_to_data_url, render_pdf_to_pngs
 from app.pitchsim.repository import (
     PitchDeckRepository,
     PitchRubricRepository,
@@ -184,6 +187,31 @@ class PitchSessionService:
             return ""
         slides = await self.decks.slides_for_deck(ps.deck_id)
         return "\n".join(s.extracted_text for s in slides if s.extracted_text)
+
+    async def _deck_images(self, ps: PitchSession) -> list[str]:
+        """Images des slides (data URLs) pour la VISION — vide si pas de deck/storage/provider vision.
+
+        Le deck source (PDF) est téléchargé puis rendu en PNG ; une image partagée telle quelle
+        devient directement une data URL. Coûteux → on ne le fait que si le provider voit les images.
+        """
+        if ps.deck_id is None or self.storage is None:
+            return []
+        if not getattr(self.provider, "supports_vision", False):
+            return []
+        deck = await self.decks.get_deck(ps.deck_id)
+        if deck is None or not deck.source_key:
+            return []
+        try:
+            data = await asyncio.to_thread(self.storage.get_bytes, deck.source_key)
+        except Exception:  # objet absent / storage KO → on dégrade (critique texte seul)
+            return []
+        ctype = deck.source_content_type or ""
+        if ctype in PDF_TYPES:
+            pngs = await asyncio.to_thread(render_pdf_to_pngs, data)
+            return [png_to_data_url(p) for p in pngs]
+        if ctype.startswith("image/"):
+            return [f"data:{ctype};base64,{base64.b64encode(data).decode('ascii')}"]
+        return []
 
     async def _load_owned(self, ctx: AuthContext, session_id: UUID) -> PitchSession:
         ps = await self.repo.get_session(session_id)
@@ -539,17 +567,20 @@ class PitchSessionService:
         turns = await self.repo.turns_for_session(ps.id)
         transcript = "\n".join(t.content for t in turns if t.kind in ("narration", "answer"))
         slide_text = await self._deck_text(ps)  # le verdict juge AUSSI la cohérence dit/montré
+        slide_images = await self._deck_images(ps)  # vision : les juges VOIENT les slides (Pixtral)
         # Verdicts VERBATIM : un appel LLM par persona (ses mots, son style — Règle d'or n°5).
         verdicts: list[dict] = []
         for p in personas:
-            raw = await self.provider.analyze_json(
-                build_verdict_prompt(
-                    persona=p,
-                    transcript=transcript,
-                    slide_text=slide_text,
-                    conviction=int(convictions.get(p["name"], 0)),
-                )
+            prompt = build_verdict_prompt(
+                persona=p,
+                transcript=transcript,
+                slide_text=slide_text,
+                conviction=int(convictions.get(p["name"], 0)),
             )
+            if slide_images and hasattr(self.provider, "analyze_json_with_images"):
+                raw = await self.provider.analyze_json_with_images(prompt, images=slide_images)
+            else:
+                raw = await self.provider.analyze_json(prompt)
             text = raw.get("verdict", "")
             verdicts.append({"agent": p["name"], "text": text, "vote": raw.get("vote", "conditional")})
             await self._add(ps, actor=p["name"], kind="deliberation", content=text)
