@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     # Modèles par défaut (surchargables par env). Choix : petits modèles (coût freemium).
     deepseek_model: str = "deepseek-chat"
     mistral_model: str = "mistral-small-latest"
+    mistral_vision_model: str = "pixtral-12b-2409"  # Pixtral : multimodal (voit les slides)
     openai_model: str = "gpt-4o-mini"
     gemini_model: str = "gemini-1.5-flash"
     # Paramètres d'appel. Température basse (reproductibilité), un peu > 0 pour que

@@ -30,10 +30,14 @@ class OpenAICompatibleProvider:
         temperature: float = 0.2,
         max_tokens: int = 1024,
         timeout: float = 30.0,
+        vision_model: str | None = None,
     ) -> None:
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self.model = model
+        # Modèle multimodal (voit les slides). None → le provider ne fait pas de vision.
+        self.vision_model = vision_model
+        self.supports_vision = vision_model is not None
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._timeout = timeout
@@ -43,9 +47,11 @@ class OpenAICompatibleProvider:
         # système (retry, fallback) ne manipule que des exceptions LLM, jamais httpx.
         self._retry = RetryPolicy(max_attempts=3, base_delay=0.5, retry_on=(TransientLLMError,))
 
-    async def _chat(self, messages: list[dict], *, json_mode: bool = False) -> dict:
+    async def _chat(
+        self, messages: list[dict], *, json_mode: bool = False, model: str | None = None
+    ) -> dict:
         payload: dict = {
-            "model": self.model,
+            "model": model or self.model,
             "messages": messages,
             "temperature": self._temperature,
             "max_tokens": self._max_tokens,
@@ -98,3 +104,24 @@ class OpenAICompatibleProvider:
         data = await self._chat(messages, json_mode=True)
         content = data["choices"][0]["message"]["content"]
         return extract_json_object(content)
+
+    async def analyze_json_with_images(
+        self, prompt: str, *, images: list[str], schema: dict | None = None
+    ) -> dict:
+        """Comme analyze_json, mais le comité VOIT les slides (vision multimodale).
+
+        `images` : data URLs base64 (`data:image/png;base64,...`). Utilise le modèle vision
+        (Pixtral pour Mistral). Si aucun modèle vision n'est configuré, on dégrade en texte seul.
+        """
+        if not self.vision_model or not images:
+            return await self.analyze_json(prompt, schema=schema)
+        content: list[dict] = [{"type": "text", "text": prompt}]
+        for url in images:
+            content.append({"type": "image_url", "image_url": {"url": url}})
+        messages: list[dict] = [
+            {"role": "system", "content": "Réponds STRICTEMENT en JSON valide, sans texte autour."},
+            {"role": "user", "content": content},
+        ]
+        data = await self._chat(messages, json_mode=True, model=self.vision_model)
+        out = data["choices"][0]["message"]["content"]
+        return extract_json_object(out)
