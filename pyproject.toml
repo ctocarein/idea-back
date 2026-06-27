@@ -38,10 +38,14 @@ dev = [
 pdf = [
     "weasyprint>=63.0",
 ]
-# Parsing des pitch decks (PITCH-02). `uv sync --extra pitch`.
+# Parsing + rendu des pitch decks (PITCH-02). `uv sync --extra pitch`.
+# pypdfium2 = PDFium embarqué (binaire), zéro lib système → rend les slides en images
+# (présentation nette + vision multimodale). Pillow encode les PNG.
 pitch = [
     "pypdf>=4.0",
     "python-pptx>=0.6",
+    "pypdfium2>=4.30",
+    "pillow>=10.0",
 ]
 
 [build-system]
