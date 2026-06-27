@@ -14,6 +14,10 @@ PPTX_TYPES = {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 ALLOWED_DECK_TYPES = PDF_TYPES | PPTX_TYPES
+# Types présentables visuellement dans le salon (façon partage d'écran). Le PPTX n'est pas
+# rendu par le navigateur → on demande au porteur de l'exporter en PDF.
+IMAGE_TYPES = {"image/png", "image/jpeg", "image/webp", "image/gif"}
+PRESENTABLE_TYPES = PDF_TYPES | IMAGE_TYPES
 MAX_MAIN_SLIDES = 10  # garde-fou : un pitch deck principal reste court
 
 

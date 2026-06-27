@@ -31,4 +31,5 @@ def get_session_service(session: AsyncSession = Depends(get_session)) -> PitchSe
         PitchDeckRepository(session),
         ProjectRepository(session),
         get_llm(get_settings()),
+        get_storage(),
     )

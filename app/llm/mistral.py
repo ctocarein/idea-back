@@ -20,4 +20,5 @@ class MistralProvider(OpenAICompatibleProvider):
             temperature=settings.llm_temperature,
             max_tokens=settings.llm_max_tokens,
             timeout=settings.llm_timeout_seconds,
+            vision_model=settings.mistral_vision_model,  # Pixtral : le comité voit les slides
         )

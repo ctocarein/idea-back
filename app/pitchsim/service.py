@@ -7,6 +7,8 @@ MinIO (best-effort, pour les vignettes en V2) ; le texte par slide est persisté
 
 from __future__ import annotations
 
+import asyncio
+import base64
 from uuid import UUID
 
 from app.core.errors import BusinessRuleError, NotFoundError
@@ -15,10 +17,17 @@ from app.iam.dependencies import AuthContext, guard_owner_access
 from app.llm.base import LLMProvider
 from app.llm.prompt import build_pitch_prompt, build_verdict_prompt
 from app.pitchsim import evaluate, forme, orchestrator, postmortem, scenario
-from app.pitchsim.constants import BIO_AXES, FORMATS, committee_timing, resolve_personas
+from app.pitchsim.constants import BIO_AXES, FORMATS, committee_timing, format_qa, resolve_personas
 from app.pitchsim.constants import committee as get_committee
-from app.pitchsim.models import PitchSession, PitchStatus, PitchTurn, SlideKind
-from app.pitchsim.parser import ALLOWED_DECK_TYPES, MAX_MAIN_SLIDES, parse_deck
+from app.pitchsim.models import PitchDeck, PitchSession, PitchSlide, PitchStatus, PitchTurn, SlideKind
+from app.pitchsim.parser import (
+    ALLOWED_DECK_TYPES,
+    MAX_MAIN_SLIDES,
+    PDF_TYPES,
+    PRESENTABLE_TYPES,
+    parse_deck,
+)
+from app.pitchsim.render import png_to_data_url, render_pdf_to_pngs
 from app.pitchsim.repository import (
     PitchDeckRepository,
     PitchRubricRepository,
@@ -38,6 +47,26 @@ from app.projects.repository import ProjectRepository
 from app.scoring import engine
 
 MAX_DECK_BYTES = 20 * 1024 * 1024  # 20 Mo
+
+
+def deck_to_out(
+    deck: PitchDeck, slides: list[PitchSlide], storage: ObjectStorage | None
+) -> DeckOut:
+    """DeckOut + URL présignée du fichier source (présentation dans le salon)."""
+    file_url: str | None = None
+    if deck.source_key and storage is not None:
+        try:
+            file_url = storage.presigned_get(deck.source_key)
+        except Exception:  # storage indisponible → on dégrade (deck sans aperçu visuel)
+            file_url = None
+    return DeckOut(
+        id=deck.id,
+        title=deck.title,
+        project_id=deck.project_id,
+        slides=[SlideOut.model_validate(s) for s in slides],
+        file_url=file_url,
+        content_type=deck.source_content_type,
+    )
 
 
 class PitchDeckService:
@@ -69,8 +98,9 @@ class PitchDeckService:
             raise BusinessRuleError("Aucune slide détectée dans le fichier.")
         deck = await self.repo.create_deck(owner_id=ctx.user.id, project_id=project_id, title=title)
         await self.repo.add_slides(deck.id, SlideKind.MAIN, slides)
+        store_deck_source(self.storage, deck, content_type, data)  # présentation persistée
         await self.session.commit()
-        return await self._deck_out(deck.id, title, project_id)
+        return await self._deck_out(deck)
 
     async def add_slides(
         self,
@@ -91,23 +121,33 @@ class PitchDeckService:
         slides = parse_deck(content_type, data)
         await self.repo.add_slides(deck_id, kind, slides)
         await self.session.commit()
-        return await self._deck_out(deck.id, deck.title, deck.project_id)
+        return await self._deck_out(deck)
 
     async def get_deck(self, ctx: AuthContext, deck_id: UUID) -> DeckOut:
         deck = await self.repo.get_deck(deck_id)
         if deck is None:
             raise NotFoundError("pitch_deck")
         guard_owner_access(owner_id=deck.owner_id, ctx=ctx)
-        return await self._deck_out(deck.id, deck.title, deck.project_id)
+        return await self._deck_out(deck)
 
-    async def _deck_out(self, deck_id: UUID, title: str, project_id: UUID | None) -> DeckOut:
-        rows = await self.repo.slides_for_deck(deck_id)
-        return DeckOut(
-            id=deck_id,
-            title=title,
-            project_id=project_id,
-            slides=[SlideOut.model_validate(r) for r in rows],
-        )
+    async def _deck_out(self, deck: PitchDeck) -> DeckOut:
+        rows = await self.repo.slides_for_deck(deck.id)
+        return deck_to_out(deck, rows, self.storage)
+
+
+def store_deck_source(
+    storage: ObjectStorage | None, deck: PitchDeck, content_type: str, data: bytes
+) -> None:
+    """Persiste le fichier source du deck (présentation visuelle) si présentable + storage dispo."""
+    if storage is None or content_type not in PRESENTABLE_TYPES:
+        return
+    key = f"pitch-decks/{deck.id}/source"
+    try:
+        storage.put_bytes(key=key, data=data, content_type=content_type)
+        deck.source_key = key
+        deck.source_content_type = content_type
+    except Exception:  # storage KO → deck sans aperçu (dégradation gracieuse)
+        pass
 
 
 class PitchSessionService:
@@ -125,6 +165,7 @@ class PitchSessionService:
         decks: PitchDeckRepository,
         projects: ProjectRepository,
         provider: LLMProvider,
+        storage: ObjectStorage | None = None,
     ) -> None:
         self.repo = repo
         self.rubrics = rubrics
@@ -132,12 +173,45 @@ class PitchSessionService:
         self.decks = decks
         self.projects = projects
         self.provider = provider
+        self.storage = storage
         self.session = repo.session
 
     def _session_personas(self, ps: PitchSession) -> list[dict]:
         # Le comité SNAPSHOTTÉ (personas fixes + expert métier) ; repli sur le comité de base.
         snap = ps.orch.get("personas")
         return snap if snap else self._personas(ps.committee_key)
+
+    async def _deck_text(self, ps: PitchSession) -> str:
+        """Texte des slides du deck partagé (ce que les juges « voient ») — vide si aucun deck."""
+        if ps.deck_id is None:
+            return ""
+        slides = await self.decks.slides_for_deck(ps.deck_id)
+        return "\n".join(s.extracted_text for s in slides if s.extracted_text)
+
+    async def _deck_images(self, ps: PitchSession) -> list[str]:
+        """Images des slides (data URLs) pour la VISION — vide si pas de deck/storage/provider vision.
+
+        Le deck source (PDF) est téléchargé puis rendu en PNG ; une image partagée telle quelle
+        devient directement une data URL. Coûteux → on ne le fait que si le provider voit les images.
+        """
+        if ps.deck_id is None or self.storage is None:
+            return []
+        if not getattr(self.provider, "supports_vision", False):
+            return []
+        deck = await self.decks.get_deck(ps.deck_id)
+        if deck is None or not deck.source_key:
+            return []
+        try:
+            data = await asyncio.to_thread(self.storage.get_bytes, deck.source_key)
+        except Exception:  # objet absent / storage KO → on dégrade (critique texte seul)
+            return []
+        ctype = deck.source_content_type or ""
+        if ctype in PDF_TYPES:
+            pngs = await asyncio.to_thread(render_pdf_to_pngs, data)
+            return [png_to_data_url(p) for p in pngs]
+        if ctype.startswith("image/"):
+            return [f"data:{ctype};base64,{base64.b64encode(data).decode('ascii')}"]
+        return []
 
     async def _load_owned(self, ctx: AuthContext, session_id: UUID) -> PitchSession:
         ps = await self.repo.get_session(session_id)
@@ -179,6 +253,7 @@ class PitchSessionService:
         fmt = data.format or timing["default_format"]
         if fmt not in timing["allowed_formats"]:
             raise BusinessRuleError(f"Format « {fmt} » non autorisé pour ce comité.")
+        qa = format_qa(fmt)  # profondeur Q&A pilotée par le format
         personas = resolve_personas(data.committee_key, sector)
         ps = await self.repo.create_session(
             owner_id=ctx.user.id,
@@ -192,8 +267,10 @@ class PitchSessionService:
                 "hard_questions": data.hard_questions,
                 "silence": data.silence,
                 "format": fmt,
-                "duration_min": FORMATS.get(fmt, 3),
-                "qa_questions_per_agent": timing["qa_questions_per_agent"],
+                "duration_min": FORMATS.get(fmt, 5),
+                "qa_questions_per_agent": qa["qa_questions_per_agent"],
+                "qa_minutes": qa["qa_minutes"],
+                "answer_target_s": qa["answer_target_s"],
                 "tour_libre": timing["tour_libre"],
             },
         )
@@ -214,10 +291,7 @@ class PitchSessionService:
         n_answers = sum(1 for t in turns if t.kind == "answer")
 
         # Texte des slides du deck (les juges « voient » les slides).
-        slide_text = ""
-        if ps.deck_id is not None:
-            slides = await self.decks.slides_for_deck(ps.deck_id)
-            slide_text = "\n".join(s.extracted_text for s in slides)
+        slide_text = await self._deck_text(ps)
 
         committee = get_committee(ps.committee_key)
         label = committee["label"] if committee else ps.committee_key
@@ -318,6 +392,12 @@ class PitchSessionService:
 
     async def _out(self, ps: PitchSession) -> SessionOut:
         turns = await self.repo.turns_for_session(ps.id)
+        deck_out: DeckOut | None = None
+        if ps.deck_id is not None:
+            deck = await self.decks.get_deck(ps.deck_id)
+            if deck is not None:
+                slides = await self.decks.slides_for_deck(deck.id)
+                deck_out = deck_to_out(deck, slides, self.storage)
         return SessionOut(
             id=ps.id,
             committee_key=ps.committee_key,
@@ -327,7 +407,35 @@ class PitchSessionService:
             config=ps.config,
             convictions=ps.orch.get("convictions", {}),
             turns=[TurnOut.model_validate(t) for t in turns],
+            deck=deck_out,
         )
+
+    async def attach_deck(
+        self, ctx: AuthContext, session_id: UUID, *, content_type: str, data: bytes
+    ) -> SessionOut:
+        """Le porteur partage son deck dans le salon → persisté + rattaché à la session."""
+        # Portes d'entrée AVANT tout accès DB (fail-fast + testable sans dépôt).
+        if content_type not in PRESENTABLE_TYPES:
+            raise BusinessRuleError(
+                "Format non présentable. Exporte ton PowerPoint en PDF (ou partage une image)."
+            )
+        if not data:
+            raise BusinessRuleError("Fichier vide.")
+        if len(data) > MAX_DECK_BYTES:
+            raise BusinessRuleError("Fichier trop volumineux (max 20 Mo).")
+        ps = await self._load_owned(ctx, session_id)
+        deck = await self.decks.create_deck(
+            owner_id=ctx.user.id, project_id=ps.project_id, title="Deck de pitch"
+        )
+        # Texte pour les juges : seulement le PDF (les images n'ont pas de texte extractible).
+        if content_type in PDF_TYPES:
+            slides = parse_deck(content_type, data)[:MAX_MAIN_SLIDES]
+            if slides:
+                await self.decks.add_slides(deck.id, SlideKind.MAIN, slides)
+        store_deck_source(self.storage, deck, content_type, data)
+        ps.deck_id = deck.id
+        await self.session.commit()
+        return await self._out(ps)
 
     # --- Flux « comité silencieux » (PITCH-06) — additif, ne remplace pas encore 4A ---
 
@@ -458,12 +566,21 @@ class PitchSessionService:
 
         turns = await self.repo.turns_for_session(ps.id)
         transcript = "\n".join(t.content for t in turns if t.kind in ("narration", "answer"))
+        slide_text = await self._deck_text(ps)  # le verdict juge AUSSI la cohérence dit/montré
+        slide_images = await self._deck_images(ps)  # vision : les juges VOIENT les slides (Pixtral)
         # Verdicts VERBATIM : un appel LLM par persona (ses mots, son style — Règle d'or n°5).
         verdicts: list[dict] = []
         for p in personas:
-            raw = await self.provider.analyze_json(
-                build_verdict_prompt(persona=p, transcript=transcript, conviction=int(convictions.get(p["name"], 0)))
+            prompt = build_verdict_prompt(
+                persona=p,
+                transcript=transcript,
+                slide_text=slide_text,
+                conviction=int(convictions.get(p["name"], 0)),
             )
+            if slide_images and hasattr(self.provider, "analyze_json_with_images"):
+                raw = await self.provider.analyze_json_with_images(prompt, images=slide_images)
+            else:
+                raw = await self.provider.analyze_json(prompt)
             text = raw.get("verdict", "")
             verdicts.append({"agent": p["name"], "text": text, "vote": raw.get("vote", "conditional")})
             await self._add(ps, actor=p["name"], kind="deliberation", content=text)

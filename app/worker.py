@@ -13,6 +13,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+import app.models  # noqa: F401 — enregistre TOUTES les tables sur Base.metadata (FK cross-features)
 from app.core.database import get_session_factory
 from app.core.logging import configure_logging, get_logger
 from app.diagnostics.handlers import handle_run_diagnostic

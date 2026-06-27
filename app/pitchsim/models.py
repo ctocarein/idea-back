@@ -32,6 +32,9 @@ class PitchDeck(Base):
         ForeignKey("projects.id", ondelete="SET NULL"), default=None, index=True
     )
     title: Mapped[str] = mapped_column(String(200), default="Pitch deck")
+    # Fichier source persisté (présentation dans le salon, façon partage d'écran).
+    source_key: Mapped[str | None] = mapped_column(String(300), default=None)
+    source_content_type: Mapped[str | None] = mapped_column(String(100), default=None)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 

@@ -44,12 +44,15 @@ class JobRepository:
     async def claim_one(self) -> Job | None:
         # Atomique : sélectionne le prochain job éligible et le passe à 'processing'.
         # SKIP LOCKED → les lignes verrouillées par un autre worker sont ignorées.
+        # Les littéraux doivent correspondre aux labels stockés en base : SQLAlchemy
+        # persiste le **nom** du membre d'enum (PENDING…), pas sa valeur. On dérive donc
+        # les labels de l'enum (`.name`) pour éviter toute dérive de chaîne magique.
         stmt = text(
-            """
-            UPDATE jobs SET status = 'processing', started_at = now()
+            f"""
+            UPDATE jobs SET status = '{JobStatus.PROCESSING.name}', started_at = now()
             WHERE id = (
                 SELECT id FROM jobs
-                WHERE status IN ('pending', 'retrying')
+                WHERE status IN ('{JobStatus.PENDING.name}', '{JobStatus.RETRYING.name}')
                   AND scheduled_at <= now()
                 ORDER BY priority ASC, scheduled_at ASC
                 FOR UPDATE SKIP LOCKED

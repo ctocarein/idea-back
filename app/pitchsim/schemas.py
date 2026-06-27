@@ -24,6 +24,9 @@ class DeckOut(BaseModel):
     title: str
     project_id: UUID | None
     slides: list[SlideOut] = []
+    # Présentation persistée : URL présignée du fichier source (PDF/image) + son type.
+    file_url: str | None = None
+    content_type: str | None = None
 
 
 # --- Rubrique & comités (lecture) ---
@@ -52,7 +55,7 @@ class SessionStartIn(BaseModel):
     deck_id: UUID | None = None
     project_id: UUID | None = None
     # Format (timing) — défaut du comité si absent ; validé contre allowed_formats.
-    format: str | None = Field(default=None, pattern="^(elevator|standard|long)$")
+    format: str | None = Field(default=None, pattern="^(speed|standard|approfondi)$")
     # Options (Écran 1) :
     imprevus: bool = True
     hard_questions: bool = True
@@ -91,6 +94,7 @@ class SessionOut(BaseModel):
     config: dict
     convictions: dict = {}  # humeur du comité par juge (−2..+2), pour le front
     turns: list[TurnOut] = []
+    deck: DeckOut | None = None  # deck partagé persisté (ré-affiché au reload)
 
 
 class PitchRunOut(BaseModel):

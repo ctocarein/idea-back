@@ -29,11 +29,34 @@ class FallbackProvider:
         # `model` = chaîne ordonnée des modèles (tracée dans le ScoreRun).
         self.model = "→".join(p.model for p in providers)
 
+    @property
+    def supports_vision(self) -> bool:
+        # Le wrapper voit les images si AU MOINS un provider de la chaîne le sait.
+        return any(getattr(p, "supports_vision", False) for p in self._providers)
+
     async def complete(self, prompt: str, *, max_tokens: int = 1024) -> LLMResult:
         return await self._with_failover("complete", lambda p: p.complete(prompt, max_tokens=max_tokens))
 
     async def analyze_json(self, prompt: str, *, schema: dict | None = None) -> dict:
         return await self._with_failover("analyze_json", lambda p: p.analyze_json(prompt, schema=schema))
+
+    async def analyze_json_with_images(
+        self, prompt: str, *, images: list[str], schema: dict | None = None
+    ) -> dict:
+        # Bascule UNIQUEMENT sur les providers qui voient les images (Pixtral…).
+        vision = [p for p in self._providers if getattr(p, "supports_vision", False)]
+        last_exc: Exception | None = None
+        for provider in vision:
+            try:
+                return await provider.analyze_json_with_images(  # type: ignore[attr-defined]
+                    prompt, images=images, schema=schema
+                )
+            except _FAILOVER as exc:
+                last_exc = exc
+                continue
+        if last_exc is not None:
+            raise last_exc
+        return await self.analyze_json(prompt, schema=schema)  # aucun vision → texte seul
 
     async def _with_failover(self, op: str, call):
         last_exc: Exception | None = None
