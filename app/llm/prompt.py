@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-PROMPT_VERSION = "scoring-v2"
+PROMPT_VERSION = "scoring-v3"  # v3 : scoring honnête (« à compléter » au lieu d'inventer)
 REPORT_PROMPT_VERSION = "report-v1"
 COACH_PROMPT_VERSION = "coach-v1"
 PITCH_PROMPT_VERSION = "pitch-v2"  # v2 : cohérence dit/montré
@@ -142,6 +142,9 @@ def build_scoring_prompt(
         f"Catégorie : {category} · Archétype : {archetype}.",
         "Note CHAQUE dimension de 0 à 10 EN T'APPUYANT sur ses ancres (paliers ci-dessous).",
         "Ne te fie pas à l'enthousiasme : juge les faits fournis.",
+        "HONNÊTETÉ : si une dimension n'est PAS étayée par le projet (aucune info), ne l'invente",
+        "PAS — note-la dans le bas de l'échelle ET écris « à compléter » dans sa justification.",
+        "Un trou honnête vaut mieux qu'un score gonflé.",
         "",
         "DIMENSIONS, QUESTION CENTRALE & ANCRES :",
     ]

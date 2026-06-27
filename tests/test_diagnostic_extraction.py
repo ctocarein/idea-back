@@ -45,3 +45,17 @@ async def test_falls_back_to_provided_name():
     out = await IdeaExtractionService(_FakeProvider({"dimensions": {}})).extract("x" * 30, "MonProjet")
     assert out.project_name == "MonProjet"
     assert out.captured_count == 0
+
+
+def test_scoring_prompt_is_honest_about_missing_data():
+    from app.llm.prompt import build_scoring_prompt
+
+    p = build_scoring_prompt(
+        [{"key": "d1", "label": "Problème", "central_question": "?", "anchors": []}],
+        category="edtech",
+        archetype="field",
+        description="x" * 30,
+        answers=None,
+    )
+    assert "HONNÊTETÉ" in p
+    assert "à compléter" in p
