@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.llm.fallback import FallbackProvider
 from app.llm.openai_compatible import OpenAICompatibleProvider
 
 
@@ -53,3 +54,38 @@ async def test_vision_degrades_to_text_without_vision_model():
     # Texte seul : pas d'override de modèle, content est une chaîne (pas de parts image).
     assert captured["model"] is None
     assert isinstance(captured["messages"][-1]["content"], str)
+
+
+class _FakeVision:
+    model = "pixtral"
+    supports_vision = True
+
+    async def analyze_json_with_images(self, prompt, *, images, schema=None):
+        return {"saw": len(images)}
+
+    async def analyze_json(self, prompt, *, schema=None):
+        return {"text_only": True}
+
+
+class _FakeText:
+    model = "text"
+    supports_vision = False
+
+    async def analyze_json(self, prompt, *, schema=None):
+        return {"text_only": True}
+
+
+@pytest.mark.asyncio
+async def test_fallback_exposes_vision_and_delegates_to_capable_provider():
+    fb = FallbackProvider([_FakeVision(), _FakeText()])
+    assert fb.supports_vision is True
+    out = await fb.analyze_json_with_images("x", images=["a", "b"])
+    assert out == {"saw": 2}
+
+
+@pytest.mark.asyncio
+async def test_fallback_without_vision_degrades_to_text():
+    fb = FallbackProvider([_FakeText()])
+    assert fb.supports_vision is False
+    out = await fb.analyze_json_with_images("x", images=["a"])
+    assert out == {"text_only": True}
