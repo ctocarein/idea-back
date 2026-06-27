@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, status
 
+from app.core.ratelimit import rate_limit
 from app.diagnostics.dependencies import get_diagnostic_service, get_extraction_service
 from app.diagnostics.extraction import IdeaExtractionService
 from app.diagnostics.schemas import (
@@ -20,10 +21,14 @@ from app.iam.permissions import Permission
 router = APIRouter(prefix="/diagnostics", tags=["diagnostics"])
 
 
-@router.post("/extract", response_model=IdeaExtractOut)
+@router.post(
+    "/extract",
+    response_model=IdeaExtractOut,
+    # PUBLIC : le porteur raconte AVANT de s'inscrire. Rate-limité par IP (1 appel LLM/visiteur).
+    dependencies=[Depends(rate_limit("diagnostic_extract", limit=8, window_seconds=60))],
+)
 async def extract_idea(
     body: IdeaExtractIn,
-    ctx: AuthContext = Depends(require(Permission.DIAGNOSTIC_RUN)),
     svc: IdeaExtractionService = Depends(get_extraction_service),
 ) -> IdeaExtractOut:
     # « Raconte, on structure » : récit libre → 12 dimensions captées / manquantes (synchrone).
