@@ -9,6 +9,7 @@ from app.iam.dependencies import AuthContext, get_auth_service, get_current_user
 from app.iam.schemas import (
     LoginIn,
     MeOut,
+    OnboardingIn,
     RefreshIn,
     RegisterIn,
     TokenPair,
@@ -76,4 +77,21 @@ async def update_me(
     svc: AuthService = Depends(get_auth_service),
 ) -> UserOut:
     user = await svc.update_me(ctx.user, full_name=body.full_name)
+    return UserOut.model_validate(user)
+
+
+@router.patch("/me/onboarding", response_model=UserOut)
+async def complete_onboarding(
+    body: OnboardingIn,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: AuthService = Depends(get_auth_service),
+) -> UserOut:
+    user = await svc.complete_onboarding(
+        ctx.user,
+        country=body.country,
+        city=body.city,
+        professional_status=body.professional_status,
+        project_stage=body.project_stage,
+        weekly_availability=body.weekly_availability,
+    )
     return UserOut.model_validate(user)

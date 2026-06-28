@@ -22,7 +22,7 @@ from app.core.security import (
     needs_rehash,
     verify_password,
 )
-from app.iam.models import AccountStatus, Role, User
+from app.iam.models import AccountStatus, ProfessionalStatus, ProjectStage, Role, User, WeeklyAvailability
 from app.iam.permissions import permissions_for
 from app.iam.repository import RefreshTokenRepository, UserRepository
 from app.iam.schemas import MeOut, TokenPair, UserOut
@@ -141,6 +141,25 @@ class AuthService:
         if full_name is not None:
             user.full_name = full_name
             await self.session.commit()
+        return user
+
+    async def complete_onboarding(
+        self,
+        user: User,
+        *,
+        country: str,
+        city: str | None,
+        professional_status: ProfessionalStatus,
+        project_stage: ProjectStage,
+        weekly_availability: WeeklyAvailability | None,
+    ) -> User:
+        user.country = country
+        user.city = city
+        user.professional_status = professional_status
+        user.project_stage = project_stage
+        user.weekly_availability = weekly_availability
+        user.onboarding_completed = True
+        await self.session.commit()
         return user
 
     # --- Helpers internes --------------------------------------------------

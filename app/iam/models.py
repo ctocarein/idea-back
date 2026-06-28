@@ -16,6 +16,30 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
+class ProfessionalStatus(str, Enum):
+    STUDENT = "student"
+    EMPLOYEE = "employee"
+    ENTREPRENEUR = "entrepreneur"
+    FREELANCE = "freelance"
+    CAREER_CHANGE = "career_change"
+    UNEMPLOYED = "unemployed"
+
+
+class ProjectStage(str, Enum):
+    IDEA = "idea"
+    VALIDATION = "validation"
+    MVP = "mvp"
+    TRACTION = "traction"
+    SCALE = "scale"
+
+
+class WeeklyAvailability(str, Enum):
+    LT5 = "lt5"
+    H5_10 = "h5_10"
+    H10_20 = "h10_20"
+    GT20 = "gt20"
+
+
 class Role(str, Enum):
     # Quatre rôles de premier niveau. "founder" = le porteur de projet.
     # "analyst" est le regard humain (souvent fondu dans l'admin) ; "investor" est
@@ -47,6 +71,14 @@ class User(Base):
     # créés autrement (seed, invitation) le renseignent à leur propre étape.
     consent_at: Mapped[datetime | None] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    # Profil porteur (renseigné à l'onboarding post-inscription).
+    country: Mapped[str | None] = mapped_column(String(2), default=None)  # ISO 3166-1 alpha-2
+    city: Mapped[str | None] = mapped_column(String(100), default=None)
+    professional_status: Mapped[ProfessionalStatus | None] = mapped_column(default=None)
+    project_stage: Mapped[ProjectStage | None] = mapped_column(default=None)
+    weekly_availability: Mapped[WeeklyAvailability | None] = mapped_column(default=None)
+    onboarding_completed: Mapped[bool] = mapped_column(default=False)
 
     grants: Mapped[list[PermissionGrant]] = relationship(back_populates="user", cascade="all, delete-orphan")
 

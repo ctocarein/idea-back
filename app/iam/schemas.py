@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.iam.models import AccountStatus, Role
+from app.iam.models import AccountStatus, ProfessionalStatus, ProjectStage, Role, WeeklyAvailability
 
 
 class RegisterIn(BaseModel):
@@ -60,10 +60,25 @@ class UserOut(BaseModel):
     role: Role
     status: AccountStatus
     created_at: datetime
+    # Profil porteur (None si onboarding pas encore complété).
+    country: str | None = None
+    city: str | None = None
+    professional_status: ProfessionalStatus | None = None
+    project_stage: ProjectStage | None = None
+    weekly_availability: WeeklyAvailability | None = None
+    onboarding_completed: bool = False
 
 
 class UpdateMeIn(BaseModel):
     full_name: str | None = Field(default=None, min_length=2, max_length=200)
+
+
+class OnboardingIn(BaseModel):
+    country: str = Field(min_length=2, max_length=2, description="Code ISO 3166-1 alpha-2")
+    city: str | None = Field(default=None, max_length=100)
+    professional_status: ProfessionalStatus
+    project_stage: ProjectStage
+    weekly_availability: WeeklyAvailability | None = None
 
 
 class MeOut(BaseModel):

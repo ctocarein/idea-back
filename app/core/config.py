@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     # Paramètres d'appel. Température basse (reproductibilité), un peu > 0 pour que
     # l'ensemble (N passes) ait une dispersion exploitable.
     llm_temperature: float = 0.2
-    llm_max_tokens: int = 1024
+    llm_max_tokens: int = 4096
     llm_timeout_seconds: float = 30.0
 
     # --- Stockage objet (MinIO) ---
