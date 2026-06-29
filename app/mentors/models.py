@@ -54,6 +54,28 @@ class MentorProfile(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
 
+class MentorRequestStatus(str, Enum):
+    REQUESTED = "requested"
+    ACCEPTED = "accepted"
+    DECLINED = "declined"
+    SESSION_PLANNED = "session_planned"
+    DONE = "done"
+    CANCELLED = "cancelled"
+
+
+# Transitions autorisées (état courant → états cibles) par rôle.
+MENTOR_TRANSITIONS: dict[str, set[str]] = {
+    MentorRequestStatus.REQUESTED: {MentorRequestStatus.ACCEPTED, MentorRequestStatus.DECLINED},
+    MentorRequestStatus.ACCEPTED: {MentorRequestStatus.SESSION_PLANNED},
+    MentorRequestStatus.SESSION_PLANNED: {MentorRequestStatus.DONE},
+}
+FOUNDER_TRANSITIONS: dict[str, set[str]] = {
+    MentorRequestStatus.REQUESTED: {MentorRequestStatus.CANCELLED},
+    MentorRequestStatus.ACCEPTED: {MentorRequestStatus.CANCELLED},
+    MentorRequestStatus.SESSION_PLANNED: {MentorRequestStatus.CANCELLED},
+}
+
+
 class MentorRequest(Base):
     # Demande d'accompagnement d'un porteur vers un mentor (booking/paiement = v2).
     __tablename__ = "mentor_requests"
@@ -63,5 +85,7 @@ class MentorRequest(Base):
     mentor_user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     project_id: Mapped[UUID | None] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), default=None)
     message: Mapped[str] = mapped_column(Text, default="")
-    status: Mapped[str] = mapped_column(String(20), default="requested", index=True)
+    status: Mapped[str] = mapped_column(String(20), default=MentorRequestStatus.REQUESTED, index=True)
+    session_at: Mapped[datetime | None] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())

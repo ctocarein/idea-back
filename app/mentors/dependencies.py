@@ -10,7 +10,10 @@ from app.core.database import get_session
 from app.iam.repository import UserRepository
 from app.mentors.repository import MentorRepository
 from app.mentors.service import MentorService
+from app.projects.repository import ProjectRepository
 
 
 def get_mentor_service(session: AsyncSession = Depends(get_session)) -> MentorService:
-    return MentorService(MentorRepository(session), UserRepository(session), AuditService(session))
+    return MentorService(  # noqa: E501
+        MentorRepository(session), UserRepository(session), AuditService(session), ProjectRepository(session)
+    )

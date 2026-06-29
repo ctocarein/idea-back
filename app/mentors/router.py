@@ -18,8 +18,10 @@ from app.mentors.schemas import (
     MentorProfileMeOut,
     MentorProfileUpdateIn,
     MentorPublicOut,
+    MentorRequestDetailOut,
     MentorRequestIn,
     MentorRequestOut,
+    SessionPlanIn,
 )
 from app.mentors.service import MentorService
 
@@ -80,6 +82,70 @@ async def request_mentor(
 ) -> MentorRequestOut:
     # Demande d'accompagnement (booking/paiement = v2).
     return await svc.request_mentor(ctx, mentor_user_id, body)
+
+
+@router.get("/me/mentor-requests", response_model=list[MentorRequestDetailOut])
+async def my_mentor_requests(
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> list[MentorRequestDetailOut]:
+    # Porteur : ses demandes envoyées (toutes) avec statut en temps réel.
+    return await svc.my_requests(ctx)
+
+
+@router.get("/mentors/me/requests", response_model=list[MentorRequestDetailOut])
+async def mentor_incoming_requests(
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> list[MentorRequestDetailOut]:
+    # Mentor : demandes reçues.
+    return await svc.mentor_incoming_requests(ctx)
+
+
+@router.patch("/mentor-requests/{request_id}/accept", response_model=MentorRequestDetailOut)
+async def accept_request(
+    request_id: UUID,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> MentorRequestDetailOut:
+    return await svc.respond_request(ctx, request_id, accept=True)
+
+
+@router.patch("/mentor-requests/{request_id}/decline", response_model=MentorRequestDetailOut)
+async def decline_request(
+    request_id: UUID,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> MentorRequestDetailOut:
+    return await svc.respond_request(ctx, request_id, accept=False)
+
+
+@router.patch("/mentor-requests/{request_id}/plan-session", response_model=MentorRequestDetailOut)
+async def plan_session(
+    request_id: UUID,
+    body: SessionPlanIn,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> MentorRequestDetailOut:
+    return await svc.plan_session(ctx, request_id, body)
+
+
+@router.patch("/mentor-requests/{request_id}/complete", response_model=MentorRequestDetailOut)
+async def complete_request(
+    request_id: UUID,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> MentorRequestDetailOut:
+    return await svc.complete_request(ctx, request_id)
+
+
+@router.patch("/mentor-requests/{request_id}/cancel", response_model=MentorRequestDetailOut)
+async def cancel_request(
+    request_id: UUID,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: MentorService = Depends(get_mentor_service),
+) -> MentorRequestDetailOut:
+    return await svc.cancel_request(ctx, request_id)
 
 
 @router.get("/admin/mentor-applications", response_model=list[MentorApplicationOut])

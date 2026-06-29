@@ -5,7 +5,10 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+from datetime import datetime
+
 from sqlalchemy import select
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.iam.invitations import Invitation, InvitationStatus
@@ -79,6 +82,37 @@ class MentorRepository:
         self.session.add(req)
         await self.session.flush()
         return req
+
+    async def get_request(self, request_id: UUID) -> MentorRequest | None:
+        return await self.session.get(MentorRequest, request_id)
+
+    async def list_by_founder(self, founder_id: UUID) -> list[tuple[MentorRequest, str]]:
+        MentorUser = aliased(User)
+        result = await self.session.execute(
+            select(MentorRequest, MentorUser.full_name)
+            .join(MentorUser, MentorUser.id == MentorRequest.mentor_user_id)
+            .where(MentorRequest.founder_id == founder_id)
+            .order_by(MentorRequest.created_at.desc())
+        )
+        return [(req, name) for req, name in result.all()]
+
+    async def list_by_mentor(self, mentor_user_id: UUID) -> list[tuple[MentorRequest, str]]:
+        FounderUser = aliased(User)
+        result = await self.session.execute(
+            select(MentorRequest, FounderUser.full_name)
+            .join(FounderUser, FounderUser.id == MentorRequest.founder_id)
+            .where(MentorRequest.mentor_user_id == mentor_user_id)
+            .order_by(MentorRequest.created_at.desc())
+        )
+        return [(req, name) for req, name in result.all()]
+
+    async def transition_request(
+        self, req: MentorRequest, *, status: str, session_at: datetime | None = None
+    ) -> None:
+        req.status = status
+        if session_at is not None:
+            req.session_at = session_at
+        await self.session.flush()
 
     # --- Invitations ---
 

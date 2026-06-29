@@ -83,3 +83,25 @@ class MentorRequestOut(BaseModel):
     mentor_user_id: UUID
     project_id: UUID | None
     status: str
+
+
+class MentorRequestDetailOut(BaseModel):
+    id: UUID
+    status: str
+    message: str
+    mentor_user_id: UUID
+    mentor_name: str
+    founder_id: UUID
+    founder_name: str
+    project_id: UUID | None
+    session_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class RespondRequestIn(BaseModel):
+    action: str  # "accept" | "decline"
+
+
+class SessionPlanIn(BaseModel):
+    session_at: datetime

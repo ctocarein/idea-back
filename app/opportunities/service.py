@@ -13,7 +13,7 @@ from app.iam.dependencies import AuthContext, guard_owner_access
 from app.instrumentation.service import OPPORTUNITY_INTEREST, InstrumentationService
 from app.opportunities.eligibility import evaluate_eligibility
 from app.opportunities.repository import OpportunityRepository
-from app.opportunities.schemas import OpportunityOut
+from app.opportunities.schemas import OpportunityAdminOut, OpportunityIn, OpportunityOut
 from app.projects.repository import ProjectRepository
 from app.reports.models import ReportStatus
 from app.reports.repository import ReportRepository
@@ -75,6 +75,54 @@ class OpportunityService:
         # Éligibles d'abord (orientation : « pour quoi suis-je prêt »).
         items.sort(key=lambda o: not o.eligible)
         return items
+
+    # --- Admin CRUD ----------------------------------------------------------
+
+    async def admin_list_all(self, ctx: AuthContext) -> list[OpportunityAdminOut]:
+        rows = await self.repo.list_all()
+        return [OpportunityAdminOut.model_validate(o) for o in rows]
+
+    async def admin_create(self, ctx: AuthContext, data: OpportunityIn) -> OpportunityAdminOut:
+        opp = await self.repo.create_opportunity(
+            title=data.title,
+            kind=data.kind,
+            description=data.description,
+            sector=data.sector,
+            min_overall=data.min_overall,
+            min_maturity=data.min_maturity,
+            deadline=data.deadline,
+            is_active=data.is_active,
+        )
+        await self.session.commit()
+        return OpportunityAdminOut.model_validate(opp)
+
+    async def admin_update(self, ctx: AuthContext, opp_id: UUID, data: OpportunityIn) -> OpportunityAdminOut:
+        opp = await self.repo.get_by_id(opp_id)
+        if opp is None:
+            raise NotFoundError("opportunity")
+        await self.repo.update_opportunity(
+            opp,
+            data={
+                "title": data.title,
+                "kind": data.kind,
+                "description": data.description,
+                "sector": data.sector,
+                "min_overall": data.min_overall,
+                "min_maturity": data.min_maturity,
+                "deadline": data.deadline,
+                "is_active": data.is_active,
+            },
+        )
+        await self.session.commit()
+        return OpportunityAdminOut.model_validate(opp)
+
+    async def admin_set_active(self, ctx: AuthContext, opp_id: UUID, *, active: bool) -> OpportunityAdminOut:
+        opp = await self.repo.get_by_id(opp_id)
+        if opp is None:
+            raise NotFoundError("opportunity")
+        await self.repo.set_active(opp, active=active)
+        await self.session.commit()
+        return OpportunityAdminOut.model_validate(opp)
 
     async def express_interest(self, ctx: AuthContext, opportunity_id: UUID, project_id: UUID) -> None:
         opp = await self.repo.get_by_id(opportunity_id)
