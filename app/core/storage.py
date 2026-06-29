@@ -59,6 +59,14 @@ class ObjectStorage:
             self._bucket, key, expires=timedelta(seconds=expires_seconds)
         )
 
+    def stat_object(self, key: str) -> tuple[int, str]:
+        """Retourne (size_bytes, content_type) de l'objet stocké (SEC-06).
+
+        Lève une exception MinIO si l'objet n'existe pas — l'appelant doit gérer.
+        """
+        stat = self._client.stat_object(self._bucket, key)  # type: ignore[attr-defined]
+        return (stat.size, stat.content_type or "")
+
     def remove_object(self, key: str) -> None:
         self._client.remove_object(self._bucket, key)  # type: ignore[attr-defined]
 

@@ -1,10 +1,9 @@
-"""Seed de développement — un compte de démo par rôle.
+"""Seed de production minimal — compte admin + données structurelles.
 
 Idempotent : relançable sans dupliquer (on saute un email déjà présent).
-Mot de passe commun aux comptes de démo : "ideaxion" (uniquement en local).
+Ne crée aucun compte porteur/mentor/analyste de démo : les vrais comptes sont créés via l'UI.
 
-La grille Radar v1 (référentiel d'évaluation) sera seedée au Sprint 2 (épic SCORING),
-quand le module scoring existera. Lancement : `python -m app.seed` (ou `make seed`).
+Lancement : `python -m app.seed` (ou `make seed`).
 """
 
 from __future__ import annotations
@@ -35,30 +34,23 @@ from app.scoring.repository import ScoringRepository
 
 logger = get_logger("seed")
 
-DEMO_PASSWORD = "ideaxion"  # local uniquement
-# Domaine `.dev` (et non `.test`) : `.test` est un TLD réservé que `EmailStr` refuse → les
-# comptes de démo ne pourraient pas se logger via l'API. Le front démo doit s'aligner.
-DEMO_USERS = [
-    ("admin@ideaxion.dev", "Admin Démo", Role.ADMIN),
-    ("analyst@ideaxion.dev", "Analyste Démo", Role.ANALYST),
-    ("mentor@ideaxion.dev", "Mentor Démo", Role.MENTOR),
-    ("founder@ideaxion.dev", "Porteur Démo", Role.FOUNDER),
-]
+ADMIN_PASSWORD = "ideaxion"  # à changer en prod via l'UI ou une variable d'env
+ADMIN_EMAIL = "admin@ideaxion.dev"
+ADMIN_NAME = "Admin Ideaxion"
 
 
 async def _seed_users(repo: UserRepository) -> None:
-    for email, full_name, role in DEMO_USERS:
-        if await repo.get_by_email(email) is not None:
-            logger.info("seed_user_skipped", email=email)
-            continue
-        await repo.create(
-            email=email,
-            password_hash=hash_password(DEMO_PASSWORD),
-            full_name=full_name,
-            role=role,
-            status=AccountStatus.ACTIVE,
-        )
-        logger.info("seed_user_created", email=email, role=role.value)
+    if await repo.get_by_email(ADMIN_EMAIL) is not None:
+        logger.info("seed_user_skipped", email=ADMIN_EMAIL)
+        return
+    await repo.create(
+        email=ADMIN_EMAIL,
+        password_hash=hash_password(ADMIN_PASSWORD),
+        full_name=ADMIN_NAME,
+        role=Role.ADMIN,
+        status=AccountStatus.ACTIVE,
+    )
+    logger.info("seed_user_created", email=ADMIN_EMAIL, role=Role.ADMIN.value)
 
 
 async def _seed_grid(repo: ScoringRepository) -> None:

@@ -19,13 +19,43 @@ from app.core.database import dispose_engine
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 
+_KNOWN_WEAK_SECRETS = {
+    # Valeurs de démo/dev qu'on ne doit JAMAIS retrouver en production.
+    "changeme", "secret", "ideaxion", "devsecret", "devjwt",
+    "3f9c1d7a4b8e2f6c0a5d9e3b7c1f4a8d2e6b0c9f5a3d7e1b",  # JWT du .env local
+}
+
+
+def _assert_production_config(settings) -> None:  # noqa: ANN001
+    """SEC-08 / SEC-14 : refuse de démarrer en production avec une config non sécurisée."""
+    if not settings.is_production:
+        return
+    errors: list[str] = []
+
+    # JWT_SECRET faible ou valeur de démo connue.
+    jwt = settings.jwt_secret.get_secret_value()
+    if len(jwt) < 32 or jwt.lower() in _KNOWN_WEAK_SECRETS:
+        errors.append("JWT_SECRET trop court ou valeur de démo connue — rotation requise.")
+
+    # CORS wildcard incompatible avec allow_credentials=True.
+    if "*" in settings.cors_origins:
+        errors.append("CORS wildcard '*' interdit en production avec credentials actifs.")
+
+    # Pas d'origine CORS configurée du tout.
+    if not settings.cors_origins:
+        errors.append("CORS_ORIGINS vide — aucune origine autorisée en production.")
+
+    if errors:
+        bullet_list = "\n".join(f"  • {e}" for e in errors)
+        raise RuntimeError(f"Démarrage refusé — configuration production invalide :\n{bullet_list}")
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    # Démarrage : config (fail-fast) + logging. Arrêt : libération des pools.
     configure_logging()
     logger = get_logger("startup")
     settings = get_settings()
+    _assert_production_config(settings)  # SEC-08/14 : fail-fast si config prod invalide
     logger.info("app_starting", env=settings.app_env, name=settings.app_name)
     yield
     await dispose_engine()

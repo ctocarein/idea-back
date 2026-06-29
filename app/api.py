@@ -17,6 +17,7 @@ from app.iam.router import router as iam_router
 from app.instrumentation.router import router as analytics_router
 from app.jobs.router import router as jobs_admin_router
 from app.mentors.router import router as mentors_router
+from app.opportunities.admin_router import router as opportunities_admin_router
 from app.opportunities.router import router as opportunities_router
 from app.pitchsim.router import router as pitchsim_router
 from app.platform.router import router as platform_router
@@ -24,6 +25,7 @@ from app.projects.router import router as projects_admin_router
 from app.reports.router import router as reports_router
 from app.scoring.governance import router as scoring_admin_router
 from app.scoring.router import router as scoring_router
+from app.notifications.router import router as notifications_router
 from app.sharing.router import router as sharing_router
 
 # Routeur racine de l'API versionnée.
@@ -49,6 +51,8 @@ api_router.include_router(sharing_router)  # /projects/{id}/share, /shared/{toke
 api_router.include_router(analytics_router)  # /admin/learning-dashboard (Sprint 6)
 api_router.include_router(gdpr_router)  # /me/export, DELETE /me (Sprint 6)
 api_router.include_router(jobs_admin_router)  # /admin/jobs/* (Sprint 6)
+api_router.include_router(notifications_router)  # /notifications/* (V1-05)
+api_router.include_router(opportunities_admin_router)  # /admin/opportunities/* (V1-06)
 
 # Sprints suivants (à monter quand prêts) :
 #   from app.mentors.router import router as mentors_router          # Sprint 5

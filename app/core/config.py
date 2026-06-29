@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     # Liste blanche d'origines. NoDecode : on reçoit la chaîne brute du .env et c'est notre
     # validateur (_split_csv) qui la découpe — pas le décodage JSON de pydantic-settings.
     cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    # IPs/CIDR des reverse proxies de confiance (ex. "10.0.0.1,10.0.0.2").
+    # Uniquement ces peers peuvent fixer X-Forwarded-For. En local = vide.
+    trusted_proxies: Annotated[list[str], NoDecode] = Field(default_factory=list)
 
     # --- Abstraction LLM ---
     llm_provider: str = "deepseek"  # mock | deepseek | mistral | openai | gemini

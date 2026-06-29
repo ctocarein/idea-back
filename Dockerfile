@@ -1,8 +1,9 @@
 # Image unique pour l'API et le worker : même code base, commande différente.
+# SEC-09 : uv épinglé par version (pas :latest), build non-root, uv sync --frozen.
 FROM python:3.12-slim AS base
 
-# uv : gestionnaire de paquets rapide (copié depuis l'image officielle).
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# uv : gestionnaire de paquets rapide — version épinglée pour build reproductible.
+COPY --from=ghcr.io/astral-sh/uv:0.5.26 /uv /uvx /bin/
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -25,15 +26,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
+# Utilisateur non-root (SEC-09 : limite l'impact d'une compromission runtime).
+RUN groupadd --system app && useradd --system --gid app --no-create-home app
+
 WORKDIR /app
 
-# Couche dépendances (cache) : `--extra pdf` = WeasyPrint, `--extra pitch` = parsing decks.
-COPY pyproject.toml ./
-RUN uv sync --no-install-project --no-dev --extra pdf --extra pitch || true
+# Couche dépendances (cache) : lockfile + pyproject.toml → build reproductible.
+# `--frozen` : refuse de modifier le lockfile (pas de surprise en CI/prod).
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --no-dev --extra pdf --extra pitch
 
-# Puis le code applicatif.
+# Code applicatif.
 COPY . .
-RUN uv sync --no-dev --extra pdf --extra pitch
+RUN uv sync --frozen --no-dev --extra pdf --extra pitch
+
+# Passage à l'utilisateur non-root AVANT le CMD.
+USER app
 
 EXPOSE 8080
 
