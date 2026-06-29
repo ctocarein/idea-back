@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, status
 from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
 from app.sharing.dependencies import get_share_service
-from app.sharing.schemas import ShareCreateIn, SharedFicheOut, ShareOut
+from app.sharing.schemas import ShareCreateIn, SharedFicheOut, ShareOut, ShareStatsOut
 from app.sharing.service import ShareService
 
 router = APIRouter(tags=["sharing"])
@@ -33,6 +33,14 @@ async def revoke_share(
     svc: ShareService = Depends(get_share_service),
 ) -> None:
     await svc.revoke(ctx, project_id)
+
+
+@router.get("/me/shares", response_model=list[ShareStatsOut])
+async def list_my_shares(
+    ctx: AuthContext = Depends(require(Permission.REPORT_READ_OWN)),
+    svc: ShareService = Depends(get_share_service),
+) -> list[ShareStatsOut]:
+    return await svc.list_my_shares(ctx)
 
 
 @router.get("/shared/{token}", response_model=SharedFicheOut)

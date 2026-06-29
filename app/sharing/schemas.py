@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 
@@ -23,3 +26,15 @@ class SharedFicheOut(BaseModel):
     summary: str
     strengths: list[str]
     scored_by: str = "Ideaxion"
+
+
+class ShareStatsOut(BaseModel):
+    id: UUID
+    project_id: UUID
+    project_title: str
+    share_url: str          # /shared/{token}
+    is_active: bool
+    expires_at: datetime
+    view_count: int
+    last_viewed_at: datetime | None
+    created_at: datetime

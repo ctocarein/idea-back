@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from app.core.errors import BusinessRuleError, NotFoundError
@@ -16,8 +16,9 @@ from app.iam.dependencies import AuthContext, guard_owner_access
 from app.projects.repository import ProjectRepository
 from app.reports.models import Report, ReportStatus
 from app.reports.repository import ReportRepository
+from app.sharing.models import SHARE_DEFAULT_TTL_DAYS
 from app.sharing.repository import ShareRepository
-from app.sharing.schemas import SharedFicheOut, ShareOut
+from app.sharing.schemas import SharedFicheOut, ShareOut, ShareStatsOut
 
 
 def _hash(token: str) -> str:
@@ -45,11 +46,14 @@ class ShareService:
         if await self._latest_ready_report(project_id) is None:
             raise BusinessRuleError("Aucun bilan prêt à partager.")
         token = secrets.token_urlsafe(24)
+        now = datetime.now(UTC)
         await self.repo.create(
             project_id=project_id,
             owner_id=ctx.user.id,
+            token=token,
             token_hash=_hash(token),
-            consent_at=datetime.now(UTC),
+            consent_at=now,
+            expires_at=now + timedelta(days=SHARE_DEFAULT_TTL_DAYS),
         )
         await self.session.commit()
         return ShareOut(token=token, path=f"/shared/{token}")
@@ -62,14 +66,39 @@ class ShareService:
         await self.repo.revoke_for_project(project_id, ctx.user.id)
         await self.session.commit()
 
+    async def list_my_shares(self, ctx: AuthContext) -> list[ShareStatsOut]:
+        rows = await self.repo.list_by_owner_with_title(ctx.user.id)
+        result = []
+        for share, project_title in rows:
+            token = share.token or ""
+            result.append(ShareStatsOut(
+                id=share.id,
+                project_id=share.project_id,
+                project_title=project_title,
+                share_url=f"/shared/{token}" if token else "",
+                is_active=share.is_active,
+                expires_at=share.expires_at,
+                view_count=share.view_count,
+                last_viewed_at=share.last_viewed_at,
+                created_at=share.created_at,
+            ))
+        return result
+
     async def get_fiche(self, token: str) -> SharedFicheOut:
-        share = await self.repo.get_active_by_hash(_hash(token))
+        token_hash = _hash(token)
+        share = await self.repo.get_active_by_hash(token_hash)
         if share is None:
             raise NotFoundError("share")  # lien invalide ou révoqué
         project = await self.projects.get_by_id(share.project_id)
         report = await self._latest_ready_report(share.project_id)
         if project is None or report is None:
             raise NotFoundError("fiche")
+        # Enregistre la vue (best-effort).
+        try:
+            await self.repo.increment_view(token_hash)
+            await self.session.commit()
+        except Exception:  # noqa: BLE001
+            await self.session.rollback()
         insights = report.insights or {}
         comprehension = report.comprehension or {}
         strengths = [s.get("text", "") for s in insights.get("strengths", []) if isinstance(s, dict)]
