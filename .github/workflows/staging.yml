@@ -1,0 +1,59 @@
+name: Build & Deploy — Staging (backend)
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE: ghcr.io/${{ github.repository_owner }}/idea-back
+
+jobs:
+  build-push:
+    name: Build image → GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:staging
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=registry,ref=${{ env.IMAGE }}:staging
+          cache-to: type=inline
+
+  deploy:
+    name: Deploy → VPS staging
+    needs: build-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd ${{ secrets.STAGING_DEPLOY_PATH }}
+            export BACK_IMAGE=ghcr.io/${{ github.repository_owner }}/idea-back:${{ github.sha }}
+            docker compose -f docker-compose.staging.yml pull api migrate
+            docker compose -f docker-compose.staging.yml run --rm migrate
+            docker compose -f docker-compose.staging.yml up -d --no-deps api
+            docker image prune -f
