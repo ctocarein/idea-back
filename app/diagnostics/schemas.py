@@ -91,6 +91,15 @@ class IdeaExtractIn(BaseModel):
     project_name: str | None = Field(
         default=None, max_length=120, validation_alias=AliasChoices("project_name", "projectName")
     )
+    # SEC-12 : consentement explicite requis avant envoi au LLM (données potentiellement sensibles).
+    consent: bool = False
+
+    @field_validator("consent")
+    @classmethod
+    def _consent_required(cls, value: bool) -> bool:
+        if not value:
+            raise ValueError("Le consentement au traitement est requis pour analyser votre idée.")
+        return value
 
 
 class ExtractedDimension(BaseModel):
@@ -107,3 +116,6 @@ class IdeaExtractOut(BaseModel):
     total: int
     dimensions: list[ExtractedDimension]
     gaps: list[ExtractedDimension]  # les dimensions à compléter (captured=false)
+    # Texte source utilisé pour l'extraction (récit brut ou texte extrait du fichier).
+    # Renvoyé au front pour constituer le `description` du payload de scoring.
+    source_text: str = ""

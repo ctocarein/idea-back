@@ -17,6 +17,7 @@ from typing import Any
 from uuid import UUID
 
 from app.audit.service import AuditService
+from app.notifications.repository import NotificationRepository
 from app.core.config import get_settings
 from app.core.database import get_session_factory
 from app.core.logging import get_logger
@@ -164,6 +165,17 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
             next_actions=next_actions,
             pdf_document_id=pdf_document_id,
         )
+
+        # Notifie le porteur : son bilan est prêt.
+        try:
+            notif_repo = NotificationRepository(session)
+            await notif_repo.create(
+                user_id=project.owner_id,
+                type="report_ready",
+                payload={"report_id": str(report.id), "title": "Ton bilan de compréhension est prêt."},
+            )
+        except Exception as exc:  # noqa: BLE001 — dégradation gracieuse
+            logger.warning("notification_skipped", report_id=str(report.id), error=str(exc))
 
         # Avance le pipeline diagnostic.
         await projects.set_diagnostic_status(project, DiagnosticStatus.DIAGNOSTIC_COMPLETED)

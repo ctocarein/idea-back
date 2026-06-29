@@ -18,6 +18,7 @@ from app.diagnostics.schemas import (
     ManualDiagnosticIn,
     UploadDiagnosticIn,
 )
+from app.documents.repository import DocumentRepository
 from app.jobs.service import JobService
 from app.projects.models import (
     Archetype,
@@ -41,12 +42,14 @@ class DiagnosticService:
         reports: ReportRepository,
         jobs: JobService,
         auditor: AuditService,
+        documents: DocumentRepository | None = None,
     ) -> None:
         self.projects = projects
         self.diagnostics = diagnostics
         self.reports = reports
         self.jobs = jobs
         self.auditor = auditor
+        self.documents = documents
         self.session = projects.session
 
     async def start_guided(self, *, owner_id: UUID, data: ManualDiagnosticIn) -> DiagnosticCreatedOut:
@@ -64,6 +67,14 @@ class DiagnosticService:
         )
 
     async def start_from_document(self, *, owner_id: UUID, data: UploadDiagnosticIn) -> DiagnosticCreatedOut:
+        # SEC-07 : vérifier que le document appartient bien au porteur.
+        if data.document_id is not None and self.documents is not None:
+            from app.core.errors import ForbiddenError, NotFoundError
+            doc = await self.documents.get_by_id(data.document_id)
+            if doc is None:
+                raise NotFoundError("document")
+            if doc.owner_id != owner_id:
+                raise ForbiddenError("Ce document ne vous appartient pas.")
         return await self._start(
             owner_id=owner_id,
             title=data.project_name,

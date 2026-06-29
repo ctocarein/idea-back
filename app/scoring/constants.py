@@ -11,6 +11,67 @@ from __future__ import annotations
 GRID_VERSION_V2 = "v2-placeholder"
 SCALE_MAX = 10
 
+# Niveaux de maturité globaux — 6 paliers sur le score /100.
+# Utilisés dans GridOut, les rapports et le front (badge de maturité).
+MATURITY_LEVELS: list[dict] = [
+    {
+        "key": "idee_brute",
+        "label": "Idée brute",
+        "min": 0,
+        "max": 25,
+        "description": "Le projet est encore très flou — travaillons les fondamentaux.",
+        "tone": "fragile",
+    },
+    {
+        "key": "a_structurer",
+        "label": "Projet à structurer",
+        "min": 26,
+        "max": 45,
+        "description": "Le potentiel existe, mais les bases sont à renforcer.",
+        "tone": "watch",
+    },
+    {
+        "key": "prometteur",
+        "label": "Projet prometteur",
+        "min": 46,
+        "max": 60,
+        "description": "Le projet commence à être lisible — tu es sur la bonne voie.",
+        "tone": "watch",
+    },
+    {
+        "key": "pre_viable",
+        "label": "Projet pré-viable",
+        "min": 61,
+        "max": 75,
+        "description": "Le projet peut être testé sérieusement.",
+        "tone": "good",
+    },
+    {
+        "key": "business_ready",
+        "label": "Business Ready",
+        "min": 76,
+        "max": 85,
+        "description": "Prêt à rencontrer des partenaires, incubateurs ou premiers clients.",
+        "tone": "strong",
+    },
+    {
+        "key": "investor_ready",
+        "label": "Investor Ready",
+        "min": 86,
+        "max": 100,
+        "description": "Suffisamment structuré pour des financeurs ou institutions.",
+        "tone": "strong",
+    },
+]
+
+
+def get_maturity_level(overall_pct: int) -> dict:
+    """Retourne le niveau de maturité correspondant au score global /100."""
+    for level in MATURITY_LEVELS:
+        if level["min"] <= overall_pct <= level["max"]:
+            return level
+    return MATURITY_LEVELS[-1]
+
 # Piliers (vue porteur) — chaque pilier a sa question directrice.
 PILLARS: list[dict[str, str]] = [
     {

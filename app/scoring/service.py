@@ -12,10 +12,11 @@ from uuid import UUID
 
 from app.core.errors import NotFoundError
 from app.scoring import engine
+from app.scoring.constants import MATURITY_LEVELS
 from app.scoring.ensemble import EnsembleThresholds, consensus
 from app.scoring.models import ScoreSource, ScoringGrid
 from app.scoring.repository import ScoreRunRepository, ScoringRepository
-from app.scoring.schemas import AxisOut, GridOut, PillarOut, ScoreResult
+from app.scoring.schemas import AxisOut, GridOut, MaturityLevel, PillarOut, ScoreResult
 
 
 class ScoringService:
@@ -41,6 +42,7 @@ class ScoringService:
             pillars=[PillarOut(**p) for p in grid.pillars],
             axes=[AxisOut(**axis) for axis in grid.axes],
             category_weights=grid.category_weights,
+            maturity_levels=[MaturityLevel(**lvl) for lvl in MATURITY_LEVELS],
         )
 
     async def _resolve_grid(self, grid_version: str | None) -> ScoringGrid:

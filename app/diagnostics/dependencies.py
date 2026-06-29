@@ -11,6 +11,7 @@ from app.core.database import get_session
 from app.diagnostics.extraction import IdeaExtractionService
 from app.diagnostics.repository import DiagnosticRepository
 from app.diagnostics.service import DiagnosticService
+from app.documents.repository import DocumentRepository
 from app.jobs.repository import JobRepository
 from app.jobs.service import JobService
 from app.llm.factory import get_llm
@@ -27,6 +28,7 @@ def get_diagnostic_service(
         reports=ReportRepository(session),
         jobs=JobService(JobRepository(session)),
         auditor=AuditService(session),
+        documents=DocumentRepository(session),
     )
 
 

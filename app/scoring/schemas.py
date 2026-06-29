@@ -29,6 +29,15 @@ class AxisOut(BaseModel):
     guiding_questions: list[str] = Field(default_factory=list)
 
 
+class MaturityLevel(BaseModel):
+    key: str
+    label: str
+    min: int
+    max: int
+    description: str
+    tone: str  # fragile | watch | good | strong
+
+
 class GridOut(BaseModel):
     # Réponse de GET /scoring/grid : la grille active (v2 : 12 dims / 4 piliers / 10).
     version: str
@@ -36,6 +45,7 @@ class GridOut(BaseModel):
     pillars: list[PillarOut]
     axes: list[AxisOut]
     category_weights: dict[str, dict[str, float]] = Field(default_factory=dict)
+    maturity_levels: list[MaturityLevel] = Field(default_factory=list)
 
 
 class RadarScore(BaseModel):
