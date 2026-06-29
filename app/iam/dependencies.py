@@ -18,7 +18,7 @@ from app.audit.service import AuditService
 from app.core.database import get_session
 from app.core.errors import ForbiddenError, UnauthenticatedError
 from app.core.security import decode_access_token
-from app.iam.models import AccountStatus, User
+from app.iam.models import AccountStatus, Role, User
 from app.iam.permissions import Permission, permissions_for
 from app.iam.repository import RefreshTokenRepository, UserRepository
 from app.iam.service import AuthService
@@ -97,8 +97,10 @@ def require(*needed: Permission):
 
 
 def guard_owner_access(*, owner_id: UUID, ctx: AuthContext) -> None:
-    # Cas simple : l'admin voit tout ; sinon il faut être le propriétaire.
-    if Permission.PROJECT_READ_ANY in ctx.permissions:
+    # Seul l'admin a un passe-droit global ; sinon il faut être le propriétaire.
+    # SEC-02 : on teste le rôle explicitement — pas la permission PROJECT_READ_ANY
+    # qui était accordée aux analystes et leur donnait un accès non voulu.
+    if ctx.user.role is Role.ADMIN:
         return
     if owner_id == ctx.user.id:
         return
@@ -106,9 +108,9 @@ def guard_owner_access(*, owner_id: UUID, ctx: AuthContext) -> None:
 
 
 def guard_assigned_or_admin(*, assignee_id: UUID | None, ctx: AuthContext) -> None:
-    # Affinage analyste : l'admin peut tout ; le mentor/analyste UNIQUEMENT le projet qui
-    # lui est assigné. Le porteur (ni MENTOR_REVIEW ni PROJECT_READ_ANY) est exclu.
-    if Permission.PROJECT_READ_ANY in ctx.permissions:
+    # L'admin peut tout ; le mentor/analyste UNIQUEMENT le projet qui lui est assigné.
+    # SEC-02 : même logique — rôle explicite, pas permission.
+    if ctx.user.role is Role.ADMIN:
         return
     if Permission.MENTOR_REVIEW in ctx.permissions and assignee_id == ctx.user.id:
         return

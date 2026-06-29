@@ -96,27 +96,28 @@ class AuthService:
 
     async def refresh(self, *, refresh_token: str) -> TokenPair:
         token_hash = hash_token(refresh_token)
-        stored = await self.refresh_tokens.get_by_hash(token_hash)
 
-        if stored is None:
+        # SEC-03 : revocation atomique (UPDATE WHERE revoked=False RETURNING …).
+        # Deux requêtes concurrentes ne peuvent pas toutes les deux obtenir une ligne →
+        # pas de race condition sur la rotation.
+        row = await self.refresh_tokens.consume_if_active(token_hash)
+        if row is None:
+            # Token inexistant ou déjà révoqué → replay probable.
+            user_id = await self.refresh_tokens.find_user_id_by_hash(token_hash)
+            if user_id is not None:
+                await self.refresh_tokens.revoke_all_for_user(user_id)
+                await self.session.commit()
+                raise UnauthenticatedError("Refresh token réutilisé : session révoquée.")
             raise UnauthenticatedError("Refresh token invalide.")
 
-        # Token déjà consommé/révoqué et rejoué → vol probable : on coupe toute la chaîne.
-        # La révocation DOIT être persistée AVANT de lever l'erreur (commit explicite).
-        if stored.revoked:
-            await self.refresh_tokens.revoke_all_for_user(stored.user_id)
-            await self.session.commit()
-            raise UnauthenticatedError("Refresh token réutilisé : session révoquée.")
-
-        if stored.expires_at < datetime.now(UTC):
+        user_id, expires_at = row
+        if expires_at < datetime.now(UTC):
             raise UnauthenticatedError("Refresh token expiré.")
 
-        user = await self.users.get_by_id(stored.user_id)
+        user = await self.users.get_by_id(user_id)
         if user is None or user.status is not AccountStatus.ACTIVE:
             raise UnauthenticatedError("Compte non actif.")
 
-        await self.refresh_tokens.revoke(stored)  # rotation : l'ancien meurt
-        # rotation + émission du nouveau token commités ensemble.
         return await self._issue_tokens(user)
 
     async def logout(self, *, refresh_token: str) -> None:
@@ -159,6 +160,13 @@ class AuthService:
         user.project_stage = project_stage
         user.weekly_availability = weekly_availability
         user.onboarding_completed = True
+        await self.session.commit()
+        return user
+
+    async def update_profile(self, user: User, data) -> User:
+        # Mise à jour partielle du profil porteur (sans modifier onboarding_completed).
+        for field, value in data.model_dump(exclude_unset=True).items():
+            setattr(user, field, value)
         await self.session.commit()
         return user
 

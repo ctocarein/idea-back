@@ -81,6 +81,15 @@ class OnboardingIn(BaseModel):
     weekly_availability: WeeklyAvailability | None = None
 
 
+class FounderProfileUpdateIn(BaseModel):
+    # Même champs que l'onboarding mais tous optionnels (mise à jour partielle).
+    country: str | None = Field(default=None, min_length=2, max_length=2)
+    city: str | None = Field(default=None, max_length=100)
+    professional_status: ProfessionalStatus | None = None
+    project_stage: ProjectStage | None = None
+    weekly_availability: WeeklyAvailability | None = None
+
+
 class MeOut(BaseModel):
     # /auth/me : l'utilisateur + ses permissions effectives (pour piloter l'UX front).
     user: UserOut

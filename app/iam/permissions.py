@@ -43,6 +43,7 @@ class Permission(str, Enum):
     PERMISSION_GRANT = "permission:grant"  # accorder certification:sign, etc.
     AUDIT_READ = "audit:read"
     JOBS_MANAGE = "jobs:manage"
+    OPPORTUNITY_MANAGE = "opportunity:manage"  # CRUD catalogue opportunités
 
 
 # Permissions accordées d'office à chaque rôle. Tout le reste passe par PermissionGrant.
@@ -63,8 +64,8 @@ ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
         # CERTIFICATION_SIGN n'est PAS ici : c'est un grant explicite (mentor-certificateur).
     },
     Role.ANALYST: {
-        # Regard humain interne : lecture des projets pour la revue.
-        Permission.PROJECT_READ_ANY,
+        # Regard humain interne : lecture des projets ASSIGNÉS à l'analyste (pas de passe-droit global).
+        Permission.PROJECT_READ_ASSIGNED,
         Permission.MENTOR_REVIEW,
     },
     Role.INVESTOR: {
@@ -82,6 +83,7 @@ ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
         Permission.PERMISSION_GRANT,
         Permission.AUDIT_READ,
         Permission.JOBS_MANAGE,
+        Permission.OPPORTUNITY_MANAGE,
     },
 }
 

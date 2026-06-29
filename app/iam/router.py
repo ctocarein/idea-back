@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, status
 from app.core.ratelimit import rate_limit
 from app.iam.dependencies import AuthContext, get_auth_service, get_current_user
 from app.iam.schemas import (
+    FounderProfileUpdateIn,
     LoginIn,
     MeOut,
     OnboardingIn,
@@ -77,6 +78,16 @@ async def update_me(
     svc: AuthService = Depends(get_auth_service),
 ) -> UserOut:
     user = await svc.update_me(ctx.user, full_name=body.full_name)
+    return UserOut.model_validate(user)
+
+
+@router.patch("/me/profile", response_model=UserOut)
+async def update_profile(
+    body: FounderProfileUpdateIn,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: AuthService = Depends(get_auth_service),
+) -> UserOut:
+    user = await svc.update_profile(ctx.user, body)
     return UserOut.model_validate(user)
 
 

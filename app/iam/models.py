@@ -75,9 +75,9 @@ class User(Base):
     # Profil porteur (renseigné à l'onboarding post-inscription).
     country: Mapped[str | None] = mapped_column(String(2), default=None)  # ISO 3166-1 alpha-2
     city: Mapped[str | None] = mapped_column(String(100), default=None)
-    professional_status: Mapped[ProfessionalStatus | None] = mapped_column(default=None)
-    project_stage: Mapped[ProjectStage | None] = mapped_column(default=None)
-    weekly_availability: Mapped[WeeklyAvailability | None] = mapped_column(default=None)
+    professional_status: Mapped[ProfessionalStatus | None] = mapped_column(String(30), default=None)
+    project_stage: Mapped[ProjectStage | None] = mapped_column(String(20), default=None)
+    weekly_availability: Mapped[WeeklyAvailability | None] = mapped_column(String(10), default=None)
     onboarding_completed: Mapped[bool] = mapped_column(default=False)
 
     grants: Mapped[list[PermissionGrant]] = relationship(back_populates="user", cascade="all, delete-orphan")

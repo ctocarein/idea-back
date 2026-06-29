@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.iam.models import AccountStatus, PermissionGrant, RefreshToken, Role, User
@@ -81,6 +81,33 @@ class RefreshTokenRepository:
     async def get_by_hash(self, token_hash: str) -> RefreshToken | None:
         result = await self.session.execute(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
         return result.scalar_one_or_none()
+
+    async def consume_if_active(self, token_hash: str) -> tuple[UUID, datetime] | None:
+        """Révoque atomiquement le token si non-révoqué et retourne (user_id, expires_at).
+
+        SEC-03 : l'UPDATE conditionnel (WHERE revoked=False) est atomique — deux requêtes
+        concurrentes ne peuvent pas obtenir toutes les deux une ligne. Retourne None si le
+        token est inconnu ou déjà révoqué (rejoué).
+        """
+        stmt = (
+            update(RefreshToken)
+            .where(RefreshToken.token_hash == token_hash)
+            .where(RefreshToken.revoked.is_(False))
+            .values(revoked=True)
+            .returning(RefreshToken.user_id, RefreshToken.expires_at)
+        )
+        row = (await self.session.execute(stmt)).one_or_none()
+        if row is None:
+            return None
+        return (row.user_id, row.expires_at)
+
+    async def find_user_id_by_hash(self, token_hash: str) -> UUID | None:
+        """Retrouve le user_id d'un token même révoqué — pour détecter les replays."""
+        result = await self.session.execute(
+            select(RefreshToken.user_id).where(RefreshToken.token_hash == token_hash)
+        )
+        row = result.one_or_none()
+        return row.user_id if row else None
 
     async def revoke(self, token: RefreshToken) -> None:
         token.revoked = True
