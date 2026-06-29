@@ -17,16 +17,18 @@ from app.academy.schemas import (
     LessonDetailOut,
     LessonOut,
 )
-from app.core.errors import NotFoundError
+from app.core.errors import ForbiddenError, NotFoundError
 from app.iam.dependencies import AuthContext, guard_owner_access
 from app.llm.base import LLMProvider
 from app.llm.prompt import build_coach_prompt
+from app.projects.repository import ProjectRepository
 
 
 class AcademyService:
-    def __init__(self, repo: AcademyRepository, provider: LLMProvider) -> None:
+    def __init__(self, repo: AcademyRepository, provider: LLMProvider, projects: ProjectRepository | None = None) -> None:  # noqa: E501
         self.repo = repo
         self.provider = provider
+        self.projects = projects
         self.session = repo.session
 
     async def list_lessons(self, *, topic: str | None = None) -> list[LessonOut]:
@@ -57,6 +59,11 @@ class AcademyService:
     # --- Construire guidé ---
 
     async def start_guided(self, ctx: AuthContext, data: GuidedStartIn) -> GuidedSessionOut:
+        # SEC-07 : vérifier que le project_id fourni appartient bien à l'utilisateur.
+        if data.project_id is not None and self.projects is not None:
+            project = await self.projects.get_by_id(data.project_id)
+            if project is None or project.owner_id != ctx.user.id:
+                raise ForbiddenError("Ce projet ne vous appartient pas.")
         gs = await self.repo.create_session(owner_id=ctx.user.id, project_id=data.project_id, section=data.section)
         await self.session.commit()
         return GuidedSessionOut.model_validate(gs)

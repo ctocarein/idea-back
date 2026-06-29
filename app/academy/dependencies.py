@@ -10,7 +10,8 @@ from app.academy.service import AcademyService
 from app.core.config import get_settings
 from app.core.database import get_session
 from app.llm.factory import get_llm
+from app.projects.repository import ProjectRepository
 
 
 def get_academy_service(session: AsyncSession = Depends(get_session)) -> AcademyService:
-    return AcademyService(AcademyRepository(session), get_llm(get_settings()))
+    return AcademyService(AcademyRepository(session), get_llm(get_settings()), ProjectRepository(session))

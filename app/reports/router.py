@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import HTMLResponse
 
 from app.iam.dependencies import AuthContext, get_current_user, require
 from app.iam.permissions import Permission
@@ -50,6 +51,20 @@ async def start_next_action(
 ) -> None:
     # Le porteur démarre une prochaine action → event `action_started` (sortie du funnel).
     await svc.start_action(report_id, ctx, action_key)
+
+
+@router.get("/{report_id}/html", response_class=HTMLResponse)
+async def download_report_html(
+    report_id: UUID,
+    ctx: AuthContext = Depends(get_current_user),
+    svc: ReportService = Depends(get_report_service),
+) -> HTMLResponse:
+    html = await svc.get_html(report_id, ctx)
+    short = str(report_id)[:8]
+    return HTMLResponse(
+        content=html,
+        headers={"Content-Disposition": f'attachment; filename="bilan-{short}.html"'},
+    )
 
 
 @router.get("/{report_id}/pdf", response_model=PdfLink)

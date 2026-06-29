@@ -13,6 +13,7 @@ from app.core.storage import ObjectStorage
 from app.documents.repository import DocumentRepository
 from app.documents.schemas import (
     ALLOWED_CONTENT_TYPES,
+    MAX_SIZE_BYTES,
     DocumentOut,
     UploadUrlIn,
     UploadUrlOut,
@@ -54,6 +55,20 @@ class DocumentService:
         if doc is None:
             raise NotFoundError("document")
         guard_owner_access(owner_id=doc.owner_id, ctx=ctx)
+
+        # SEC-06 : vérifier que l'objet a bien été uploadé et qu'il respecte les contraintes.
+        if self.storage is not None:
+            try:
+                actual_size, actual_ct = self.storage.stat_object(doc.object_key)
+            except Exception:  # noqa: BLE001 — objet absent
+                raise BusinessRuleError("Le fichier n'a pas encore été uploadé.") from None
+            if actual_size > MAX_SIZE_BYTES:
+                self.storage.remove_object(doc.object_key)
+                raise BusinessRuleError("Fichier trop volumineux — upload refusé.")
+            if actual_ct and actual_ct.split(";")[0].strip() not in ALLOWED_CONTENT_TYPES:
+                self.storage.remove_object(doc.object_key)
+                raise BusinessRuleError("Type de fichier non autorisé.")
+
         await self.repo.confirm(doc)
         await self.session.commit()
         return DocumentOut.model_validate(doc)

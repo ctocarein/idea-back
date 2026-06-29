@@ -242,11 +242,24 @@ class PitchSessionService:
         rubric = await self.rubrics.get_active()
         if rubric is None:
             raise BusinessRuleError("Aucune rubrique de pitch active.")
-        # Secteur du projet → expert métier (5ᵉ juge).
+
+        # SEC-01 : vérifier la propriété du projet ET du deck avant de les associer à la session.
         sector = None
         if data.project_id is not None:
             project = await self.projects.get_by_id(data.project_id)
-            sector = project.sector if project else None
+            if project is None:
+                raise NotFoundError("project")
+            guard_owner_access(owner_id=project.owner_id, ctx=ctx)
+            sector = project.sector
+
+        if data.deck_id is not None:
+            deck = await self.decks.get_deck(data.deck_id)
+            if deck is None:
+                raise NotFoundError("pitch_deck")
+            guard_owner_access(owner_id=deck.owner_id, ctx=ctx)
+            # Le deck doit appartenir au même projet (ou ne pas être lié à un projet).
+            if data.project_id is not None and deck.project_id not in (None, data.project_id):
+                raise BusinessRuleError("Ce deck n'appartient pas au projet sélectionné.")
         # Timing : contexte (comité) × format (dans les bornes autorisées).
         # NB : gating par niveau/palier freemium = hook futur (pas de modèle d'abonnement encore).
         timing = committee_timing(data.committee_key)
