@@ -11,6 +11,7 @@ Flux module :
 from __future__ import annotations
 
 import json
+import re
 from uuid import UUID
 
 from app.academy.dimensions import DIMENSION_MODULES
@@ -44,6 +45,19 @@ from app.scoring.constants import AXES
 
 
 _AXES_BY_KEY: dict[str, dict] = {a["key"]: a for a in AXES}
+
+
+def _extract_json(text: str) -> str:
+    """Extrait le JSON d'une réponse LLM qui peut contenir des code fences."""
+    # Cherche un bloc ```json ... ``` ou ``` ... ```
+    m = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
+    if m:
+        return m.group(1).strip()
+    # Sinon cherche le premier { ... } ou [ ... ]
+    m = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", text)
+    if m:
+        return m.group(1).strip()
+    return text.strip()
 
 
 class AcademyService:
@@ -282,9 +296,9 @@ class AcademyService:
         )
         result = await self.provider.complete(prompt)
 
-        # Parser le JSON retourné par l'IA
+        # Parser le JSON retourné par l'IA (peut contenir des code fences)
         try:
-            prefilled = json.loads(result.text)
+            prefilled = json.loads(_extract_json(result.text))
         except (json.JSONDecodeError, ValueError):
             prefilled = {}
 
@@ -327,7 +341,7 @@ class AcademyService:
         result = await self.provider.complete(prompt)
 
         try:
-            parsed = json.loads(result.text)
+            parsed = json.loads(_extract_json(result.text))
             fiches_data = parsed.get("fiches", []) if isinstance(parsed, dict) else []
         except (json.JSONDecodeError, ValueError):
             fiches_data = []

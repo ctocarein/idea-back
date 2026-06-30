@@ -17,6 +17,7 @@ from app.academy.schemas import (
     LessonOut,
     ModuleFormIn,
     ModuleSessionOut,
+    ModuleStartIn,
     ModuleTurnIn,
     NeedFicheOut,
     WeaknessListOut,
