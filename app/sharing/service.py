@@ -18,7 +18,7 @@ from app.reports.models import Report, ReportStatus
 from app.reports.repository import ReportRepository
 from app.sharing.models import SHARE_DEFAULT_TTL_DAYS
 from app.sharing.repository import ShareRepository
-from app.sharing.schemas import SharedFicheOut, ShareOut, ShareStatsOut
+from app.sharing.schemas import ProjectVisibilityOut, SharedFicheOut, ShareOut, ShareStatsOut
 
 
 def _hash(token: str) -> str:
@@ -83,6 +83,24 @@ class ShareService:
                 created_at=share.created_at,
             ))
         return result
+
+    async def set_visibility(self, ctx: AuthContext, project_id: UUID, is_public: bool) -> None:
+        project = await self.projects.get_by_id(project_id)
+        if project is None:
+            raise NotFoundError("project")
+        guard_owner_access(owner_id=project.owner_id, ctx=ctx)
+        await self.projects.set_visibility(project, is_public)
+        await self.session.commit()
+
+    async def get_my_project_visibility(self, ctx: AuthContext) -> ProjectVisibilityOut | None:
+        project = await self.projects.get_latest_for_owner(ctx.user.id)
+        if project is None:
+            return None
+        return ProjectVisibilityOut(
+            project_id=project.id,
+            project_title=project.title,
+            is_public=project.is_public,
+        )
 
     async def get_fiche(self, token: str) -> SharedFicheOut:
         token_hash = _hash(token)

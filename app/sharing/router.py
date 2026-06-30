@@ -9,7 +9,8 @@ from fastapi import APIRouter, Depends, status
 from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
 from app.sharing.dependencies import get_share_service
-from app.sharing.schemas import ShareCreateIn, SharedFicheOut, ShareOut, ShareStatsOut
+from app.sharing.schemas import ProjectVisibilityOut, ShareCreateIn, SharedFicheOut, ShareOut, ShareStatsOut
+from app.projects.schemas import VisibilityIn
 from app.sharing.service import ShareService
 
 router = APIRouter(tags=["sharing"])
@@ -41,6 +42,24 @@ async def list_my_shares(
     svc: ShareService = Depends(get_share_service),
 ) -> list[ShareStatsOut]:
     return await svc.list_my_shares(ctx)
+
+
+@router.get("/me/project-visibility", response_model=ProjectVisibilityOut | None)
+async def get_my_project_visibility(
+    ctx: AuthContext = Depends(require(Permission.REPORT_READ_OWN)),
+    svc: ShareService = Depends(get_share_service),
+) -> ProjectVisibilityOut | None:
+    return await svc.get_my_project_visibility(ctx)
+
+
+@router.patch("/projects/{project_id}/visibility", status_code=status.HTTP_204_NO_CONTENT)
+async def set_project_visibility(
+    project_id: UUID,
+    body: VisibilityIn,
+    ctx: AuthContext = Depends(require(Permission.REPORT_READ_OWN)),
+    svc: ShareService = Depends(get_share_service),
+) -> None:
+    await svc.set_visibility(ctx, project_id, body.is_public)
 
 
 @router.get("/shared/{token}", response_model=SharedFicheOut)

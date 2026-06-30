@@ -85,3 +85,16 @@ class ProjectRepository:
     async def set_review_status(self, project: Project, status: ReviewStatus) -> None:
         project.review_status = status
         await self.session.flush()
+
+    async def set_visibility(self, project: Project, is_public: bool) -> None:
+        project.is_public = is_public
+        await self.session.flush()
+
+    async def get_latest_for_owner(self, owner_id: UUID) -> Project | None:
+        result = await self.session.execute(
+            select(Project)
+            .where(Project.owner_id == owner_id)
+            .order_by(Project.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()

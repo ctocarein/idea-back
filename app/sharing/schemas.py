@@ -38,3 +38,9 @@ class ShareStatsOut(BaseModel):
     view_count: int
     last_viewed_at: datetime | None
     created_at: datetime
+
+
+class ProjectVisibilityOut(BaseModel):
+    project_id: UUID
+    project_title: str
+    is_public: bool

@@ -14,7 +14,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import ForeignKey, String, func
+from sqlalchemy import Boolean, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -105,5 +105,7 @@ class Project(Base):
     review_status: Mapped[ReviewStatus] = mapped_column(default=ReviewStatus.NEW_DIAGNOSTIC, index=True)
     # Analyste/mentor assigné (curation). Null tant que non assigné.
     assignee_id: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), default=None)
+    # Projet visible dans l'écosystème (mentors/financeurs). Privé par défaut.
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())

@@ -22,6 +22,7 @@ class ProjectAdminOut(BaseModel):
     diagnostic_status: str
     review_status: str
     assignee_id: UUID | None
+    is_public: bool
     created_at: datetime
 
 
@@ -31,3 +32,7 @@ class ReviewTransitionIn(BaseModel):
 
 class AssigneeIn(BaseModel):
     assignee_id: UUID | None  # None = désassigner
+
+
+class VisibilityIn(BaseModel):
+    is_public: bool
