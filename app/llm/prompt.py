@@ -17,6 +17,7 @@ COACH_PROMPT_VERSION = "coach-v1"
 PITCH_PROMPT_VERSION = "pitch-v2"  # v2 : cohérence dit/montré
 VERDICT_PROMPT_VERSION = "verdict-v2"  # v2 : le verdict voit le deck + juge la cohérence
 EXTRACTION_PROMPT_VERSION = "extract-v1"  # récit libre → 12 dimensions captées / manquantes
+MODULE_PROMPT_VERSION = "module-v1"       # modules Academy : opener + turn + form + fiches
 
 
 def build_extraction_prompt(
@@ -165,6 +166,158 @@ def build_scoring_prompt(
         '{ "axes": { "<dimKey d1..d12>": <0-10>, ... }, "justifications": { "<dimKey>": "<courte raison>", ... } }',
     ]
     return "\n".join(lines)
+
+
+def build_module_opener_prompt(
+    *,
+    dimension: str,
+    label: str,
+    context_questions: list[str],
+    project_title: str | None = None,
+    sector: str | None = None,
+) -> str:
+    # Premier message du coach au démarrage d'un module Academy.
+    # Il pose les questions de contexte de manière directe et bienveillante.
+    projet = f"« {project_title} »" if project_title else "ton projet"
+    secteur = f" dans le secteur {sector}" if sector else ""
+    questions = "\n".join(f"- {q}" for q in context_questions)
+    return "\n".join(
+        [
+            "FORMAT=module_coach.",
+            f"Tu es un coach entrepreneurial travaillant avec le porteur de {projet}{secteur}.",
+            f"Tu commences le module « {dimension.upper()} — {label} ».",
+            "Présente-toi brièvement (1 phrase) et pose les questions de contexte ci-dessous",
+            "en un seul message structuré. Sois direct et bienveillant.",
+            "Ne rédige jamais à la place du porteur — tu poses des questions.",
+            "",
+            "QUESTIONS À POSER :",
+            questions,
+            "",
+            "Réponds en prose (pas de JSON) — le porteur va lire et répondre.",
+        ]
+    )
+
+
+def build_module_turn_prompt(
+    *,
+    dimension: str,
+    label: str,
+    history: list[dict],
+    message: str,
+) -> str:
+    # Tour de conversation dans un module (phase context).
+    hist = "\n".join(
+        f"{'Porteur' if t['role'] == 'porteur' else 'Coach'}: {t['text']}"
+        for t in history[-6:]
+    )
+    return "\n".join(
+        [
+            "FORMAT=module_coach.",
+            f"Tu coaches le porteur sur « {dimension.upper()} — {label} ».",
+            "Ton rôle : comprendre son projet sur cet aspect, poser des questions précises,",
+            "expliquer des concepts si besoin. Tu NE rédiges JAMAIS à sa place.",
+            "Si le porteur a répondu aux questions principales, dis-lui qu'il peut",
+            "maintenant passer à l'étape suivante (bouton « Remplir le formulaire »).",
+            "",
+            f"Historique récent :\n{hist or '(début de session)'}",
+            f"Message du porteur : {message}",
+            "",
+            "Réponds en prose (3-5 phrases max).",
+        ]
+    )
+
+
+def build_module_form_prefill_prompt(
+    *,
+    dimension: str,
+    label: str,
+    form_sections: list[dict],
+    history: list[dict],
+    project_title: str | None = None,
+    sector: str | None = None,
+) -> str:
+    # Pré-remplit le formulaire structuré à partir de la conversation de contexte.
+    # Ne JAMAIS inventer — seulement ce qui est dans la conversation.
+    projet = f"« {project_title} »" if project_title else "ce projet"
+    secteur = f" ({sector})" if sector else ""
+    sections_json = json.dumps(
+        [{"key": s["key"], "label": s["label"]} for s in form_sections],
+        ensure_ascii=False,
+    )
+    hist = "\n".join(
+        f"{'Porteur' if t['role'] == 'porteur' else 'Coach'}: {t['text']}"
+        for t in history
+    )
+    return "\n".join(
+        [
+            "FORMAT=form_prefill.",
+            f"À partir de la conversation sur le module « {dimension.upper()} — {label} »",
+            f"pour le projet {projet}{secteur}, pré-remplis les sections du formulaire.",
+            "RÈGLE ABSOLUE : ne JAMAIS inventer une info absente de la conversation.",
+            "Si une section n'est pas couverte par la conversation → chaîne vide (\"\").",
+            "",
+            f"SECTIONS DU FORMULAIRE : {sections_json}",
+            "",
+            "CONVERSATION :",
+            hist or "(aucun historique)",
+            "",
+            "Réponds STRICTEMENT en JSON : { \"<section_key>\": \"<valeur ou vide>\", ... }",
+        ]
+    )
+
+
+def build_module_fiches_prompt(
+    *,
+    dimension: str,
+    label: str,
+    form_data: dict,
+    project_title: str | None = None,
+    sector: str | None = None,
+) -> str:
+    # Génère des fiches de besoin structurées à partir du formulaire rempli.
+    projet = f"« {project_title} »" if project_title else "ce projet"
+    secteur = f" ({sector})" if sector else ""
+    return "\n".join(
+        [
+            "FORMAT=fiches.",
+            f"À partir du formulaire complété sur « {dimension.upper()} — {label} »",
+            f"pour le projet {projet}{secteur}, identifie les besoins concrets",
+            "qui permettraient de consolider ce projet.",
+            "",
+            "TYPES DE BESOIN POSSIBLES :",
+            "- dev : développeur (web, mobile, IoT, logiciel)",
+            "- expert : expert sectoriel (financier, juridique, RH, technique, sectoriel)",
+            "- cofondateur : cofondateur avec un profil complémentaire",
+            "- partenaire : partenaire commercial, de distribution ou technologique",
+            "- outil : outil, logiciel ou ressource technologique",
+            "- financement : recherche de financement (investisseur, subvention, prêt)",
+            "- formation : formation ou accompagnement spécialisé",
+            "- autre : autre type de besoin",
+            "",
+            "Pour CHAQUE besoin identifié, génère une fiche structurée.",
+            "Génère seulement les besoins réellement identifiés (1-4 fiches max).",
+            "",
+            f"FORMULAIRE :\n{json.dumps(form_data, ensure_ascii=False, indent=2)}",
+            "",
+            "Réponds STRICTEMENT en JSON :",
+            '{ "fiches": [',
+            '  {',
+            '    "need_type": "<type>",',
+            '    "title": "<titre court et concret>",',
+            '    "description": "<description 2-3 phrases>",',
+            '    "details": {',
+            '      "profile": "<profil recherché>",',
+            '      "skills": ["<compétence1>", "..."],',
+            '      "budget": "<estimation budgétaire ou vide>",',
+            '      "timeline": "<délai souhaité>",',
+            '      "deliverables": ["<livrable1>", "..."],',
+            '      "priority": "high|medium|low",',
+            '      "engagement_type": "<freelance|CDI|association|prestation|autre>"',
+            '    }',
+            '  }',
+            '] }',
+        ]
+    )
 
 
 def build_report_prompt(
