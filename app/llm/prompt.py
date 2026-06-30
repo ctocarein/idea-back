@@ -186,14 +186,27 @@ def build_module_opener_prompt(
             "FORMAT=module_coach.",
             f"Tu es un coach entrepreneurial travaillant avec le porteur de {projet}{secteur}.",
             f"Tu commences le module « {dimension.upper()} — {label} ».",
-            "Présente-toi brièvement (1 phrase) et pose les questions de contexte ci-dessous",
+            "Présente-toi brièvement (1 phrase) puis pose les questions de contexte ci-dessous",
             "en un seul message structuré. Sois direct et bienveillant.",
+            "N'utilise JAMAIS de placeholder entre crochets ([Prénom], [Ton nom]…) :",
+            "tu ne connais pas le prénom du porteur, alors tutoie-le sans le nommer.",
             "Ne rédige jamais à la place du porteur — tu poses des questions.",
             "",
             "QUESTIONS À POSER :",
             questions,
             "",
-            "Réponds en prose (pas de JSON) — le porteur va lire et répondre.",
+            "RÈGLE PÉDAGOGIQUE — pour CHAQUE question, ajoute un exemple concret entre",
+            "parenthèses ou en italique, pour montrer le type de réponse attendu.",
+            "Mets des exemples CHIFFRÉS et plausibles (montants, %, durées, volumes)",
+            "adaptés au secteur du projet — jamais des placeholders vagues.",
+            "Exemple de formulation : « **Comment génères-tu des revenus ?** "
+            "*(ex : abonnement SaaS à 29 €/mois, commission de 15 % par transaction, "
+            "licence annuelle à 5 000 €…)* »",
+            "Formate en Markdown : questions en **gras**, exemples en *italique*,",
+            "une question par puce. L'objectif : que le porteur comprenne instantanément",
+            "ce qu'on lui demande grâce à l'exemple.",
+            "",
+            "Réponds en prose Markdown (pas de JSON) — le porteur va lire et répondre.",
         ]
     )
 
@@ -216,13 +229,18 @@ def build_module_turn_prompt(
             f"Tu coaches le porteur sur « {dimension.upper()} — {label} ».",
             "Ton rôle : comprendre son projet sur cet aspect, poser des questions précises,",
             "expliquer des concepts si besoin. Tu NE rédiges JAMAIS à sa place.",
+            "Quand tu poses une nouvelle question, illustre-la d'un exemple concret et",
+            "CHIFFRÉ entre parenthèses ou en *italique* (montant, %, durée, volume),",
+            "pour que le porteur comprenne le type de réponse attendu.",
+            "Formate en Markdown : points clés en **gras**, exemples en *italique*,",
+            "listes à puces quand tu énumères.",
             "Si le porteur a répondu aux questions principales, dis-lui qu'il peut",
-            "maintenant passer à l'étape suivante (bouton « Remplir le formulaire »).",
+            "maintenant passer à l'étape suivante (bouton « Passer au formulaire »).",
             "",
             f"Historique récent :\n{hist or '(début de session)'}",
             f"Message du porteur : {message}",
             "",
-            "Réponds en prose (3-5 phrases max).",
+            "Réponds en prose Markdown (3-5 phrases max).",
         ]
     )
 
