@@ -111,3 +111,4 @@ class ModuleSessionOut(BaseModel):
     form_data: dict | None
     form_sections: list[dict] = Field(default_factory=list)    # fourni par le service (non stocké)
     fiches: list[NeedFicheOut] = Field(default_factory=list)   # fiches générées pour cette session
+    context_ready: bool = False                                # le coach juge la conversation suffisante

@@ -269,10 +269,17 @@ class AcademyService:
             message=message,
         )
         result = await self.provider.complete(prompt)
+
+        # Le coach signale qu'on a assez d'éléments via le marqueur [[PRET]].
+        text = result.text
+        ready = "[[PRET]]" in text
+        if ready:
+            text = text.replace("[[PRET]]", "").strip()
+
         gs.turns = [
             *gs.turns,
             {"role": "porteur", "text": message},
-            {"role": "coach", "text": result.text},
+            {"role": "coach", "text": text, "ready": ready},
         ]
         await self.session.commit()
         return await self._build_module_out(gs)
@@ -392,6 +399,13 @@ class AcademyService:
             raw = await self.repo.list_fiches_for_session(gs.id)
             fiches = [NeedFicheOut.model_validate(f) for f in raw]
 
+        # Le coach est-il prêt à passer à la synthèse ? (dernier tour coach)
+        context_ready = False
+        for turn in reversed(gs.turns or []):
+            if turn.get("role") == "coach":
+                context_ready = bool(turn.get("ready", False))
+                break
+
         return ModuleSessionOut(
             id=gs.id,
             dimension=gs.dimension,
@@ -400,4 +414,5 @@ class AcademyService:
             form_data=gs.form_data,
             form_sections=form_sections,
             fiches=fiches,
+            context_ready=context_ready,
         )
