@@ -258,6 +258,14 @@ class AcademyService:
                 project_title = p.title
                 sector = p.sector
 
+        # Score réel de l'axe au diagnostic → le coach personnalise son ouverture.
+        axis_score: int | None = None
+        radar = await self._get_latest_radar(ctx)
+        if radar:
+            axes = radar.get("axes") or {}
+            if dimension in axes:
+                axis_score = int(axes[dimension])
+
         # Message d'ouverture du coach
         opener_prompt = build_module_opener_prompt(
             dimension=dimension,
@@ -265,6 +273,7 @@ class AcademyService:
             context_questions=mod["context_questions"],
             project_title=project_title,
             sector=sector,
+            axis_score=axis_score,
         )
         result = await self.provider.complete(opener_prompt)
 

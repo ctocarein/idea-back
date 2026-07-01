@@ -175,17 +175,27 @@ def build_module_opener_prompt(
     context_questions: list[str],
     project_title: str | None = None,
     sector: str | None = None,
+    axis_score: int | None = None,
 ) -> str:
     # Premier message du coach au démarrage d'un module Academy.
     # Il pose les questions de contexte de manière directe et bienveillante.
     projet = f"« {project_title} »" if project_title else "ton projet"
     secteur = f" dans le secteur {sector}" if sector else ""
     questions = "\n".join(f"- {q}" for q in context_questions)
+    # Personnalisation : le coach part du score réel du diagnostic sur cet axe.
+    score_line = (
+        f"CONTEXTE — au diagnostic Radar, le porteur a obtenu {axis_score}/10 sur cet axe : "
+        "c'est un des points à renforcer. Reconnais-le en une demi-phrase, sans le culpabiliser, "
+        "et cadre l'échange comme une manière concrète de faire monter ce score."
+        if axis_score is not None
+        else ""
+    )
     return "\n".join(
         [
             "FORMAT=module_coach.",
             f"Tu es un coach entrepreneurial travaillant avec le porteur de {projet}{secteur}.",
             f"Tu commences le module « {dimension.upper()} — {label} ».",
+            *([score_line] if score_line else []),
             "Présente-toi brièvement (1 phrase) puis pose les questions de contexte ci-dessous",
             "en un seul message structuré. Sois direct et bienveillant.",
             "N'utilise JAMAIS de placeholder entre crochets ([Prénom], [Ton nom]…) :",
