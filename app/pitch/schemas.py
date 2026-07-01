@@ -21,7 +21,18 @@ class PitchOut(BaseModel):
     id: UUID
     title: str
     sections: list[PitchSectionOut]
+    template_id: str = "base"
+    slides: list[dict] = []
     updated_at: datetime
+
+
+class DeckGenerateIn(BaseModel):
+    # Source optionnelle : texte collé / pitch importé. Vide → on part des sections.
+    source: str | None = None
+
+
+class TemplateIn(BaseModel):
+    template_id: str
 
 
 class SectionUpdateIn(BaseModel):

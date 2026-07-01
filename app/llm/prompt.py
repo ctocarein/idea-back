@@ -435,3 +435,49 @@ def build_pitch_section_prompt(
         lines += ["", "VERSION ACTUELLE À AMÉLIORER :", existing_content or ""]
     lines += ["", "Réponds UNIQUEMENT par le texte de la section (aucun JSON, aucun guillemet englobant)."]
     return "\n".join(lines)
+
+
+def build_deck_prompt(
+    *,
+    source: str,
+    project_title: str | None = None,
+    sector: str | None = None,
+) -> str:
+    """Transforme la matière (pitch/Workshop/texte) en SLIDES structurées.
+
+    Sortie = JSON. Peu de texte, des CHIFFRES, un visuel par slide. Le rendu
+    HTML/CSS se charge du beau ; l'IA ne produit que la structure et la substance.
+    """
+    projet = f"« {project_title} »" if project_title else "le projet"
+    secteur = f" (secteur {sector})" if sector else ""
+    return "\n".join(
+        [
+            "FORMAT=deck.",
+            f"Tu es un designer de pitch deck. À partir de la MATIÈRE ci-dessous sur {projet}{secteur},",
+            "produis un deck de 7 à 10 slides, façon Gamma : PEU de texte, des CHIFFRES, un visuel par slide.",
+            "",
+            "RÈGLES :",
+            "- Titre de slide : 3 à 6 mots MAX. Bullets : 3 max, une ligne chacune, percutantes.",
+            "- Mets en avant les CHIFFRES réels de la matière (montants, %, volumes) — n'en invente aucun.",
+            "- Choisis le bon layout par slide :",
+            "  · cover   → 1re slide : titre du projet + sous-titre accrocheur + image_keyword",
+            "  · stat    → UN chiffre clé : stat={value,label} + une phrase de contexte",
+            "  · bullets → titre + 2-3 bullets + image_keyword",
+            "  · chart   → titre + chart={type:'bar'|'line'|'pie', labels:[...], values:[...]} (données de la matière)",
+            "  · image   → titre + image_keyword + 1 courte légende",
+            "- Couvre l'arc : accroche, problème, solution, marché (stat/chart), modèle éco (chart), "
+            "traction (stat), concurrence, équipe, demande/besoins.",
+            "- image_keyword = 1 à 3 mots ANGLAIS pour une photo Unsplash (ex. 'city logistics', 'team meeting').",
+            "",
+            "MATIÈRE :",
+            source or "(peu d'éléments — reste général mais honnête)",
+            "",
+            "Réponds STRICTEMENT en JSON : { \"slides\": [ {",
+            '  "layout": "cover|stat|bullets|chart|image",',
+            '  "title": "...", "subtitle": "", "bullets": [], ',
+            '  "stat": { "value": "", "label": "" }, ',
+            '  "chart": { "type": "bar", "labels": [], "values": [] }, ',
+            '  "image_keyword": "", "caption": "" } ] }',
+            "Omets les champs non pertinents pour le layout (ou laisse-les vides).",
+        ]
+    )

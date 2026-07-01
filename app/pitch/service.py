@@ -7,6 +7,8 @@ porteur reste maître : l'IA propose, il édite et enregistre.
 
 from __future__ import annotations
 
+import json
+import re
 from uuid import UUID
 
 from app.academy.repository import AcademyRepository
@@ -19,7 +21,8 @@ from app.core.errors import (
 )
 from app.iam.dependencies import AuthContext
 from app.llm.base import LLMProvider
-from app.llm.prompt import build_pitch_section_prompt
+from app.llm.prompt import build_deck_prompt, build_pitch_section_prompt
+from app.pitch.deck_render import TEMPLATES, render_deck_html
 from app.pitch.export import (
     render_pitch_html,
     render_pitch_pdf,
@@ -183,4 +186,66 @@ class PitchService:
             )
             for meta in PITCH_SECTIONS
         ]
-        return PitchOut(id=pitch.id, title=pitch.title, sections=sections, updated_at=pitch.updated_at)
+        return PitchOut(
+            id=pitch.id,
+            title=pitch.title,
+            sections=sections,
+            template_id=pitch.template_id or "base",
+            slides=pitch.slides or [],
+            updated_at=pitch.updated_at,
+        )
+
+    # --- Deck visuel (V1.3) ---
+
+    async def set_template(self, ctx: AuthContext, pitch_id: UUID, template_id: str) -> PitchOut:
+        if template_id not in TEMPLATES:
+            raise BusinessRuleError(f"Template inconnu : {template_id}")
+        pitch = await self._load_owned(ctx, pitch_id)
+        pitch.template_id = template_id
+        await self.session.commit()
+        await self.session.refresh(pitch)
+        return self._to_out(pitch)
+
+    async def generate_deck(
+        self, ctx: AuthContext, pitch_id: UUID, source: str | None = None
+    ) -> PitchOut:
+        """Génère les slides structurées depuis la source (texte fourni ou sections)."""
+        pitch = await self._load_owned(ctx, pitch_id)
+        material = (source or "").strip()
+        if not material:
+            material = "\n\n".join(
+                f"{s.get('title','')} : {s.get('content','')}"
+                for s in (pitch.sections or [])
+                if str(s.get("content", "")).strip()
+            )
+        if not material:
+            raise BusinessRuleError(
+                "Rien à générer : rédige d'abord tes sections, colle un texte, ou importe un pitch."
+            )
+        title, sector, _ = await self._project_context(ctx)
+        prompt = build_deck_prompt(source=material, project_title=title, sector=sector)
+        result = await self.provider.complete(prompt)
+        try:
+            parsed = json.loads(self._extract_json(result.text))
+            slides = parsed.get("slides", []) if isinstance(parsed, dict) else []
+        except (json.JSONDecodeError, ValueError):
+            slides = []
+        if not slides:
+            raise BusinessRuleError("La génération du deck a échoué. Réessaie.")
+        pitch.slides = [s for s in slides if isinstance(s, dict)]
+        await self.session.commit()
+        await self.session.refresh(pitch)
+        return self._to_out(pitch)
+
+    async def render_deck(self, ctx: AuthContext, pitch_id: UUID, *, standalone: bool = True) -> str:
+        pitch = await self._load_owned(ctx, pitch_id)
+        title, _sector, _ = await self._project_context(ctx)
+        return render_deck_html(pitch, project_title=title, standalone=standalone)
+
+    @staticmethod
+    def _extract_json(text: str) -> str:
+        m = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
+        if m:
+            return m.group(1).strip()
+        m = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", text)
+        return m.group(1).strip() if m else text.strip()

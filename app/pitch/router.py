@@ -9,7 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
 from app.pitch.dependencies import get_pitch_service
-from app.pitch.schemas import PitchOut, SectionGenerateOut, SectionUpdateIn
+from app.pitch.schemas import (
+    DeckGenerateIn,
+    PitchOut,
+    SectionGenerateOut,
+    SectionUpdateIn,
+    TemplateIn,
+)
 from app.pitch.service import PitchService
 
 router = APIRouter(prefix="/pitch", tags=["pitch"])
@@ -42,6 +48,36 @@ async def generate_section(
     svc: PitchService = Depends(get_pitch_service),
 ) -> SectionGenerateOut:
     return await svc.generate_section(ctx, pitch_id, key)
+
+
+@router.post("/{pitch_id}/deck/generate", response_model=PitchOut)
+async def generate_deck(
+    pitch_id: UUID,
+    body: DeckGenerateIn,
+    ctx: AuthContext = Depends(require(Permission.PITCH_EDIT)),
+    svc: PitchService = Depends(get_pitch_service),
+) -> PitchOut:
+    return await svc.generate_deck(ctx, pitch_id, body.source)
+
+
+@router.patch("/{pitch_id}/template", response_model=PitchOut)
+async def set_template(
+    pitch_id: UUID,
+    body: TemplateIn,
+    ctx: AuthContext = Depends(require(Permission.PITCH_EDIT)),
+    svc: PitchService = Depends(get_pitch_service),
+) -> PitchOut:
+    return await svc.set_template(ctx, pitch_id, body.template_id)
+
+
+@router.get("/{pitch_id}/deck/html")
+async def deck_html(
+    pitch_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.PITCH_EDIT)),
+    svc: PitchService = Depends(get_pitch_service),
+) -> Response:
+    html = await svc.render_deck(ctx, pitch_id, standalone=True)
+    return Response(content=html, media_type="text/html; charset=utf-8")
 
 
 @router.get("/{pitch_id}/export")
