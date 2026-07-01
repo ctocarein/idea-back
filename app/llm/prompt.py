@@ -398,3 +398,40 @@ def build_report_prompt(
             "}",
         ]
     )
+
+
+def build_pitch_section_prompt(
+    *,
+    section_title: str,
+    section_hint: str,
+    existing_content: str | None,
+    evidence: str | None,
+    project_title: str | None = None,
+    sector: str | None = None,
+) -> str:
+    """Génère ou améliore UNE section de pitch, à partir du travail Workshop.
+
+    `evidence` = matière brute (synthèse Workshop de la dimension, ou fiches de
+    besoin pour la section « Nos besoins »). Le ton est celui d'un pitch : court,
+    concret, percutant — jamais de blabla ni de superlatifs creux.
+    """
+    projet = f"« {project_title} »" if project_title else "le projet"
+    secteur = f" (secteur {sector})" if sector else ""
+    mode = "AMÉLIORE" if (existing_content or "").strip() else "RÉDIGE"
+    lines = [
+        "FORMAT=pitch_section.",
+        f"Tu es un coach pitch. Tu {mode.lower()}s la section « {section_title} » du pitch de {projet}{secteur}.",
+        f"Objectif de la section : {section_hint}",
+        "STYLE : court et percutant (2 à 4 phrases MAX), concret, chiffré quand c'est possible.",
+        "Pas de superlatifs creux (« révolutionnaire », « leader »), pas de listes à puces,",
+        "pas de titre ni de préambule — juste le texte de la section, prêt à coller dans un deck.",
+        "N'invente AUCUN chiffre : n'utilise que ce qui est étayé par la matière ci-dessous ;",
+        "s'il manque une donnée, reste qualitatif plutôt que d'inventer.",
+        "",
+        "MATIÈRE (issue du diagnostic et du Workshop) :",
+        evidence or "(peu d'éléments — reste général mais honnête)",
+    ]
+    if (existing_content or "").strip():
+        lines += ["", "VERSION ACTUELLE À AMÉLIORER :", existing_content or ""]
+    lines += ["", "Réponds UNIQUEMENT par le texte de la section (aucun JSON, aucun guillemet englobant)."]
+    return "\n".join(lines)

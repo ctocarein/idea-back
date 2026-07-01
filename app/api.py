@@ -19,6 +19,7 @@ from app.jobs.router import router as jobs_admin_router
 from app.mentors.router import router as mentors_router
 from app.opportunities.admin_router import router as opportunities_admin_router
 from app.opportunities.router import router as opportunities_router
+from app.pitch.router import router as pitch_router
 from app.pitchsim.router import router as pitchsim_router
 from app.platform.router import router as platform_router
 from app.projects.router import router as projects_admin_router
@@ -53,6 +54,7 @@ api_router.include_router(gdpr_router)  # /me/export, DELETE /me (Sprint 6)
 api_router.include_router(jobs_admin_router)  # /admin/jobs/* (Sprint 6)
 api_router.include_router(notifications_router)  # /notifications/* (V1-05)
 api_router.include_router(opportunities_admin_router)  # /admin/opportunities/* (V1-06)
+api_router.include_router(pitch_router)  # /pitch/* — éditeur (V1.2)
 
 # Sprints suivants (à monter quand prêts) :
 #   from app.mentors.router import router as mentors_router          # Sprint 5

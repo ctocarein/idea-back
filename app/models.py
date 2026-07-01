@@ -26,6 +26,7 @@ from app.mentors.models import (  # noqa: F401
     MentorRequest,
 )
 from app.opportunities.models import Opportunity  # noqa: F401
+from app.pitch.models import Pitch  # noqa: F401
 from app.pitchsim.models import (  # noqa: F401
     PitchDeck,
     PitchRubric,
