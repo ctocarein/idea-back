@@ -164,7 +164,13 @@ class AcademyService:
     async def get_my_weaknesses(self, ctx: AuthContext) -> WeaknessListOut:
         radar = await self._get_latest_radar(ctx)
         if radar is None:
-            return WeaknessListOut(weaknesses=[], dimensions_worked=0, has_radar=False)
+            return WeaknessListOut(
+                weaknesses=[],
+                dimensions_worked=0,
+                dimensions_reinforced=0,
+                reinforced_dimensions=[],
+                has_radar=False,
+            )
 
         axes_scores: dict[str, int] = radar.get("axes") or {}
         # Trier les dimensions par score croissant → les plus faibles en premier
@@ -182,10 +188,14 @@ class AcademyService:
             for dim, phase, sid in await self.repo.list_started_dimensions(ctx.user.id)
         }
 
+        # Un axe est « renforcé » quand son module a produit des fiches (phase "fiches").
+        reinforced = [dim for dim, (phase, _sid) in started.items() if phase == "fiches"]
+
         weaknesses = []
         for dim_key, score in top3:
             axis = _AXES_BY_KEY[dim_key]
             existing = started.get(dim_key)
+            phase = existing[0] if existing else None
             weaknesses.append(
                 WeaknessOut(
                     dimension=dim_key,
@@ -194,13 +204,16 @@ class AcademyService:
                     central_question=axis["central_question"],
                     pillar=axis["pillar"],
                     module_session_id=existing[1] if existing else None,
-                    module_phase=existing[0] if existing else None,
+                    module_phase=phase,
+                    is_reinforced=(phase == "fiches"),
                 )
             )
 
         return WeaknessListOut(
             weaknesses=weaknesses,
             dimensions_worked=len(started),
+            dimensions_reinforced=len(reinforced),
+            reinforced_dimensions=reinforced,
             has_radar=True,
         )
 

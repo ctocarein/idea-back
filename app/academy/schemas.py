@@ -66,12 +66,15 @@ class WeaknessOut(BaseModel):
     pillar: str             # sens | viabilite | scalabilite | execution
     module_session_id: UUID | None = None   # session existante si module déjà démarré
     module_phase: str | None = None         # phase actuelle du module (context | form | fiches)
+    is_reinforced: bool = False             # True quand les fiches ont été générées (axe renforcé)
 
 
 class WeaknessListOut(BaseModel):
     weaknesses: list[WeaknessOut]
-    dimensions_worked: int      # nombre de modules démarrés
-    has_radar: bool             # False si aucun bilan Radar disponible
+    dimensions_worked: int              # nombre de modules démarrés (context/form/fiches)
+    dimensions_reinforced: int = 0      # nombre d'axes renforcés (fiches générées)
+    reinforced_dimensions: list[str] = []  # clés d1..d12 des axes renforcés (pour le Radar)
+    has_radar: bool                     # False si aucun bilan Radar disponible
 
 
 class ModuleStartIn(BaseModel):
