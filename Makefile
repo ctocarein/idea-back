@@ -27,7 +27,7 @@ dev: stack ## Stack complète : infra + attente DB + migrations + API (8082)
 	$(MAKE) run
 
 health: ## Vérifie /health de l'API locale (8082)
-	@curl -fsS http://localhost:8082/health | python -m json.tool || echo "API injoignable sur 8082"
+	@curl -fsS http://localhost:8082/api/v1/health | python -m json.tool || echo "API injoignable sur 8082"
 
 run: ## Lance l'API en local (rechargement à chaud, port 8082)
 	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8082
