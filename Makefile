@@ -2,7 +2,11 @@
 # Cible par défaut : afficher l'aide.
 
 .DEFAULT_GOAL := help
-.PHONY: help install run worker migrate revision seed test lint format typecheck calibrate
+.PHONY: help install run worker migrate revision seed test test-int lint format typecheck calibrate stack stack-down dev health
+
+# Ports de dev (source de vérité) : API 8082 (attendue par idea-front), Postgres 5432,
+# Redis 6379, MinIO 9000/9001. Le port Postgres est paramétrable via POSTGRES_PORT
+# (.env) et DOIT correspondre au port de DATABASE_URL.
 
 help: ## Affiche cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -10,8 +14,23 @@ help: ## Affiche cette aide
 install: ## Installe les dépendances (prod + dev + pdf + pitch)
 	uv sync --extra dev --extra pdf --extra pitch
 
-run: ## Lance l'API en local (rechargement à chaud)
-	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
+stack: ## Lève l'infra en arrière-plan (postgres, redis, minio)
+	docker compose up -d postgres redis minio
+
+stack-down: ## Arrête l'infra
+	docker compose down
+
+dev: stack ## Stack complète : infra + attente DB + migrations + API (8082)
+	@echo "Attente de Postgres..."
+	@until docker compose exec -T postgres pg_isready -U ideaxion >/dev/null 2>&1; do sleep 1; done
+	$(MAKE) migrate
+	$(MAKE) run
+
+health: ## Vérifie /health de l'API locale (8082)
+	@curl -fsS http://localhost:8082/health | python -m json.tool || echo "API injoignable sur 8082"
+
+run: ## Lance l'API en local (rechargement à chaud, port 8082)
+	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8082
 
 worker: ## Lance le worker (draine la table jobs)
 	uv run python -m app.worker
