@@ -74,20 +74,39 @@ def _slide(s: dict, t: dict, idx: int) -> str:
       {img}</section>"""
 
 
-def render_deck_html(pitch: Pitch, project_title: str | None = None, *, standalone: bool = True) -> str:
+def render_deck_html(
+    pitch: Pitch,
+    project_title: str | None = None,
+    *,
+    standalone: bool = True,
+    export: bool = False,
+) -> str:
+    """Rend le deck en HTML. `export=True` = mode capture (Playwright) :
+    slides flush (pas de fond gris, pas d'ombre, pas de zoom-fit) — chaque
+    slide occupe EXACTEMENT 960x540, prête à être capturée telle quelle.
+    """
     t = TEMPLATES.get(pitch.template_id, TEMPLATES["base"])
     slides = pitch.slides or []
     if not slides:
         slides = [{"layout": "cover", "title": project_title or pitch.title or "Ton deck", "subtitle": "Génère ton deck pour démarrer."}]
     body = "".join(_slide(s, t, i) for i, s in enumerate(slides))
 
+    deck_layout = (
+        ".deck { display:flex; flex-direction:column; }"
+        ".slide { width:960px; height:540px; background:var(--bg); overflow:hidden; display:flex; position:relative; }"
+        "body { background: var(--bg); }"
+        if export
+        else ".deck { display:flex; flex-direction:column; gap:20px; padding:20px; align-items:center; }"
+        ".slide { width:960px; height:540px; background:var(--bg); border-radius:14px; overflow:hidden;"
+        " box-shadow:0 6px 24px rgba(20,16,40,.12); display:flex; position:relative; }"
+        "body { background:#E9E7F0; }"
+    )
+
     css = f"""
     :root {{ --ink:{t['ink']}; --accent:{t['accent']}; --bg:{t['bg']}; --muted:{t['muted']}; --band:{t['band']}; }}
     * {{ box-sizing:border-box; margin:0; padding:0; }}
-    body {{ font-family:'Segoe UI',Roboto,system-ui,sans-serif; color:var(--ink); background:#E9E7F0; }}
-    .deck {{ display:flex; flex-direction:column; gap:20px; padding:20px; align-items:center; }}
-    .slide {{ width:960px; height:540px; background:var(--bg); border-radius:14px; overflow:hidden;
-             box-shadow:0 6px 24px rgba(20,16,40,.12); display:flex; position:relative; }}
+    body {{ font-family:'Segoe UI',Roboto,system-ui,sans-serif; color:var(--ink); }}
+    {deck_layout}
     .pad {{ padding:56px 64px; width:100%; display:flex; flex-direction:column; justify-content:center; }}
     h1 {{ font-size:52px; line-height:1.05; font-weight:800; }}
     h2 {{ font-size:38px; font-weight:800; margin-bottom:18px; }}
@@ -112,9 +131,12 @@ def render_deck_html(pitch: Pitch, project_title: str | None = None, *, standalo
     .img-txt p {{ font-size:22px; color:var(--muted); margin-top:12px; }}
     """
 
-    scripts = """
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-    <script>
+    # Zoom-fit : utile en aperçu (largeur variable) ; inutile/gênant en export
+    # (Playwright fixe déjà le viewport à la taille exacte d'une slide).
+    zoom_fit = (
+        ""
+        if export
+        else """
       function fitDeck() {
         const deck = document.querySelector('.deck');
         if (!deck) return;
@@ -124,17 +146,33 @@ def render_deck_html(pitch: Pitch, project_title: str | None = None, *, standalo
       }
       window.addEventListener('resize', fitDeck);
       fitDeck();
-      window.addEventListener('load', () => {
-        fitDeck();
-        document.querySelectorAll('canvas[data-chart]').forEach(c => {
+    """
+    )
+    # Animation Chart.js désactivée en export : le graphe doit être fini au
+    # premier paint, pas de délai à deviner avant la capture Playwright.
+    chart_animation = "false" if export else "undefined"
+
+    scripts = f"""
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script>
+      {zoom_fit}
+      window.addEventListener('load', () => {{
+        {'fitDeck();' if not export else ''}
+        const canvases = document.querySelectorAll('canvas[data-chart]');
+        let pending = canvases.length;
+        function done() {{ pending--; if (pending <= 0) document.body.setAttribute('data-deck-ready', '1'); }}
+        if (canvases.length === 0) document.body.setAttribute('data-deck-ready', '1');
+        canvases.forEach(c => {{
           const d = JSON.parse(c.dataset.chart);
-          new Chart(c, { type: d.type || 'bar',
-            data: { labels: d.labels, datasets: [{ label: '', data: d.values,
+          new Chart(c, {{ type: d.type || 'bar',
+            data: {{ labels: d.labels, datasets: [{{ label: '', data: d.values,
               backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
-              borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), borderWidth: 2, fill: false }] },
-            options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} } });
-        });
-      });
+              borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), borderWidth: 2, fill: false }}] }},
+            options: {{ responsive:true, maintainAspectRatio:false, animation:{chart_animation},
+              plugins:{{legend:{{display:false}}}} }} }});
+          done();
+        }});
+      }});
     </script>"""
 
     inner = f'<div class="deck">{body}</div>'

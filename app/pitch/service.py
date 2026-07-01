@@ -22,6 +22,7 @@ from app.core.errors import (
 from app.iam.dependencies import AuthContext
 from app.llm.base import LLMProvider
 from app.llm.prompt import build_deck_prompt, build_pitch_section_prompt
+from app.pitch.deck_export import render_deck_pdf, render_deck_pptx
 from app.pitch.deck_render import TEMPLATES, render_deck_html
 from app.pitch.export import (
     render_pitch_html,
@@ -159,10 +160,21 @@ class PitchService:
 
         title, _sector, _ = await self._project_context(ctx)
         short = str(pitch_id)[:8]
+        # Le deck visuel est le vrai livrable dès qu'il existe ; sinon on retombe
+        # sur l'export texte des sections (avant génération du deck).
+        has_deck = bool(pitch.slides)
         if fmt == "pdf":
-            data = render_pitch_pdf(render_pitch_html(pitch, project_title=title))
+            if has_deck:
+                deck_html = render_deck_html(pitch, project_title=title, export=True)
+                data = await render_deck_pdf(deck_html)
+            else:
+                data = render_pitch_pdf(render_pitch_html(pitch, project_title=title))
             return data, "application/pdf", f"pitch-{short}.pdf"
-        data = render_pitch_pptx(pitch, project_title=title)
+        if has_deck:
+            deck_html = render_deck_html(pitch, project_title=title, export=True)
+            data = await render_deck_pptx(deck_html)
+        else:
+            data = render_pitch_pptx(pitch, project_title=title)
         return (
             data,
             "application/vnd.openxmlformats-officedocument.presentationml.presentation",

@@ -47,6 +47,12 @@ pitch = [
     "pypdfium2>=4.30",
     "pillow>=10.0",
 ]
+# Rendu du deck de pitch visuel (V1.3) : Chromium headless pour convertir le
+# HTML/CSS/Chart.js du deck en PDF (page.pdf()) et en images (1 PNG/slide →
+# PPTX). `uv sync --extra deck` puis `playwright install chromium`.
+deck = [
+    "playwright>=1.47",
+]
 
 [build-system]
 requires = ["hatchling"]
