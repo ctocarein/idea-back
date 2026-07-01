@@ -115,7 +115,17 @@ def render_deck_html(pitch: Pitch, project_title: str | None = None, *, standalo
     scripts = """
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <script>
+      function fitDeck() {
+        const deck = document.querySelector('.deck');
+        if (!deck) return;
+        // 960 (slide) + 40 (padding) = 1000 ; on adapte à la largeur dispo (max 1).
+        const z = Math.min(1, (document.documentElement.clientWidth) / 1000);
+        deck.style.zoom = z;
+      }
+      window.addEventListener('resize', fitDeck);
+      fitDeck();
       window.addEventListener('load', () => {
+        fitDeck();
         document.querySelectorAll('canvas[data-chart]').forEach(c => {
           const d = JSON.parse(c.dataset.chart);
           new Chart(c, { type: d.type || 'bar',
