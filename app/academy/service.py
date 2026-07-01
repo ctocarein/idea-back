@@ -10,23 +10,28 @@ Flux module :
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import secrets
 from datetime import UTC, datetime
 from statistics import median
 from uuid import UUID
 
 from app.academy.dimensions import DIMENSION_MODULES
 from app.academy.models import GuidedSession, NeedFiche
+from app.academy.pdf import render_fiche_html, render_fiche_pdf
 from app.academy.repository import AcademyRepository
 from app.academy.schemas import (
     AcademyProgressOut,
+    FicheShareOut,
     GuidedSessionOut,
     GuidedStartIn,
     LessonDetailOut,
     LessonOut,
     ModuleSessionOut,
     NeedFicheOut,
+    SharedFicheOut,
     WeaknessListOut,
     WeaknessOut,
 )
@@ -490,6 +495,57 @@ class AcademyService:
         fiche.is_validated = True
         await self.session.commit()
         return NeedFicheOut.model_validate(fiche)
+
+    # --- Export PDF & partage d'une fiche (V1.1 item 2) ---
+
+    async def _owned_fiche(self, ctx: AuthContext, fiche_id: UUID) -> NeedFiche:
+        fiche = await self.repo.get_fiche(fiche_id)
+        if fiche is None:
+            raise NotFoundError("fiche")
+        if fiche.owner_id != ctx.user.id:
+            raise ForbiddenError()
+        return fiche
+
+    async def _fiche_project_title(self, fiche: NeedFiche) -> str | None:
+        if fiche.project_id is None or self.projects is None:
+            return None
+        p = await self.projects.get_by_id(fiche.project_id)
+        return p.title if p is not None else None
+
+    async def get_fiche_pdf(self, ctx: AuthContext, fiche_id: UUID) -> bytes:
+        """Rend la fiche en PDF (WeasyPrint). ImportError si l'extra pdf est absent."""
+        fiche = await self._owned_fiche(ctx, fiche_id)
+        title = await self._fiche_project_title(fiche)
+        html = render_fiche_html(fiche, project_title=title)
+        return render_fiche_pdf(html)
+
+    async def share_fiche(self, ctx: AuthContext, fiche_id: UUID) -> FicheShareOut:
+        """Génère (ou régénère) un lien de partage public read-only pour la fiche."""
+        fiche = await self._owned_fiche(ctx, fiche_id)
+        token = secrets.token_urlsafe(24)
+        fiche.share_token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        await self.session.commit()
+        return FicheShareOut(token=token, path=f"/shared/fiche/{token}")
+
+    async def unshare_fiche(self, ctx: AuthContext, fiche_id: UUID) -> None:
+        fiche = await self._owned_fiche(ctx, fiche_id)
+        fiche.share_token_hash = None
+        await self.session.commit()
+
+    async def get_shared_fiche(self, token: str) -> SharedFicheOut:
+        """Vue publique (sans auth) d'une fiche partagée, par token."""
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        fiche = await self.repo.get_fiche_by_token_hash(token_hash)
+        if fiche is None:
+            raise NotFoundError("fiche")
+        title = await self._fiche_project_title(fiche)
+        return SharedFicheOut(
+            need_type=fiche.need_type,
+            title=fiche.title,
+            description=fiche.description,
+            details=fiche.details or {},
+            project_title=title,
+        )
 
     async def _build_module_out(self, gs: GuidedSession) -> ModuleSessionOut:
         form_sections = []

@@ -98,4 +98,6 @@ class NeedFiche(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     details: Mapped[dict] = mapped_column(JSONB, default=dict)  # profile, skills, budget, timeline, deliverables, priority, ...
     is_validated: Mapped[bool] = mapped_column(Boolean, default=False)  # porteur a confirmé la fiche
+    # Partage : token (hashé, jamais en clair) pour un lien public read-only. Null = non partagée.
+    share_token_hash: Mapped[str | None] = mapped_column(String(64), unique=True, default=None)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

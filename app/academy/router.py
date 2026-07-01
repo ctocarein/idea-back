@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.academy.dependencies import get_academy_service
 from app.academy.schemas import (
     AcademyProgressOut,
+    FicheShareOut,
     GuidedDraftIn,
     GuidedSessionOut,
     GuidedStartIn,
@@ -20,6 +21,7 @@ from app.academy.schemas import (
     ModuleStartIn,
     ModuleTurnIn,
     NeedFicheOut,
+    SharedFicheOut,
     WeaknessListOut,
 )
 from app.academy.service import AcademyService
@@ -199,3 +201,50 @@ async def validate_fiche(
     svc: AcademyService = Depends(get_academy_service),
 ) -> NeedFicheOut:
     return await svc.validate_fiche(ctx, fiche_id)
+
+
+@router.get("/fiches/{fiche_id}/pdf")
+async def export_fiche_pdf(
+    fiche_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.ACADEMY_PROGRESS)),
+    svc: AcademyService = Depends(get_academy_service),
+) -> Response:
+    try:
+        pdf = await svc.get_fiche_pdf(ctx, fiche_id)
+    except ImportError as exc:  # WeasyPrint absent → dégradation propre.
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Génération PDF indisponible (extra pdf non installé).",
+        ) from exc
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="besoin-{str(fiche_id)[:8]}.pdf"'},
+    )
+
+
+@router.post("/fiches/{fiche_id}/share", response_model=FicheShareOut, status_code=201)
+async def share_fiche(
+    fiche_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.ACADEMY_PROGRESS)),
+    svc: AcademyService = Depends(get_academy_service),
+) -> FicheShareOut:
+    return await svc.share_fiche(ctx, fiche_id)
+
+
+@router.delete("/fiches/{fiche_id}/share", status_code=status.HTTP_204_NO_CONTENT)
+async def unshare_fiche(
+    fiche_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.ACADEMY_PROGRESS)),
+    svc: AcademyService = Depends(get_academy_service),
+) -> None:
+    await svc.unshare_fiche(ctx, fiche_id)
+
+
+@router.get("/shared-fiche/{token}", response_model=SharedFicheOut)
+async def get_shared_fiche(
+    token: str,
+    svc: AcademyService = Depends(get_academy_service),
+) -> SharedFicheOut:
+    # Public : aucune auth (lecture seule, données non personnelles).
+    return await svc.get_shared_fiche(token)

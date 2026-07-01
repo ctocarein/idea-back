@@ -162,3 +162,9 @@ class AcademyRepository:
 
     async def get_fiche(self, fiche_id: UUID) -> NeedFiche | None:
         return await self.session.get(NeedFiche, fiche_id)
+
+    async def get_fiche_by_token_hash(self, token_hash: str) -> NeedFiche | None:
+        result = await self.session.execute(
+            select(NeedFiche).where(NeedFiche.share_token_hash == token_hash)
+        )
+        return result.scalar_one_or_none()

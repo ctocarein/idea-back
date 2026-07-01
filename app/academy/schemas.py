@@ -104,6 +104,23 @@ class NeedFicheOut(BaseModel):
     is_validated: bool
 
 
+class FicheShareOut(BaseModel):
+    """Lien de partage d'une fiche (token en clair, retourné une fois à la création)."""
+
+    token: str
+    path: str  # ex. /shared/fiche/<token>
+
+
+class SharedFicheOut(BaseModel):
+    """Vue publique d'une fiche partagée — aucune donnée personnelle du porteur."""
+
+    need_type: str
+    title: str
+    description: str
+    details: dict
+    project_title: str | None = None
+
+
 class ModuleSessionOut(BaseModel):
     """Session de module avec contexte complet (conversation + formulaire + fiches)."""
 
