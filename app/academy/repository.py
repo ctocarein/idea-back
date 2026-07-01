@@ -91,10 +91,17 @@ class AcademyRepository:
         )
         return result.scalar_one_or_none()
 
-    async def list_started_dimensions(self, owner_id: UUID) -> list[tuple[str, str, UUID]]:
-        """Retourne [(dimension, phase, session_id)] pour toutes les sessions de module."""
+    async def list_started_dimensions(
+        self, owner_id: UUID
+    ) -> list[tuple[str, str, UUID, int | None]]:
+        """Retourne [(dimension, phase, session_id, axis_score_after)] par module."""
         result = await self.session.execute(
-            select(GuidedSession.dimension, GuidedSession.phase, GuidedSession.id)
+            select(
+                GuidedSession.dimension,
+                GuidedSession.phase,
+                GuidedSession.id,
+                GuidedSession.axis_score_after,
+            )
             .where(
                 GuidedSession.owner_id == owner_id,
                 GuidedSession.dimension.is_not(None),
@@ -103,10 +110,10 @@ class AcademyRepository:
         )
         seen: set[str] = set()
         rows = []
-        for dim, phase, sid in result:
+        for dim, phase, sid, after in result:
             if dim not in seen:
                 seen.add(dim)
-                rows.append((dim, phase, sid))
+                rows.append((dim, phase, sid, after))
         return rows
 
     # --- Fiches de besoin ---

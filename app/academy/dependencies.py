@@ -12,6 +12,7 @@ from app.core.database import get_session
 from app.llm.factory import get_llm
 from app.projects.repository import ProjectRepository
 from app.reports.repository import ReportRepository
+from app.scoring.repository import ScoringRepository
 
 
 def get_academy_service(session: AsyncSession = Depends(get_session)) -> AcademyService:
@@ -20,4 +21,5 @@ def get_academy_service(session: AsyncSession = Depends(get_session)) -> Academy
         get_llm(get_settings()),
         ProjectRepository(session),
         ReportRepository(session),
+        ScoringRepository(session),
     )

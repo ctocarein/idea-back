@@ -166,6 +166,15 @@ async def generate_fiches(
     return await svc.generate_fiches(ctx, session_id)
 
 
+@router.post("/modules/{session_id}/rescore", response_model=ModuleSessionOut)
+async def rescore_axis(
+    session_id: UUID,
+    ctx: AuthContext = Depends(require(Permission.ACADEMY_PROGRESS)),
+    svc: AcademyService = Depends(get_academy_service),
+) -> ModuleSessionOut:
+    return await svc.rescore_axis(ctx, session_id)
+
+
 @router.get("/modules/{session_id}", response_model=ModuleSessionOut)
 async def get_module(
     session_id: UUID,

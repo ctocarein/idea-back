@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import UTC, datetime
+from statistics import median
 from uuid import UUID
 
 from app.academy.dimensions import DIMENSION_MODULES
@@ -37,9 +39,11 @@ from app.llm.prompt import (
     build_module_form_prefill_prompt,
     build_module_opener_prompt,
     build_module_turn_prompt,
+    build_scoring_prompt,
 )
 from app.projects.repository import ProjectRepository
 from app.reports.repository import ReportRepository
+from app.scoring.repository import ScoringRepository
 from app.reports.models import ReportStatus
 from app.scoring.constants import AXES
 
@@ -67,11 +71,13 @@ class AcademyService:
         provider: LLMProvider,
         projects: ProjectRepository | None = None,
         reports: ReportRepository | None = None,
+        scoring: ScoringRepository | None = None,
     ) -> None:
         self.repo = repo
         self.provider = provider
         self.projects = projects
         self.reports = reports
+        self.scoring = scoring
         self.session = repo.session
 
     # --- Leçons ---
@@ -182,30 +188,36 @@ class AcademyService:
         scored.sort(key=lambda x: x[1])
         top3 = scored[:3]
 
-        # Charger les sessions existantes pour savoir lesquelles sont démarrées
+        # Charger les sessions existantes : (phase, session_id, score re-mesuré).
         started = {
-            dim: (phase, sid)
-            for dim, phase, sid in await self.repo.list_started_dimensions(ctx.user.id)
+            dim: (phase, sid, after)
+            for dim, phase, sid, after in await self.repo.list_started_dimensions(ctx.user.id)
         }
 
         # Un axe est « renforcé » quand son module a produit des fiches (phase "fiches").
-        reinforced = [dim for dim, (phase, _sid) in started.items() if phase == "fiches"]
+        reinforced = [dim for dim, (phase, _sid, _a) in started.items() if phase == "fiches"]
 
         weaknesses = []
-        for dim_key, score in top3:
+        for dim_key, original in top3:
             axis = _AXES_BY_KEY[dim_key]
             existing = started.get(dim_key)
             phase = existing[0] if existing else None
+            rescored_after = existing[2] if existing else None
+            # Le tri garde les axes par score INITIAL (l'axe travaillé reste visible),
+            # mais on affiche le score EFFECTIF (re-mesuré si disponible).
+            effective = rescored_after if rescored_after is not None else original
             weaknesses.append(
                 WeaknessOut(
                     dimension=dim_key,
                     label=axis["label"],
-                    score=score,
+                    score=effective,
+                    original_score=original,
                     central_question=axis["central_question"],
                     pillar=axis["pillar"],
                     module_session_id=existing[1] if existing else None,
                     module_phase=phase,
                     is_reinforced=(phase == "fiches"),
+                    is_rescored=(rescored_after is not None),
                 )
             )
 
@@ -388,6 +400,74 @@ class AcademyService:
         gs = await self._load_owned_session(ctx, session_id)
         return await self._build_module_out(gs)
 
+    async def rescore_axis(self, ctx: AuthContext, session_id: UUID) -> ModuleSessionOut:
+        """Re-mesure le score de l'axe après le module (boucle B).
+
+        Même méthode que le diagnostic (grille ancrée + N passes → médiane),
+        mais l'évidence est la SYNTHÈSE du module (form_data) — plus concrète et
+        à jour que le diagnostic initial. Le bilan d'origine n'est pas modifié :
+        le score avant/après est porté par la session (audit + before/after).
+        """
+        gs = await self._load_owned_session(ctx, session_id)
+        if gs.dimension is None:
+            raise BusinessRuleError("Cette session n'est pas un module Academy.")
+        if gs.phase != "fiches" or not gs.form_data:
+            raise BusinessRuleError(
+                "Termine le module (synthèse + fiches) avant de mesurer ta progression."
+            )
+        if self.scoring is None:
+            raise BusinessRuleError("Le scoring n'est pas disponible.")
+
+        grid = await self.scoring.get_active()
+        if grid is None:
+            raise BusinessRuleError("Aucune grille Radar active.")
+        axis = next((a for a in grid.axes if a.get("key") == gs.dimension), None)
+        if axis is None:
+            raise BusinessRuleError(f"Axe {gs.dimension} absent de la grille.")
+
+        # Contexte projet (catégorie/archétype) pour calibrer comme le diagnostic.
+        project_title, sector, project_id = await self._get_project_context(ctx)
+        archetype = "field"
+        if project_id is not None and self.projects is not None:
+            p = await self.projects.get_by_id(project_id)
+            if p is not None:
+                archetype = p.archetype.value
+
+        # Score AVANT = score effectif courant (re-score précédent, sinon radar).
+        before = gs.axis_score_after
+        if before is None:
+            radar = await self._get_latest_radar(ctx)
+            if radar:
+                axes = radar.get("axes") or {}
+                if gs.dimension in axes:
+                    before = int(axes[gs.dimension])
+
+        # N passes sur la synthèse du module → médiane (mêmes ancres que le diagnostic).
+        scores: list[int] = []
+        for k in range(3):
+            prompt = build_scoring_prompt(
+                [axis],
+                category=sector or "generic",
+                archetype=archetype,
+                description=project_title,
+                answers=gs.form_data,
+                perspective=k,
+            )
+            out = await self.provider.analyze_json(prompt)
+            raw = (out.get("axes") or {}).get(gs.dimension)
+            if raw is not None:
+                scores.append(int(raw))
+
+        if not scores:
+            raise BusinessRuleError("La mesure a échoué. Réessaie.")
+
+        after = int(round(median(scores)))
+        gs.axis_score_before = before
+        gs.axis_score_after = after
+        gs.rescored_at = datetime.now(UTC)
+        await self.session.commit()
+        return await self._build_module_out(gs)
+
     async def list_my_fiches(self, ctx: AuthContext) -> list[NeedFicheOut]:
         fiches = await self.repo.list_fiches_for_owner(ctx.user.id)
         return [NeedFicheOut.model_validate(f) for f in fiches]
@@ -428,4 +508,6 @@ class AcademyService:
             form_sections=form_sections,
             fiches=fiches,
             context_ready=context_ready,
+            axis_score_before=gs.axis_score_before,
+            axis_score_after=gs.axis_score_after,
         )

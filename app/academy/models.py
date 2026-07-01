@@ -66,6 +66,10 @@ class GuidedSession(Base):
     draft: Mapped[str] = mapped_column(Text, default="")
     turns: Mapped[list] = mapped_column(JSONB, default=list)
     form_data: Mapped[dict | None] = mapped_column(JSONB, default=None)
+    # Re-scoring de l'axe après le module (boucle B) : mesure avant/après.
+    axis_score_before: Mapped[int | None] = mapped_column(default=None)
+    axis_score_after: Mapped[int | None] = mapped_column(default=None)
+    rescored_at: Mapped[datetime | None] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 

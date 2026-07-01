@@ -61,12 +61,14 @@ class WeaknessOut(BaseModel):
 
     dimension: str          # d1..d12
     label: str              # "Modèle économique"
-    score: int              # 0-10
+    score: int              # 0-10 — score EFFECTIF (re-mesuré si dispo, sinon radar)
+    original_score: int     # 0-10 — score du bilan Radar initial
     central_question: str   # question directrice de la dimension
     pillar: str             # sens | viabilite | scalabilite | execution
     module_session_id: UUID | None = None   # session existante si module déjà démarré
     module_phase: str | None = None         # phase actuelle du module (context | form | fiches)
     is_reinforced: bool = False             # True quand les fiches ont été générées (axe renforcé)
+    is_rescored: bool = False               # True quand l'axe a été re-mesuré après le module
 
 
 class WeaknessListOut(BaseModel):
@@ -115,3 +117,5 @@ class ModuleSessionOut(BaseModel):
     form_sections: list[dict] = Field(default_factory=list)    # fourni par le service (non stocké)
     fiches: list[NeedFicheOut] = Field(default_factory=list)   # fiches générées pour cette session
     context_ready: bool = False                                # le coach juge la conversation suffisante
+    axis_score_before: int | None = None                       # score de l'axe avant le module
+    axis_score_after: int | None = None                        # score re-mesuré après le module
