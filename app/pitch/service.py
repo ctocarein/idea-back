@@ -10,10 +10,21 @@ from __future__ import annotations
 from uuid import UUID
 
 from app.academy.repository import AcademyRepository
-from app.core.errors import BusinessRuleError, ForbiddenError, NotFoundError
+from app.core.config import get_settings
+from app.core.errors import (
+    BusinessRuleError,
+    ForbiddenError,
+    NotFoundError,
+    PaymentRequiredError,
+)
 from app.iam.dependencies import AuthContext
 from app.llm.base import LLMProvider
 from app.llm.prompt import build_pitch_section_prompt
+from app.pitch.export import (
+    render_pitch_html,
+    render_pitch_pdf,
+    render_pitch_pptx,
+)
 from app.pitch.models import Pitch
 from app.pitch.repository import PitchRepository
 from app.pitch.schemas import PitchOut, PitchSectionOut, SectionGenerateOut
@@ -127,6 +138,38 @@ class PitchService:
         )
         result = await self.provider.complete(prompt)
         return SectionGenerateOut(key=key, content=result.text.strip())
+
+    async def export_pitch(
+        self, ctx: AuthContext, pitch_id: UUID, fmt: str
+    ) -> tuple[bytes, str, str]:
+        """Exporte le pitch en PDF ou PPTX. Retourne (bytes, media_type, filename).
+
+        Paywall « prêt mais off » : si `pitch_export_paid` est activé et que le
+        porteur n'a pas de droit, on lève 402. Par défaut le flag est off → gratuit.
+        """
+        if fmt not in {"pdf", "pptx"}:
+            raise BusinessRuleError("Format d'export invalide (pdf ou pptx).")
+        pitch = await self._load_owned(ctx, pitch_id)
+
+        if get_settings().pitch_export_paid and not self._is_entitled(ctx):
+            raise PaymentRequiredError("L'export du pitch nécessite un accès payant.")
+
+        title, _sector, _ = await self._project_context(ctx)
+        short = str(pitch_id)[:8]
+        if fmt == "pdf":
+            data = render_pitch_pdf(render_pitch_html(pitch, project_title=title))
+            return data, "application/pdf", f"pitch-{short}.pdf"
+        data = render_pitch_pptx(pitch, project_title=title)
+        return (
+            data,
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            f"pitch-{short}.pptx",
+        )
+
+    def _is_entitled(self, ctx: AuthContext) -> bool:
+        # Aucun système de paiement en V1 → personne n'est débloqué quand le
+        # paywall est activé. À brancher sur les droits/abonnements plus tard.
+        return False
 
     def _to_out(self, pitch: Pitch) -> PitchOut:
         # On renvoie les sections dans l'ordre canonique, en injectant le hint.

@@ -84,6 +84,13 @@ class RateLimitError(AppError):
     message = "Trop de tentatives. Réessaie plus tard."
 
 
+class PaymentRequiredError(AppError):
+    # Fonctionnalité payante non débloquée (paywall) → 402.
+    code = "PAYMENT_REQUIRED"
+    status_code = 402
+    message = "Cette fonctionnalité nécessite un accès payant."
+
+
 def _error_body(code: str, message: str, details: list[Any]) -> dict[str, Any]:
     return {"error": {"code": code, "message": message, "details": details}}
 

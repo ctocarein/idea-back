@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     minio_bucket: str = "ideaxion"
     minio_secure: bool = False
 
+    # --- Monétisation (V1.2) ---
+    # Paywall de l'export du pitch : False = gratuit au lancement (défaut).
+    # Passer à True quand le paiement est branché → l'export exigera un droit.
+    pitch_export_paid: bool = False
+
     @field_validator("cors_origins", "llm_fallbacks", mode="before")
     @classmethod
     def _split_csv(cls, value: object) -> object:
