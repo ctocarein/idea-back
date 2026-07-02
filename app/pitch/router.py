@@ -4,7 +4,16 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 
 from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
@@ -14,6 +23,8 @@ from app.pitch.schemas import (
     PitchOut,
     SectionGenerateOut,
     SectionUpdateIn,
+    SlidesReorderIn,
+    SlideUpdateIn,
     TemplateIn,
 )
 from app.pitch.service import PitchService
@@ -60,6 +71,23 @@ async def generate_deck(
     return await svc.generate_deck(ctx, pitch_id, body.source)
 
 
+@router.post("/{pitch_id}/deck/import", response_model=PitchOut)
+async def import_deck(
+    pitch_id: UUID,
+    file: UploadFile = File(...),
+    ctx: AuthContext = Depends(require(Permission.PITCH_EDIT)),
+    svc: PitchService = Depends(get_pitch_service),
+) -> PitchOut:
+    from app.pitch.import_extract import extract_text
+
+    data = await file.read()
+    try:
+        text = extract_text(file.filename or "", data)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return await svc.generate_deck(ctx, pitch_id, text)
+
+
 @router.patch("/{pitch_id}/template", response_model=PitchOut)
 async def set_template(
     pitch_id: UUID,
@@ -68,6 +96,37 @@ async def set_template(
     svc: PitchService = Depends(get_pitch_service),
 ) -> PitchOut:
     return await svc.set_template(ctx, pitch_id, body.template_id)
+
+
+@router.patch("/{pitch_id}/slides/{index}", response_model=PitchOut)
+async def update_slide(
+    pitch_id: UUID,
+    index: int,
+    body: SlideUpdateIn,
+    ctx: AuthContext = Depends(require(Permission.PITCH_EDIT)),
+    svc: PitchService = Depends(get_pitch_service),
+) -> PitchOut:
+    return await svc.update_slide(ctx, pitch_id, index, body.model_dump(exclude_none=True))
+
+
+@router.delete("/{pitch_id}/slides/{index}", response_model=PitchOut)
+async def delete_slide(
+    pitch_id: UUID,
+    index: int,
+    ctx: AuthContext = Depends(require(Permission.PITCH_EDIT)),
+    svc: PitchService = Depends(get_pitch_service),
+) -> PitchOut:
+    return await svc.delete_slide(ctx, pitch_id, index)
+
+
+@router.post("/{pitch_id}/slides/reorder", response_model=PitchOut)
+async def reorder_slides(
+    pitch_id: UUID,
+    body: SlidesReorderIn,
+    ctx: AuthContext = Depends(require(Permission.PITCH_EDIT)),
+    svc: PitchService = Depends(get_pitch_service),
+) -> PitchOut:
+    return await svc.reorder_slides(ctx, pitch_id, body.order)
 
 
 @router.get("/{pitch_id}/deck/html")

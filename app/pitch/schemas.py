@@ -35,6 +35,23 @@ class TemplateIn(BaseModel):
     template_id: str
 
 
+class SlideUpdateIn(BaseModel):
+    """Champs d'une slide édités par le porteur (édition structurée)."""
+
+    layout: str | None = None
+    title: str | None = None
+    subtitle: str | None = None
+    bullets: list[str] | None = None
+    stat: dict | None = None
+    chart: dict | None = None
+    image_keyword: str | None = None
+    caption: str | None = None
+
+
+class SlidesReorderIn(BaseModel):
+    order: list[int]  # nouvel ordre = indices actuels réagencés
+
+
 class SectionUpdateIn(BaseModel):
     content: str = Field(default="", max_length=8000)
 

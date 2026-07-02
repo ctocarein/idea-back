@@ -218,6 +218,45 @@ class PitchService:
         await self.session.refresh(pitch)
         return self._to_out(pitch)
 
+    async def update_slide(
+        self, ctx: AuthContext, pitch_id: UUID, index: int, fields: dict
+    ) -> PitchOut:
+        """Met à jour les champs d'UNE slide (édition structurée)."""
+        pitch = await self._load_owned(ctx, pitch_id)
+        slides = [dict(s) for s in (pitch.slides or [])]
+        if not 0 <= index < len(slides):
+            raise NotFoundError("slide")
+        for k, v in fields.items():
+            if v is not None:
+                slides[index][k] = v
+        pitch.slides = slides
+        await self.session.commit()
+        await self.session.refresh(pitch)
+        return self._to_out(pitch)
+
+    async def delete_slide(self, ctx: AuthContext, pitch_id: UUID, index: int) -> PitchOut:
+        pitch = await self._load_owned(ctx, pitch_id)
+        slides = [dict(s) for s in (pitch.slides or [])]
+        if not 0 <= index < len(slides):
+            raise NotFoundError("slide")
+        del slides[index]
+        pitch.slides = slides
+        await self.session.commit()
+        await self.session.refresh(pitch)
+        return self._to_out(pitch)
+
+    async def reorder_slides(
+        self, ctx: AuthContext, pitch_id: UUID, order: list[int]
+    ) -> PitchOut:
+        pitch = await self._load_owned(ctx, pitch_id)
+        slides = list(pitch.slides or [])
+        if sorted(order) != list(range(len(slides))):
+            raise BusinessRuleError("Ordre invalide (doit être une permutation des slides).")
+        pitch.slides = [slides[i] for i in order]
+        await self.session.commit()
+        await self.session.refresh(pitch)
+        return self._to_out(pitch)
+
     async def generate_deck(
         self, ctx: AuthContext, pitch_id: UUID, source: str | None = None
     ) -> PitchOut:
