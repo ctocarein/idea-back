@@ -270,8 +270,11 @@ class PitchService:
                 if str(s.get("content", "")).strip()
             )
         if not material:
+            material = await self._workshop_material(ctx)
+        if not material:
             raise BusinessRuleError(
-                "Rien à générer : rédige d'abord tes sections, colle un texte, ou importe un pitch."
+                "Rien à générer : fais ton diagnostic / travaille un axe dans le Workshop, "
+                "colle un texte, ou importe un pitch."
             )
         title, sector, _ = await self._project_context(ctx)
         prompt = build_deck_prompt(source=material, project_title=title, sector=sector)
@@ -287,6 +290,22 @@ class PitchService:
         await self.session.commit()
         await self.session.refresh(pitch)
         return self._to_out(pitch)
+
+    async def _workshop_material(self, ctx: AuthContext) -> str:
+        """Matière issue du Workshop : synthèses des modules + fiches de besoin."""
+        if self.academy is None:
+            return ""
+        parts: list[str] = []
+        for dim, _phase, sid, _after in await self.academy.list_started_dimensions(ctx.user.id):
+            module = await self.academy.get_module_session(ctx.user.id, dim)
+            if module and module.form_data:
+                vals = [str(v) for v in module.form_data.values() if str(v).strip()]
+                if vals:
+                    parts.append("\n".join(vals))
+        fiches = await self.academy.list_fiches_for_owner(ctx.user.id)
+        if fiches:
+            parts.append("Besoins : " + "; ".join(f"{f.need_type} — {f.title}" for f in fiches[:8]))
+        return "\n\n".join(parts)
 
     async def render_deck(self, ctx: AuthContext, pitch_id: UUID, *, standalone: bool = True) -> str:
         pitch = await self._load_owned(ctx, pitch_id)
