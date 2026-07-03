@@ -63,3 +63,9 @@ class ReportRepository:
         report.next_actions = next_actions
         report.pdf_document_id = pdf_document_id
         await self.session.flush()
+
+    async def mark_failed(self, report: Report) -> None:
+        # Échec définitif du scoring (job épuisé) : sort le bilan de l'attente pour que
+        # le porteur voie un état terminal plutôt qu'un spinner infini.
+        report.status = ReportStatus.FAILED
+        await self.session.flush()

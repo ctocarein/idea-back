@@ -19,3 +19,13 @@ uv.lock.bak
 .DS_Store
 .idea/
 .vscode/
+
+# PID du worker lancé par 'make dev-all'
+.worker.pid
+
+# Traces de dev / outillage local
+uvicorn*.log
+uvicorn*.err
+uvicorn*.out
+nul
+.claude/

@@ -16,7 +16,7 @@ from typing import Any
 import app.models  # noqa: F401 — enregistre TOUTES les tables sur Base.metadata (FK cross-features)
 from app.core.database import get_session_factory
 from app.core.logging import configure_logging, get_logger
-from app.diagnostics.handlers import handle_run_diagnostic
+from app.diagnostics.handlers import handle_run_diagnostic, handle_run_diagnostic_failed
 from app.jobs.models import Job
 from app.jobs.repository import JobRepository
 from app.jobs.service import JobService
@@ -33,6 +33,12 @@ REGISTRY: dict[str, HandlerFn] = {
     # "cleanup_expired": handle_cleanup_expired, # cron quotidien
 }
 
+# Nettoyage sur échec DÉFINITIF (retries épuisés). Optionnel par type : permet de
+# sortir proprement d'un état d'attente (ex. bilan `pending` → `failed`).
+TERMINAL_REGISTRY: dict[str, HandlerFn] = {
+    "run_diagnostic": handle_run_diagnostic_failed,
+}
+
 
 async def _process(job: Job, jobs: JobService) -> None:
     handler = REGISTRY.get(job.type)
@@ -43,9 +49,22 @@ async def _process(job: Job, jobs: JobService) -> None:
     try:
         await handler(job.payload)
     except Exception as exc:  # noqa: BLE001 — on capture tout pour décider du retry
-        await jobs.fail(job, exc)
+        terminal = await jobs.fail(job, exc)
+        if terminal:
+            await _cleanup_terminal(job)
         return
     await jobs.complete(job)
+
+
+async def _cleanup_terminal(job: Job) -> None:
+    # Échec définitif : déclenche le nettoyage propre au type, s'il existe.
+    cleanup = TERMINAL_REGISTRY.get(job.type)
+    if cleanup is None:
+        return
+    try:
+        await cleanup(job.payload)
+    except Exception as exc:  # noqa: BLE001 — le nettoyage ne doit jamais masquer l'échec initial
+        logger.error("terminal_cleanup_failed", job_id=str(job.id), type=job.type, error=str(exc))
 
 
 async def run() -> None:

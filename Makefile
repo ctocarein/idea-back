@@ -2,7 +2,7 @@
 # Cible par défaut : afficher l'aide.
 
 .DEFAULT_GOAL := help
-.PHONY: help install run worker migrate revision seed test test-int lint format typecheck calibrate stack stack-down dev health
+.PHONY: help install run worker migrate revision seed test test-int lint format typecheck calibrate stack stack-down dev dev-all health
 
 # Ports de dev (source de vérité) : API 8082 (attendue par idea-front), Postgres 5432,
 # Redis 6379, MinIO 9000/9001. Le port Postgres est paramétrable via POSTGRES_PORT
@@ -25,6 +25,15 @@ dev: stack ## Stack complète : infra + attente DB + migrations + API (8082)
 	@until docker compose exec -T postgres pg_isready -U ideaxion >/dev/null 2>&1; do sleep 1; done
 	$(MAKE) migrate
 	$(MAKE) run
+
+dev-all: stack ## Comme dev, MAIS lance aussi le worker (sinon aucun bilan n'est généré)
+	@echo "Attente de Postgres..."
+	@until docker compose exec -T postgres pg_isready -U ideaxion >/dev/null 2>&1; do sleep 1; done
+	$(MAKE) migrate
+	@echo "Démarrage du worker en arrière-plan (draine les diagnostics → bilans)..."
+	@uv run python -m app.worker & echo $$! > .worker.pid; \
+	trap 'kill `cat .worker.pid` 2>/dev/null; rm -f .worker.pid; echo "worker arrêté"' EXIT INT TERM; \
+	uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8082
 
 health: ## Vérifie /health de l'API locale (8082)
 	@curl -fsS http://localhost:8082/api/v1/health | python -m json.tool || echo "API injoignable sur 8082"

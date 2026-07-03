@@ -45,8 +45,10 @@ class JobService:
         async with self.session.begin():
             await self.repo.mark_completed(job)
 
-    async def fail(self, job: Job, exc: Exception) -> None:
+    async def fail(self, job: Job, exc: Exception) -> bool:
         # Décide retry (backoff) ou échec définitif selon les tentatives restantes.
+        # Renvoie True si l'échec est DÉFINITIF (retries épuisés) — le worker peut alors
+        # déclencher un nettoyage propre à ce type de job (ex. sortir le bilan de l'attente).
         error = f"{type(exc).__name__}: {exc}"
         async with self.session.begin():
             if job.retry_count < job.max_retries:
@@ -54,6 +56,7 @@ class JobService:
                 next_run = datetime.now(UTC) + timedelta(minutes=delay)
                 await self.repo.mark_retry(job, error=error, next_run=next_run)
                 logger.warning("job_retrying", job_id=str(job.id), type=job.type, delay_min=delay)
-            else:
-                await self.repo.mark_failed(job, error=error)
-                logger.error("job_failed", job_id=str(job.id), type=job.type, error=error)
+                return False
+            await self.repo.mark_failed(job, error=error)
+            logger.error("job_failed", job_id=str(job.id), type=job.type, error=error)
+            return True

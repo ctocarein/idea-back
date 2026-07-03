@@ -17,7 +17,6 @@ from typing import Any
 from uuid import UUID
 
 from app.audit.service import AuditService
-from app.notifications.repository import NotificationRepository
 from app.core.config import get_settings
 from app.core.database import get_session_factory
 from app.core.logging import get_logger
@@ -25,8 +24,10 @@ from app.core.storage import get_storage
 from app.diagnostics.repository import DiagnosticRepository
 from app.llm.factory import get_llm
 from app.llm.prompt import PROMPT_VERSION, build_report_prompt, build_scoring_prompt
+from app.notifications.repository import NotificationRepository
 from app.projects.models import DiagnosticStatus, ReviewStatus
 from app.projects.repository import ProjectRepository
+from app.reports.models import ReportStatus
 from app.reports.pdf import render_bilan_html, render_bilan_pdf
 from app.reports.repository import ReportRepository
 from app.reports.schemas import DiagnosticReport
@@ -205,3 +206,46 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
         confidence=result.confidence,
         needs_review=result.needs_review,
     )
+
+
+async def handle_run_diagnostic_failed(payload: dict[str, Any]) -> None:
+    """Nettoyage sur échec DÉFINITIF du scoring (retries épuisés).
+
+    Sans ça, le bilan resterait `pending` pour toujours et le porteur verrait un
+    spinner infini. On le fait basculer en `failed` (état terminal côté front) et on
+    prévient le porteur. Best-effort : ne doit jamais lever (sinon on masque l'échec).
+    """
+    report_id = UUID(payload["report_id"])
+    factory = get_session_factory()
+
+    # 1) Bascule du statut, commit ISOLÉ : c'est le correctif essentiel (sortir de l'attente).
+    #    Rien ne doit l'empêcher de persister — surtout pas une notif défaillante.
+    owner_id = None
+    async with factory() as session:
+        reports = ReportRepository(session)
+        report = await reports.get_by_id(report_id)
+        if report is None or report.status is not ReportStatus.PENDING:
+            # Déjà prêt (course avec un retry qui a réussi) ou supprimé : rien à faire.
+            return
+        await reports.mark_failed(report)
+        project = await ProjectRepository(session).get_by_id(report.project_id)
+        owner_id = project.owner_id if project is not None else None
+        await session.commit()
+    logger.error("diagnostic_failed_terminal", report_id=str(report_id))
+
+    # 2) Notification du porteur, best-effort dans une transaction séparée.
+    if owner_id is None:
+        return
+    try:
+        async with factory() as session:
+            await NotificationRepository(session).create(
+                user_id=owner_id,
+                type="report_failed",
+                payload={
+                    "report_id": str(report_id),
+                    "title": "On n'a pas pu terminer ton analyse. Notre équipe est prévenue.",
+                },
+            )
+            await session.commit()
+    except Exception as exc:  # noqa: BLE001 — dégradation gracieuse de la notif
+        logger.warning("report_failed_notification_skipped", report_id=str(report_id), error=str(exc))

@@ -64,6 +64,8 @@ services:
   api:
     build: .
     env_file: .env
+    # Se relève seul en cas de crash (ne redémarre pas si arrêt volontaire).
+    restart: unless-stopped
     environment:
       # En conteneur, on cible les services par leur nom de réseau Docker.
       DATABASE_URL: postgresql://ideaxion:ideaxion@postgres:5432/ideaxion
@@ -82,6 +84,9 @@ services:
   worker:
     build: .
     command: ["uv", "run", "python", "-m", "app.worker"]
+    # CRITIQUE : le worker draine les diagnostics → bilans. S'il reste mort, aucun
+    # bilan n'est jamais généré et les porteurs restent bloqués en "analyse en cours".
+    restart: unless-stopped
     env_file: .env
     environment:
       DATABASE_URL: postgresql://ideaxion:ideaxion@postgres:5432/ideaxion
