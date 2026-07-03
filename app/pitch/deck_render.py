@@ -9,8 +9,12 @@ from __future__ import annotations
 
 import json
 from html import escape
+from pathlib import Path
 
 from app.pitch.models import Pitch
+
+# Chart.js vendorisé (self-host) : inliné dans le deck → aucun CDN, export offline-safe.
+_CHARTJS = (Path(__file__).parent / "vendor" / "chart.umd.min.js").read_text(encoding="utf-8")
 
 # --- Thèmes (templates). Un thème = un jeu de variables CSS. ---
 TEMPLATES: dict[str, dict] = {
@@ -20,10 +24,24 @@ TEMPLATES: dict[str, dict] = {
 }
 
 
-def _img(keyword: str | None) -> str:
-    kw = (keyword or "startup business").strip().replace(" ", ",")
-    # Stand-in Unsplash sans clé (mot-clé → photo). Swappable vers l'API Unsplash.
-    return f"https://loremflickr.com/1200/900/{kw}"
+def _bg(keyword: str | None, t: dict, *, dark: bool = False) -> str:
+    """Fond de slide auto-suffisant : dégradé aux couleurs de la marque.
+
+    Remplace les photos externes (loremflickr) → zéro dépendance réseau, zéro fuite
+    du mot-clé vers un tiers, rendu instantané, et plus cohérent avec l'identité.
+    Le mot-clé pilote juste l'angle/position pour varier d'une slide à l'autre.
+    """
+    h = sum(ord(c) for c in (keyword or "idea"))
+    angle = 90 + (h % 200)
+    if dark:
+        # Cover : sombre et riche pour un texte blanc lisible, avec une lueur d'accent.
+        return f"linear-gradient({angle}deg, {t['ink']} 0%, {t['ink']}E6 55%, {t['accent']}B3 100%)"
+    # Slides image : dégradé de marque clair + halo doux.
+    px, py = 25 + h % 50, 20 + (h // 3) % 55
+    return (
+        f"radial-gradient(circle at {px}% {py}%, {t['accent']}30, transparent 62%), "
+        f"linear-gradient({angle}deg, {t['accent']}1F, {t['band']})"
+    )
 
 
 def _slide(s: dict, t: dict, idx: int, logo_html: str = "") -> str:
@@ -36,7 +54,7 @@ def _slide(s: dict, t: dict, idx: int, logo_html: str = "") -> str:
     foot = f'<div class="brand-logo">{logo_html}</div>' if logo_html and layout != "cover" else ""
 
     if layout == "cover":
-        return f"""<section class="slide cover" style="background-image:linear-gradient(120deg,{t['ink']}CC,{t['ink']}55),url('{_img(s.get('image_keyword'))}')">
+        return f"""<section class="slide cover" style="background:{_bg(s.get('image_keyword'), t, dark=True)}">
           <div class="cover-in">
             <h1>{title}</h1>
             <p class="lead">{subtitle}</p>
@@ -64,13 +82,17 @@ def _slide(s: dict, t: dict, idx: int, logo_html: str = "") -> str:
 
     if layout == "image":
         return f"""<section class="slide image">
-          <div class="img-half" style="background-image:url('{_img(s.get('image_keyword'))}')"></div>
+          <div class="img-half" style="background:{_bg(s.get('image_keyword'), t)}"></div>
           <div class="img-txt"><h2>{title}</h2><p>{caption or subtitle}</p></div>
         {foot}</section>"""
 
     # bullets (défaut)
     lis = "".join(f"<li>{b}</li>" for b in bullets[:3]) or "<li>—</li>"
-    img = f"<div class=\"b-img\" style=\"background-image:url('{_img(s.get('image_keyword'))}')\"></div>" if s.get("image_keyword") else ""
+    img = (
+        f'<div class="b-img" style="background:{_bg(s.get("image_keyword"), t)}"></div>'
+        if s.get("image_keyword")
+        else ""
+    )
     return f"""<section class="slide bullets">
       <div class="pad"><h2>{title}</h2>{f'<p class="lead">{subtitle}</p>' if subtitle else ''}<ul>{lis}</ul></div>
       {img}{foot}</section>"""
@@ -171,25 +193,23 @@ def render_deck_html(
     chart_animation = "false" if export else "undefined"
 
     scripts = f"""
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script>{_CHARTJS}</script>
     <script>
       {zoom_fit}
-      window.addEventListener('load', () => {{
+      window.addEventListener('load', async () => {{
         {'fitDeck();' if not export else ''}
-        const canvases = document.querySelectorAll('canvas[data-chart]');
-        let pending = canvases.length;
-        function done() {{ pending--; if (pending <= 0) document.body.setAttribute('data-deck-ready', '1'); }}
-        if (canvases.length === 0) document.body.setAttribute('data-deck-ready', '1');
-        canvases.forEach(c => {{
+        const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+        document.querySelectorAll('canvas[data-chart]').forEach(c => {{
           const d = JSON.parse(c.dataset.chart);
           new Chart(c, {{ type: d.type || 'bar',
             data: {{ labels: d.labels, datasets: [{{ label: '', data: d.values,
-              backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
-              borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(), borderWidth: 2, fill: false }}] }},
+              backgroundColor: accent, borderColor: accent, borderWidth: 2, fill: false }}] }},
             options: {{ responsive:true, maintainAspectRatio:false, animation:{chart_animation},
               plugins:{{legend:{{display:false}}}} }} }});
-          done();
         }});
+        // Attendre les polices (sinon l'export capture avant le rendu de la typo de marque).
+        try {{ await document.fonts.ready; }} catch (e) {{}}
+        document.body.setAttribute('data-deck-ready', '1');
       }});
     </script>"""
 
