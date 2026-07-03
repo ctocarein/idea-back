@@ -39,6 +39,7 @@ from app.projects.models import Project  # noqa: F401
 from app.reports.models import Report  # noqa: F401
 from app.scoring.models import ScoreRun, ScoringGrid  # noqa: F401
 from app.sharing.models import ProjectShare  # noqa: F401
+from app.studio.models import Logo  # noqa: F401
 
 __all__ = [
     "AuditLog",
@@ -50,6 +51,7 @@ __all__ = [
     "Job",
     "LearningProgress",
     "Lesson",
+    "Logo",
     "MentorApplication",
     "MentorProfile",
     "MentorRequest",

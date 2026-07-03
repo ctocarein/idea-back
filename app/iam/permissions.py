@@ -27,6 +27,7 @@ class Permission(str, Enum):
     ACADEMY_PROGRESS = "academy:progress"  # enregistrer sa progression
     PITCHSIM_RUN = "pitchsim:run"  # lancer / rejouer une session de pitch
     PITCH_EDIT = "pitch:edit"  # éditer son pitch (éditeur V1.2)
+    STUDIO_EDIT = "studio:edit"  # générer / éditer ses assets de marque (Studio, V1.3)
 
     # --- Mentorat / certification ---
     MENTOR_REVIEW = "mentor:review"  # coacher / commenter un projet assigné
@@ -59,6 +60,7 @@ ROLE_PERMISSIONS: dict[Role, set[Permission]] = {
         Permission.ACADEMY_PROGRESS,
         Permission.PITCHSIM_RUN,
         Permission.PITCH_EDIT,
+        Permission.STUDIO_EDIT,
     },
     Role.MENTOR: {
         Permission.PROJECT_READ_ASSIGNED,

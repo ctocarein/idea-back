@@ -34,6 +34,8 @@ from app.pitch.repository import PitchRepository
 from app.pitch.schemas import PitchOut, PitchSectionOut, SectionGenerateOut
 from app.pitch.sections import PITCH_SECTIONS, default_sections
 from app.projects.repository import ProjectRepository
+from app.studio.brand import build_brand
+from app.studio.repository import LogoRepository
 
 _SECTION_BY_KEY = {s["key"]: s for s in PITCH_SECTIONS}
 
@@ -45,12 +47,21 @@ class PitchService:
         provider: LLMProvider,
         projects: ProjectRepository | None = None,
         academy: AcademyRepository | None = None,
+        logos: LogoRepository | None = None,
     ) -> None:
         self.repo = repo
         self.provider = provider
         self.projects = projects
         self.academy = academy
+        self.logos = logos
         self.session = repo.session
+
+    async def _brand(self, ctx: AuthContext) -> dict | None:
+        """Kit de marque du porteur (dérivé de son logo), s'il en a un."""
+        if self.logos is None:
+            return None
+        logo = await self.logos.get_latest_for_owner(ctx.user.id)
+        return build_brand(logo.spec) if logo is not None else None
 
     async def _project_context(self, ctx: AuthContext) -> tuple[str | None, str | None, UUID | None]:
         if self.projects is None:
@@ -159,19 +170,20 @@ class PitchService:
             raise PaymentRequiredError("L'export du pitch nécessite un accès payant.")
 
         title, _sector, _ = await self._project_context(ctx)
+        brand = await self._brand(ctx)
         short = str(pitch_id)[:8]
         # Le deck visuel est le vrai livrable dès qu'il existe ; sinon on retombe
         # sur l'export texte des sections (avant génération du deck).
         has_deck = bool(pitch.slides)
         if fmt == "pdf":
             if has_deck:
-                deck_html = render_deck_html(pitch, project_title=title, export=True)
+                deck_html = render_deck_html(pitch, project_title=title, export=True, brand=brand)
                 data = await render_deck_pdf(deck_html)
             else:
                 data = render_pitch_pdf(render_pitch_html(pitch, project_title=title))
             return data, "application/pdf", f"pitch-{short}.pdf"
         if has_deck:
-            deck_html = render_deck_html(pitch, project_title=title, export=True)
+            deck_html = render_deck_html(pitch, project_title=title, export=True, brand=brand)
             data = await render_deck_pptx(deck_html)
         else:
             data = render_pitch_pptx(pitch, project_title=title)
@@ -310,7 +322,8 @@ class PitchService:
     async def render_deck(self, ctx: AuthContext, pitch_id: UUID, *, standalone: bool = True) -> str:
         pitch = await self._load_owned(ctx, pitch_id)
         title, _sector, _ = await self._project_context(ctx)
-        return render_deck_html(pitch, project_title=title, standalone=standalone)
+        brand = await self._brand(ctx)
+        return render_deck_html(pitch, project_title=title, standalone=standalone, brand=brand)
 
     @staticmethod
     def _extract_json(text: str) -> str:

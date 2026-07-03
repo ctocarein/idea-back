@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.diagnostics.models import Diagnostic, EntryMode
@@ -39,3 +40,12 @@ class DiagnosticRepository:
 
     async def get_by_id(self, diagnostic_id: UUID) -> Diagnostic | None:
         return await self.session.get(Diagnostic, diagnostic_id)
+
+    async def get_latest_for_owner(self, owner_id: UUID) -> Diagnostic | None:
+        result = await self.session.execute(
+            select(Diagnostic)
+            .where(Diagnostic.owner_id == owner_id)
+            .order_by(Diagnostic.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()

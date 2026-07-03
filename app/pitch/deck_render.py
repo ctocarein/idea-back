@@ -26,12 +26,14 @@ def _img(keyword: str | None) -> str:
     return f"https://loremflickr.com/1200/900/{kw}"
 
 
-def _slide(s: dict, t: dict, idx: int) -> str:
+def _slide(s: dict, t: dict, idx: int, logo_html: str = "") -> str:
     layout = s.get("layout", "bullets")
     title = escape(str(s.get("title", "")))
     subtitle = escape(str(s.get("subtitle", "")))
     bullets = [escape(str(b)) for b in (s.get("bullets") or []) if str(b).strip()]
     caption = escape(str(s.get("caption", "")))
+    # Filigrane logo en pied des slides de contenu (pas sur la cover photo).
+    foot = f'<div class="brand-logo">{logo_html}</div>' if logo_html and layout != "cover" else ""
 
     if layout == "cover":
         return f"""<section class="slide cover" style="background-image:linear-gradient(120deg,{t['ink']}CC,{t['ink']}55),url('{_img(s.get('image_keyword'))}')">
@@ -47,7 +49,7 @@ def _slide(s: dict, t: dict, idx: int) -> str:
             <div class="big-num">{escape(str(stat.get('value','')))}</div>
             <div class="stat-label">{escape(str(stat.get('label','')))}</div>
             <p class="ctx">{subtitle or (bullets[0] if bullets else '')}</p>
-          </div></section>"""
+          </div>{foot}</section>"""
 
     if layout == "chart":
         chart = s.get("chart") or {}
@@ -58,20 +60,20 @@ def _slide(s: dict, t: dict, idx: int) -> str:
             <span class="eyebrow">{escape(str(chart.get('type','')).upper())}</span>
             <h2>{title}</h2>
             <div class="chart-wrap"><canvas id="{cid}" data-chart='{data}'></canvas></div>
-          </div></section>"""
+          </div>{foot}</section>"""
 
     if layout == "image":
         return f"""<section class="slide image">
           <div class="img-half" style="background-image:url('{_img(s.get('image_keyword'))}')"></div>
           <div class="img-txt"><h2>{title}</h2><p>{caption or subtitle}</p></div>
-        </section>"""
+        {foot}</section>"""
 
     # bullets (défaut)
     lis = "".join(f"<li>{b}</li>" for b in bullets[:3]) or "<li>—</li>"
     img = f"<div class=\"b-img\" style=\"background-image:url('{_img(s.get('image_keyword'))}')\"></div>" if s.get("image_keyword") else ""
     return f"""<section class="slide bullets">
       <div class="pad"><h2>{title}</h2>{f'<p class="lead">{subtitle}</p>' if subtitle else ''}<ul>{lis}</ul></div>
-      {img}</section>"""
+      {img}{foot}</section>"""
 
 
 def render_deck_html(
@@ -80,16 +82,24 @@ def render_deck_html(
     *,
     standalone: bool = True,
     export: bool = False,
+    brand: dict | None = None,
 ) -> str:
     """Rend le deck en HTML. `export=True` = mode capture (Playwright) :
     slides flush (pas de fond gris, pas d'ombre, pas de zoom-fit) — chaque
     slide occupe EXACTEMENT 960x540, prête à être capturée telle quelle.
+
+    `brand` (dérivé du logo) applique la palette + la typo de la marque et pose
+    le logo en filigrane → cohérence logo ↔ deck.
     """
     t = TEMPLATES.get(pitch.template_id, TEMPLATES["base"])
+    if brand:
+        # Le kit de marque prime sur les couleurs du thème (le thème garde son layout).
+        t = {**t, **{k: brand[k] for k in ("ink", "accent", "bg", "muted", "band")}}
+    logo_html = brand["logo_svg"] if brand else ""
     slides = pitch.slides or []
     if not slides:
         slides = [{"layout": "cover", "title": project_title or pitch.title or "Ton deck", "subtitle": "Génère ton deck pour démarrer."}]
-    body = "".join(_slide(s, t, i) for i, s in enumerate(slides))
+    body = "".join(_slide(s, t, i, logo_html) for i, s in enumerate(slides))
 
     deck_layout = (
         ".deck { display:flex; flex-direction:column; }"
@@ -102,10 +112,18 @@ def render_deck_html(
         "body { background:#E9E7F0; }"
     )
 
+    font_import = f'@import url("{brand["font_import"]}");' if brand else ""
+    display_family = f"'{brand['display_font']}'," if brand else ""
+    body_family = f"'{brand['body_font']}'," if brand else ""
+
     css = f"""
+    {font_import}
     :root {{ --ink:{t['ink']}; --accent:{t['accent']}; --bg:{t['bg']}; --muted:{t['muted']}; --band:{t['band']}; }}
     * {{ box-sizing:border-box; margin:0; padding:0; }}
-    body {{ font-family:'Segoe UI',Roboto,system-ui,sans-serif; color:var(--ink); }}
+    body {{ font-family:{body_family}'Segoe UI',Roboto,system-ui,sans-serif; color:var(--ink); }}
+    h1,h2 {{ font-family:{display_family}'Segoe UI',Roboto,sans-serif; }}
+    .brand-logo {{ position:absolute; left:28px; bottom:20px; height:24px; opacity:.85; z-index:2; }}
+    .brand-logo svg {{ height:24px; width:auto; }}
     {deck_layout}
     .pad {{ padding:56px 64px; width:100%; display:flex; flex-direction:column; justify-content:center; }}
     h1 {{ font-size:52px; line-height:1.05; font-weight:800; }}
