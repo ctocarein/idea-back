@@ -15,6 +15,7 @@ from fastapi import (
     status,
 )
 
+from app.core.ratelimit import rate_limit
 from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
 from app.pitch.dependencies import get_pitch_service
@@ -51,7 +52,11 @@ async def update_section(
     return await svc.update_section(ctx, pitch_id, key, body.content)
 
 
-@router.post("/{pitch_id}/sections/{key}/generate", response_model=SectionGenerateOut)
+@router.post(
+    "/{pitch_id}/sections/{key}/generate",
+    response_model=SectionGenerateOut,
+    dependencies=[Depends(rate_limit("pitch_generate", limit=15, window_seconds=60, fail_open=False))],
+)
 async def generate_section(
     pitch_id: UUID,
     key: str,
@@ -61,7 +66,12 @@ async def generate_section(
     return await svc.generate_section(ctx, pitch_id, key)
 
 
-@router.post("/{pitch_id}/deck/generate", response_model=PitchOut)
+@router.post(
+    "/{pitch_id}/deck/generate",
+    response_model=PitchOut,
+    # Génération du deck = appel LLM : anti-abus coût (fail-closed si Redis down).
+    dependencies=[Depends(rate_limit("deck_generate", limit=10, window_seconds=60, fail_open=False))],
+)
 async def generate_deck(
     pitch_id: UUID,
     body: DeckGenerateIn,

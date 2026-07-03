@@ -86,7 +86,13 @@ async def extract_file_idea(
     return await svc.extract(text.strip()[:5000], name)
 
 
-@router.post("", status_code=status.HTTP_202_ACCEPTED, response_model=DiagnosticCreatedOut)
+@router.post(
+    "",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=DiagnosticCreatedOut,
+    # Scoring = 3 passes LLM : anti-abus coût (fail-closed si Redis down).
+    dependencies=[Depends(rate_limit("diagnostic_run", limit=6, window_seconds=60, fail_open=False))],
+)
 async def start_guided_diagnostic(
     body: ManualDiagnosticIn,
     ctx: AuthContext = Depends(require(Permission.DIAGNOSTIC_RUN)),
@@ -96,7 +102,12 @@ async def start_guided_diagnostic(
     return await svc.start_guided(owner_id=ctx.user.id, data=body)
 
 
-@router.post("/upload", status_code=status.HTTP_202_ACCEPTED, response_model=DiagnosticCreatedOut)
+@router.post(
+    "/upload",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=DiagnosticCreatedOut,
+    dependencies=[Depends(rate_limit("diagnostic_run", limit=6, window_seconds=60, fail_open=False))],
+)
 async def start_upload_diagnostic(
     body: UploadDiagnosticIn,
     ctx: AuthContext = Depends(require(Permission.DIAGNOSTIC_RUN)),
