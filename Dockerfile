@@ -8,7 +8,9 @@ COPY --from=ghcr.io/astral-sh/uv:0.5.26 /uv /uvx /bin/
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     UV_COMPILE_BYTECODE=1 \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    # Chromium (export deck) : chemin partagé lisible par l'utilisateur non-root `app`.
+    PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
 
 # Dépendances système de WeasyPrint (génération PDF du bilan) : Pango, Cairo, GDK-PixBuf,
 # HarfBuzz, fontconfig + une police de base. Sans elles, render_bilan_pdf échoue (ImportError
@@ -36,6 +38,13 @@ WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev --extra pdf --extra pitch
 
+# Navigateur Chromium + ses libs système (export deck PDF/PPTX via Playwright).
+# En root (avant USER app) ; --with-deps installe les paquets apt requis. On rend
+# le dossier lisible/exécutable par `app`. Sans ça, l'export deck échoue en prod.
+RUN uv run playwright install --with-deps chromium \
+    && chmod -R a+rx /opt/ms-playwright \
+    && rm -rf /var/lib/apt/lists/*
+
 # Code applicatif.
 COPY . .
 RUN uv sync --frozen --no-dev --extra pdf --extra pitch
@@ -44,6 +53,10 @@ RUN uv sync --frozen --no-dev --extra pdf --extra pitch
 USER app
 
 EXPOSE 8080
+
+# Liveness : l'orchestrateur ne route que si /health répond 200 (db + redis + minio OK).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
+    CMD ["python", "-c", "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/v1/health',timeout=4).status==200 else 1)"]
 
 # Commande par défaut : l'API. Le worker surcharge `command` dans docker-compose.
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
