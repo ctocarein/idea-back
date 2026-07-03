@@ -99,7 +99,7 @@ async def update_me(
     ctx: AuthContext = Depends(get_current_user),
     svc: AuthService = Depends(get_auth_service),
 ) -> UserOut:
-    user = await svc.update_me(ctx.user, full_name=body.full_name)
+    user = await svc.update_me(ctx.user, full_name=body.full_name, language=body.language)
     return UserOut.model_validate(user)
 
 

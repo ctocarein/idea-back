@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -60,6 +61,7 @@ class UserOut(BaseModel):
     role: Role
     status: AccountStatus
     email_verified: bool = False
+    language: str = "fr"
     created_at: datetime
     # Profil porteur (None si onboarding pas encore complété).
     country: str | None = None
@@ -76,6 +78,7 @@ class VerifyEmailIn(BaseModel):
 
 class UpdateMeIn(BaseModel):
     full_name: str | None = Field(default=None, min_length=2, max_length=200)
+    language: Literal["fr", "en"] | None = None
 
 
 class OnboardingIn(BaseModel):

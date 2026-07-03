@@ -22,6 +22,7 @@ from app.core.database import get_session_factory
 from app.core.logging import get_logger
 from app.core.storage import get_storage
 from app.diagnostics.repository import DiagnosticRepository
+from app.iam.repository import UserRepository
 from app.llm.factory import get_llm
 from app.llm.prompt import PROMPT_VERSION, build_report_prompt, build_scoring_prompt
 from app.notifications.repository import NotificationRepository
@@ -67,6 +68,10 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
         if grid is None:
             raise RuntimeError("Aucune grille Radar active (seed manquant).")
 
+        # Bilingue : le bilan (justifications + rapport) suit la langue du porteur.
+        owner = await UserRepository(session).get_by_id(project.owner_id)
+        lang = owner.language if owner is not None else "fr"
+
         # N passes : même rubrique, angle d'analyse variable → dispersion mesurable.
         passes: list[dict[str, int]] = []
         justifications: dict[str, str] | None = None
@@ -79,6 +84,7 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
                 description=diagnostic.description,
                 answers=diagnostic.answers,
                 perspective=k,
+                lang=lang,
             )
             out = await provider.analyze_json(prompt)
             raw_outputs.append(out)
@@ -110,6 +116,7 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
                 description=diagnostic.description,
                 answers=diagnostic.answers,
                 scores=result.axes,
+                lang=lang,
             )
             report_raw = await provider.analyze_json(report_prompt)
             report_data = DiagnosticReport.model_validate(report_raw).model_dump()

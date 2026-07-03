@@ -20,6 +20,19 @@ EXTRACTION_PROMPT_VERSION = "extract-v1"  # récit libre → 12 dimensions capt�
 MODULE_PROMPT_VERSION = "module-v1"       # modules Academy : opener + turn + form + fiches
 
 
+# --- Bilingue : directive de langue injectée en tête des prompts génératifs -----
+# Le contenu généré par l'IA (bilan, coach, deck…) suit la langue du porteur.
+# Défaut "fr" (marché actuel) → aucun changement de comportement tant que non "en".
+_LANG_DIRECTIVE = {
+    "fr": "Rédige TOUTE ta réponse en français.",
+    "en": "Write your ENTIRE response in English (labels, prose, values).",
+}
+
+
+def lang_directive(lang: str | None) -> str:
+    return _LANG_DIRECTIVE.get((lang or "fr").lower(), _LANG_DIRECTIVE["fr"])
+
+
 def build_extraction_prompt(
     *, idea: str, axes: list[dict], project_name: str | None = None
 ) -> str:
@@ -134,11 +147,13 @@ def build_scoring_prompt(
     description: str | None,
     answers: dict[str, str] | None,
     perspective: int = 0,
+    lang: str = "fr",
 ) -> str:
     # `perspective` varie d'une passe à l'autre (ensemble) sans changer la rubrique :
     # on demande à l'IA un angle d'analyse légèrement différent pour révéler l'incertitude.
     lines: list[str] = [
         "FORMAT=axes.",
+        lang_directive(lang) + " (les justifications suivent la langue ; les clés d'axes restent d1..d12)",
         "Tu es un évaluateur de projets entrepreneuriaux rigoureux et bienveillant.",
         f"Catégorie : {category} · Archétype : {archetype}.",
         "Note CHAQUE dimension de 0 à 10 EN T'APPUYANT sur ses ancres (paliers ci-dessous).",
@@ -367,6 +382,7 @@ def build_report_prompt(
     description: str | None,
     answers: dict[str, str] | None,
     scores: dict[str, int] | None = None,
+    lang: str = "fr",
 ) -> str:
     # Couche STRUCTURÉE du rapport de pré-diagnostic (au-delà des notes /10) : description,
     # verdict, matrice de risques, concurrents, avancement, recos priorisées, next steps.
@@ -374,6 +390,7 @@ def build_report_prompt(
     return "\n".join(
         [
             "FORMAT=report.",
+            lang_directive(lang),
             "Tu es un analyste qui rédige un pré-diagnostic synthétique et actionnable.",
             f"Catégorie : {category} · Archétype : {archetype}.",
             f"Scores Radar (0-10) déjà calculés : {json.dumps(scores or {}, ensure_ascii=False)}",

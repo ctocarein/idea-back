@@ -170,9 +170,15 @@ class AuthService:
             permissions=sorted(p.value for p in perms),
         )
 
-    async def update_me(self, user: User, *, full_name: str | None) -> User:
+    async def update_me(self, user: User, *, full_name: str | None, language: str | None = None) -> User:
+        changed = False
         if full_name is not None:
             user.full_name = full_name
+            changed = True
+        if language is not None:
+            user.language = language
+            changed = True
+        if changed:
             await self.session.commit()
         return user
 

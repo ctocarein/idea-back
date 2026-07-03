@@ -70,6 +70,9 @@ class User(Base):
     # Preuve de possession de l'email (soft gate) : l'accès reste ouvert (conversion),
     # on prouve juste l'email pour la confiance / les actions sensibles.
     email_verified: Mapped[bool] = mapped_column(default=False, server_default="false")
+    # Langue préférée (ISO 639-1 : "fr" | "en"). Pilote l'UI ET le contenu généré par
+    # l'IA (bilan, coach, deck) + les emails. Défaut "fr" (marché actuel).
+    language: Mapped[str] = mapped_column(String(2), default="fr", server_default="fr")
     # Horodatage du consentement RGPD donné à l'inscription. Nullable : les comptes
     # créés autrement (seed, invitation) le renseignent à leur propre étape.
     consent_at: Mapped[datetime | None] = mapped_column(default=None)
