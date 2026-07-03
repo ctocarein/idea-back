@@ -71,6 +71,31 @@ def decode_access_token(token: str) -> dict[str, Any]:
     )
 
 
+# --- Token de vérification d'email (JWT dédié, stateless) ------------------
+
+
+def create_email_token(subject: UUID) -> str:
+    # Token de vérification (24 h). Purpose distinct de l'access → pas d'usage croisé.
+    now = datetime.now(UTC)
+    payload = {
+        "sub": str(subject),
+        "purpose": "email_verify",
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(hours=24)).timestamp()),
+    }
+    return jwt.encode(payload, get_settings().jwt_secret.get_secret_value(), algorithm=_JWT_ALGORITHM)
+
+
+def decode_email_token(token: str) -> UUID:
+    # Lève jwt.PyJWTError si invalide/expiré, ValueError si mauvais purpose.
+    payload = jwt.decode(
+        token, get_settings().jwt_secret.get_secret_value(), algorithms=[_JWT_ALGORITHM]
+    )
+    if payload.get("purpose") != "email_verify":
+        raise ValueError("token de mauvais type")
+    return UUID(payload["sub"])
+
+
 # --- Tokens opaques (refresh, invitations) ---------------------------------
 
 

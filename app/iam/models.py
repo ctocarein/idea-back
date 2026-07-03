@@ -67,6 +67,9 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(200))
     role: Mapped[Role]  # rôle principal
     status: Mapped[AccountStatus] = mapped_column(default=AccountStatus.ACTIVE)
+    # Preuve de possession de l'email (soft gate) : l'accès reste ouvert (conversion),
+    # on prouve juste l'email pour la confiance / les actions sensibles.
+    email_verified: Mapped[bool] = mapped_column(default=False, server_default="false")
     # Horodatage du consentement RGPD donné à l'inscription. Nullable : les comptes
     # créés autrement (seed, invitation) le renseignent à leur propre étape.
     consent_at: Mapped[datetime | None] = mapped_column(default=None)

@@ -32,6 +32,16 @@ class Settings(BaseSettings):
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 30
 
+    # --- Email (vérification d'adresse) ---
+    # URL publique du front, pour construire les liens des emails.
+    public_base_url: str = "http://localhost:3000"
+    # SMTP optionnel : si smtp_host est absent, on LOGGE le lien (dev) au lieu d'envoyer.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: SecretStr | None = None
+    email_from: str = "IDEAXION <no-reply@ideaxion.cloud>"
+
     # --- CORS ---
     # Liste blanche d'origines. NoDecode : on reçoit la chaîne brute du .env et c'est notre
     # validateur (_split_csv) qui la découpe — pas le décodage JSON de pydantic-settings.

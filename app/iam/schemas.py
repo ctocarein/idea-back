@@ -59,6 +59,7 @@ class UserOut(BaseModel):
     full_name: str
     role: Role
     status: AccountStatus
+    email_verified: bool = False
     created_at: datetime
     # Profil porteur (None si onboarding pas encore complété).
     country: str | None = None
@@ -67,6 +68,10 @@ class UserOut(BaseModel):
     project_stage: ProjectStage | None = None
     weekly_availability: WeeklyAvailability | None = None
     onboarding_completed: bool = False
+
+
+class VerifyEmailIn(BaseModel):
+    token: str = Field(min_length=10, max_length=2000)
 
 
 class UpdateMeIn(BaseModel):

@@ -16,6 +16,7 @@ from app.iam.schemas import (
     TokenPair,
     UpdateMeIn,
     UserOut,
+    VerifyEmailIn,
 )
 from app.iam.service import AuthService
 
@@ -61,6 +62,27 @@ async def logout(
     svc: AuthService = Depends(get_auth_service),
 ) -> None:
     await svc.logout(refresh_token=body.refresh_token)
+
+
+@router.post("/verify-email", status_code=status.HTTP_204_NO_CONTENT)
+async def verify_email(
+    body: VerifyEmailIn,
+    svc: AuthService = Depends(get_auth_service),
+) -> None:
+    # Public : le token du lien EST l'authentification.
+    await svc.verify_email(body.token)
+
+
+@router.post(
+    "/resend-verification",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(rate_limit("email_resend", limit=3, window_seconds=300))],
+)
+async def resend_verification(
+    ctx: AuthContext = Depends(get_current_user),
+    svc: AuthService = Depends(get_auth_service),
+) -> None:
+    await svc.resend_verification(ctx.user.id)
 
 
 @router.get("/me", response_model=MeOut)

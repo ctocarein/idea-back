@@ -10,12 +10,17 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
+import jwt
+
 from app.audit.service import AuditService
 from app.core.config import get_settings
-from app.core.errors import ConflictError, RateLimitError, UnauthenticatedError
+from app.core.email import send_verification_email
+from app.core.errors import BusinessRuleError, ConflictError, NotFoundError, RateLimitError, UnauthenticatedError
 from app.core.ratelimit import RateLimiter
 from app.core.security import (
     create_access_token,
+    create_email_token,
+    decode_email_token,
     generate_opaque_token,
     hash_password,
     hash_token,
@@ -71,7 +76,34 @@ class AuthService:
             new_value={"consent_at": consent_at.isoformat()},
         )
         # user + audit + refresh token sont commités ensemble (atomique).
-        return await self._issue_tokens(user)
+        tokens = await self._issue_tokens(user)
+        # Email de vérification (best-effort, hors transaction ; ne bloque pas l'inscription).
+        send_verification_email(
+            to=user.email, name=user.full_name, token=create_email_token(user.id)
+        )
+        return tokens
+
+    async def verify_email(self, token: str) -> None:
+        """Consomme un lien de vérification → marque l'email comme vérifié."""
+        try:
+            user_id = decode_email_token(token)
+        except (jwt.PyJWTError, ValueError, KeyError):
+            raise BusinessRuleError("Lien de vérification invalide ou expiré.") from None
+        user = await self.users.get_by_id(user_id)
+        if user is None:
+            raise NotFoundError("user")
+        if not user.email_verified:
+            user.email_verified = True
+            await self.session.commit()
+
+    async def resend_verification(self, user_id: UUID) -> None:
+        """Renvoie un lien de vérification (idempotent : rien si déjà vérifié)."""
+        user = await self.users.get_by_id(user_id)
+        if user is None or user.email_verified:
+            return
+        send_verification_email(
+            to=user.email, name=user.full_name, token=create_email_token(user.id)
+        )
 
     async def login(self, *, email: str, password: str) -> TokenPair:
         # Anti brute-force ciblé : 5 tentatives / 15 min par email (en plus de la limite IP).
