@@ -78,8 +78,12 @@ class IdeaExtractionService:
     def __init__(self, provider: LLMProvider) -> None:
         self.provider = provider
 
-    async def extract(self, idea: str, project_name: str | None, lang: str = "fr") -> IdeaExtractOut:
-        prompt = build_extraction_prompt(idea=idea, axes=AXES, project_name=project_name, lang=lang)
+    async def extract(
+        self, idea: str, project_name: str | None, lang: str = "fr", currency: str = "XOF"
+    ) -> IdeaExtractOut:
+        prompt = build_extraction_prompt(
+            idea=idea, axes=AXES, project_name=project_name, lang=lang, currency=currency
+        )
         raw = await self.provider.analyze_json(prompt)
         by_key = raw.get("dimensions")
         by_key = by_key if isinstance(by_key, dict) else {}
@@ -95,6 +99,7 @@ class IdeaExtractionService:
                     captured=captured,
                     evidence=(str(d.get("evidence") or "") if captured else ""),
                     question=("" if captured else str(d.get("question") or "")),
+                    suggestion=("" if captured else str(d.get("suggestion") or "")),
                 )
             )
 

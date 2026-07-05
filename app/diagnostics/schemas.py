@@ -95,6 +95,8 @@ class IdeaExtractIn(BaseModel):
     consent: bool = False
     # Bilingue : langue du visiteur (flow public, pré-inscription) → les questions suivent la langue.
     lang: str = Field(default="fr", pattern="^(fr|en)$")
+    # Monnaie de référence du porteur → les suggestions chiffrées (prix, budget) l'utilisent.
+    currency: str = Field(default="XOF", max_length=8)
 
     @field_validator("consent")
     @classmethod
@@ -110,6 +112,9 @@ class ExtractedDimension(BaseModel):
     captured: bool  # le récit donne assez d'info ?
     evidence: str = ""  # preuve tirée du récit (si captured)
     question: str = ""  # question courte à poser (si manquant)
+    # Brouillon proposé (si manquant) : une « bonne hallucination » extrapolée du récit,
+    # à la 1re personne, que le porteur reconnaît et confirme/ajuste. ≠ evidence (jamais inventée).
+    suggestion: str = ""
 
 
 class IdeaExtractOut(BaseModel):

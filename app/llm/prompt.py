@@ -34,17 +34,29 @@ def lang_directive(lang: str | None) -> str:
 
 
 def build_extraction_prompt(
-    *, idea: str, axes: list[dict], project_name: str | None = None, lang: str = "fr"
+    *,
+    idea: str,
+    axes: list[dict],
+    project_name: str | None = None,
+    lang: str = "fr",
+    currency: str = "XOF",
 ) -> str:
     # « Raconte, on structure » : depuis le RÉCIT LIBRE, on repère pour chaque dimension si
-    # l'info est déjà là (preuve) ou s'il faut la demander (question). On n'INVENTE jamais.
+    # l'info est déjà là (preuve) ou s'il faut la demander (question) + un brouillon proposé.
     lines = [
         "FORMAT=extraction.",
-        lang_directive(lang) + " (evidence & questions suivent la langue ; les clés d'axes restent d1..d12)",
+        lang_directive(lang) + " (evidence, questions & suggestions suivent la langue ; les clés d'axes restent d1..d12)",
         "Tu es un analyste de projets. À partir du RÉCIT LIBRE du porteur, traite CHAQUE dimension :",
         "- si le récit donne assez d'info → captured=true + 'evidence' (courte preuve tirée du récit) ;",
-        "- sinon → captured=false + 'question' (UNE question courte et simple pour combler le manque).",
-        "N'INVENTE rien : si ce n'est pas dans le récit, c'est un manque (captured=false).",
+        "- sinon → captured=false + 'question' (UNE question courte et simple) + 'suggestion' (voir ci-dessous).",
+        "",
+        "RÈGLE evidence : n'INVENTE rien — si l'info n'est pas dans le récit, c'est un manque (captured=false).",
+        "",
+        "RÈGLE suggestion (pour les manques uniquement) : propose un BROUILLON à la 1re personne, comme si",
+        "tu devinais ce que le porteur AURAIT écrit, à partir du contexte de son récit (secteur, cible, ton).",
+        "Objectif : qu'il se dise « oui, c'est exactement ça » et n'ait qu'à confirmer ou ajuster.",
+        "1 phrase, concret, plausible, humble (pas de promesse grandiose). C'est une intuition, pas une vérité :",
+        "reste cohérent avec CE projet précis. Pour tout montant/prix, exprime-le en " + currency + ".",
         "",
         f"NOM du projet fourni : {project_name or '(aucun — déduis-le du récit s’il est nommé, sinon null)'}",
         "",
@@ -60,7 +72,8 @@ def build_extraction_prompt(
         "",
         "Réponds STRICTEMENT en JSON : { \"project_name\": \"<nom ou null>\", \"dimensions\": {",
         '  "<key d1..d12>": { "captured": <true|false>, "evidence": "<preuve si captured, sinon \\"\\">", '
-        '"question": "<question courte si manquant, sinon \\"\\">" } } }',
+        '"question": "<question courte si manquant, sinon \\"\\">", '
+        '"suggestion": "<brouillon 1re personne si manquant, sinon \\"\\">" } } }',
     ]
     return "\n".join(lines)
 
