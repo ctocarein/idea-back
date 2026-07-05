@@ -33,7 +33,9 @@ async def register(
     body: RegisterIn,
     svc: AuthService = Depends(get_auth_service),
 ) -> TokenPair:
-    return await svc.register(email=body.email, password=body.password, full_name=body.full_name)
+    return await svc.register(
+        email=body.email, password=body.password, full_name=body.full_name, language=body.language
+    )
 
 
 @router.post(

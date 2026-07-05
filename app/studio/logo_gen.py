@@ -13,6 +13,7 @@ import json
 import re
 from typing import Any
 
+from app.llm.prompt import lang_directive
 from app.studio.vocab import (
     CONTAINERS,
     FONTS,
@@ -28,13 +29,16 @@ from app.studio.vocab import (
 _HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
-def build_logo_prompt(*, name: str, sector: str | None, archetype: str | None, description: str | None) -> str:
+def build_logo_prompt(
+    *, name: str, sector: str | None, archetype: str | None, description: str | None, lang: str = "fr"
+) -> str:
     icons = ", ".join(sorted(ICONS))
     geos = ", ".join(GEOMETRICS)
     fonts = ", ".join(sorted(FONTS))
     desc = (description or "").strip()[:600]
     return (
         "FORMAT=logo\n"
+        + lang_directive(lang) + " (le slogan/tagline suit la langue ; les autres champs restent des clés)\n"
         "Tu es directeur artistique de marque. Conçois 4 concepts de LOGO distincts pour une startup. "
         "Tu ne dessines pas : tu CHOISIS dans des listes fermées et tu proposes une palette.\n\n"
         f"Projet : {name}\n"

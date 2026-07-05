@@ -27,6 +27,8 @@ class RegisterIn(BaseModel):
     # Consentement RGPD : miroir du `registerSchema` front (z.literal(true)).
     # Une inscription sans consentement est refusée (400).
     consent: bool = False
+    # Bilingue : langue choisie par le visiteur (préfixe /fr /en) → compte + emails d'emblée.
+    language: str = Field(default="fr", pattern="^(fr|en)$")
 
     @field_validator("consent")
     @classmethod

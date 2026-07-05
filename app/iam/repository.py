@@ -36,6 +36,7 @@ class UserRepository:
         role: Role,
         status: AccountStatus = AccountStatus.ACTIVE,
         consent_at: datetime | None = None,
+        language: str = "fr",
     ) -> User:
         user = User(
             email=email,
@@ -44,6 +45,7 @@ class UserRepository:
             role=role,
             status=status,
             consent_at=consent_at,
+            language=language,
         )
         self.session.add(user)
         await self.session.flush()  # peuple l'id sans committer (le service commit)

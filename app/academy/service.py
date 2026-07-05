@@ -131,7 +131,7 @@ class AcademyService:
 
     async def guided_turn(self, ctx: AuthContext, session_id: UUID, message: str) -> GuidedSessionOut:
         gs = await self._load_owned_session(ctx, session_id)
-        prompt = build_coach_prompt(section=gs.section, draft=gs.draft, message=message)
+        prompt = build_coach_prompt(section=gs.section, draft=gs.draft, message=message, lang=ctx.user.language)
         result = await self.provider.complete(prompt)
         gs.turns = [
             *gs.turns,
@@ -279,6 +279,7 @@ class AcademyService:
             project_title=project_title,
             sector=sector,
             axis_score=axis_score,
+            lang=ctx.user.language,
         )
         result = await self.provider.complete(opener_prompt)
 
@@ -306,6 +307,7 @@ class AcademyService:
             label=mod.get("label", gs.section),
             history=gs.turns,
             message=message,
+            lang=ctx.user.language,
         )
         result = await self.provider.complete(prompt)
 
@@ -339,6 +341,7 @@ class AcademyService:
             history=gs.turns,
             project_title=project_title,
             sector=sector,
+            lang=ctx.user.language,
         )
         result = await self.provider.complete(prompt)
 
@@ -383,6 +386,7 @@ class AcademyService:
             form_data=gs.form_data,
             project_title=project_title,
             sector=sector,
+            lang=ctx.user.language,
         )
         result = await self.provider.complete(prompt)
 

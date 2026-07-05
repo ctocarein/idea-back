@@ -54,7 +54,7 @@ async def extract_idea(
     svc: IdeaExtractionService = Depends(get_extraction_service),
 ) -> IdeaExtractOut:
     # « Raconte, on structure » : récit libre → 12 dimensions captées / manquantes (synchrone).
-    return await svc.extract(body.idea, body.project_name)
+    return await svc.extract(body.idea, body.project_name, lang=body.lang)
 
 
 @router.post(
@@ -66,6 +66,7 @@ async def extract_idea(
 async def extract_file_idea(
     file: UploadFile = File(...),
     project_name: str | None = Form(default=None),
+    lang: str = Form(default="fr"),
     svc: IdeaExtractionService = Depends(get_extraction_service),
 ) -> IdeaExtractOut:
     """Upload d'un PDF ou DOCX → extraction de texte → même pipeline 'Raconte' que /extract."""
@@ -83,7 +84,7 @@ async def extract_file_idea(
         )
 
     name = project_name or (file.filename or "").rsplit(".", 1)[0] or None
-    return await svc.extract(text.strip()[:5000], name)
+    return await svc.extract(text.strip()[:5000], name, lang=lang if lang in ("fr", "en") else "fr")
 
 
 @router.post(

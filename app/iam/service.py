@@ -48,7 +48,7 @@ class AuthService:
 
     # --- Inscription / connexion ------------------------------------------
 
-    async def register(self, *, email: str, password: str, full_name: str) -> TokenPair:
+    async def register(self, *, email: str, password: str, full_name: str, language: str = "fr") -> TokenPair:
         # Un porteur s'inscrit librement (rôle founder, actif d'emblée).
         # NB transactions : on s'appuie sur l'autobegin de la session + un commit unique
         # (porté par _issue_tokens). On n'utilise PAS session.begin() car la session de
@@ -67,6 +67,7 @@ class AuthService:
             role=Role.FOUNDER,
             status=AccountStatus.ACTIVE,
             consent_at=consent_at,
+            language=language,
         )
         await self.auditor.record(
             actor_id=user.id,
@@ -79,7 +80,7 @@ class AuthService:
         tokens = await self._issue_tokens(user)
         # Email de vérification (best-effort, hors transaction ; ne bloque pas l'inscription).
         send_verification_email(
-            to=user.email, name=user.full_name, token=create_email_token(user.id)
+            to=user.email, name=user.full_name, token=create_email_token(user.id), lang=user.language
         )
         return tokens
 
@@ -102,7 +103,7 @@ class AuthService:
         if user is None or user.email_verified:
             return
         send_verification_email(
-            to=user.email, name=user.full_name, token=create_email_token(user.id)
+            to=user.email, name=user.full_name, token=create_email_token(user.id), lang=user.language
         )
 
     async def login(self, *, email: str, password: str) -> TokenPair:

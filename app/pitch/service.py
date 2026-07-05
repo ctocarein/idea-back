@@ -150,6 +150,7 @@ class PitchService:
             evidence=evidence,
             project_title=title,
             sector=sector,
+            lang=ctx.user.language,
         )
         result = await self.provider.complete(prompt)
         return SectionGenerateOut(key=key, content=result.text.strip())
@@ -289,7 +290,7 @@ class PitchService:
                 "colle un texte, ou importe un pitch."
             )
         title, sector, _ = await self._project_context(ctx)
-        prompt = build_deck_prompt(source=material, project_title=title, sector=sector)
+        prompt = build_deck_prompt(source=material, project_title=title, sector=sector, lang=ctx.user.language)
         result = await self.provider.complete(prompt)
         try:
             parsed = json.loads(self._extract_json(result.text))

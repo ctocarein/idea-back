@@ -40,12 +40,34 @@ def send_email(*, to: str, subject: str, body: str) -> None:
         logger.warning("email_send_failed", to=to, error=str(exc))
 
 
-def send_verification_email(*, to: str, name: str, token: str) -> None:
-    link = f"{get_settings().public_base_url.rstrip('/')}/verify-email?token={token}"
-    body = (
-        f"Bonjour {name},\n\n"
-        "Confirme ton adresse email pour sécuriser ton espace IDEAXION :\n\n"
-        f"{link}\n\n"
-        "Ce lien est valable 24 h. Si tu n'es pas à l'origine de cette inscription, ignore ce message.\n"
-    )
-    send_email(to=to, subject="Confirme ton adresse — IDEAXION", body=body)
+# Bilingue : l'email de vérification suit la langue du porteur (défaut "fr").
+_VERIFY_EMAIL = {
+    "fr": {
+        "subject": "Confirme ton adresse — IDEAXION",
+        "body": (
+            "Bonjour {name},\n\n"
+            "Confirme ton adresse email pour sécuriser ton espace IDEAXION :\n\n"
+            "{link}\n\n"
+            "Ce lien est valable 24 h. Si tu n'es pas à l'origine de cette inscription, ignore ce message.\n"
+        ),
+    },
+    "en": {
+        "subject": "Confirm your email — IDEAXION",
+        "body": (
+            "Hi {name},\n\n"
+            "Confirm your email address to secure your IDEAXION space:\n\n"
+            "{link}\n\n"
+            "This link is valid for 24 h. If you didn't sign up, please ignore this message.\n"
+        ),
+    },
+}
+
+
+def send_verification_email(*, to: str, name: str, token: str, lang: str = "fr") -> None:
+    lang = lang if lang in _VERIFY_EMAIL else "fr"
+    # Lien vers la route localisée du front (préfixe /fr /en, cf. routing next-intl).
+    base = get_settings().public_base_url.rstrip("/")
+    link = f"{base}/{lang}/verify-email?token={token}"
+    tpl = _VERIFY_EMAIL[lang]
+    body = tpl["body"].format(name=name, link=link)
+    send_email(to=to, subject=tpl["subject"], body=body)

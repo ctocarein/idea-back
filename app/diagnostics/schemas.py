@@ -93,6 +93,8 @@ class IdeaExtractIn(BaseModel):
     )
     # SEC-12 : consentement explicite requis avant envoi au LLM (données potentiellement sensibles).
     consent: bool = False
+    # Bilingue : langue du visiteur (flow public, pré-inscription) → les questions suivent la langue.
+    lang: str = Field(default="fr", pattern="^(fr|en)$")
 
     @field_validator("consent")
     @classmethod

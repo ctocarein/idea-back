@@ -294,7 +294,7 @@ class PitchSessionService:
         await self.session.commit()
         return await self._out(ps)
 
-    async def _score(self, ps: PitchSession, turns: list[PitchTurn], verdicts: list[dict] | None = None) -> None:
+    async def _score(self, ps: PitchSession, turns: list[PitchTurn], verdicts: list[dict] | None = None, lang: str = "fr") -> None:
         rubric = await self.rubrics.get_active()
         if rubric is None:
             raise BusinessRuleError("Aucune rubrique de pitch active.")
@@ -313,6 +313,7 @@ class PitchSessionService:
             committee_label=label,
             transcript=transcript,
             slide_text=slide_text,
+            lang=lang,
         )
         raw = await self.provider.analyze_json(prompt)
         axes = {k: int(v) for k, v in raw.get("axes", {}).items()}
@@ -589,6 +590,7 @@ class PitchSessionService:
                 transcript=transcript,
                 slide_text=slide_text,
                 conviction=int(convictions.get(p["name"], 0)),
+                lang=ctx.user.language,
             )
             if slide_images and hasattr(self.provider, "analyze_json_with_images"):
                 raw = await self.provider.analyze_json_with_images(prompt, images=slide_images)
@@ -598,7 +600,7 @@ class PitchSessionService:
             verdicts.append({"agent": p["name"], "text": text, "vote": raw.get("vote", "conditional")})
             await self._add(ps, actor=p["name"], kind="deliberation", content=text)
 
-        await self._score(ps, turns, verdicts=verdicts)
+        await self._score(ps, turns, verdicts=verdicts, lang=ctx.user.language)
         await self._set_phase(ps, orchestrator.PitchPhase.COMPLETED)
         ps.status = PitchStatus.COMPLETED
         await self.session.commit()

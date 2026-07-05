@@ -34,12 +34,13 @@ def lang_directive(lang: str | None) -> str:
 
 
 def build_extraction_prompt(
-    *, idea: str, axes: list[dict], project_name: str | None = None
+    *, idea: str, axes: list[dict], project_name: str | None = None, lang: str = "fr"
 ) -> str:
     # « Raconte, on structure » : depuis le RÉCIT LIBRE, on repère pour chaque dimension si
     # l'info est déjà là (preuve) ou s'il faut la demander (question). On n'INVENTE jamais.
     lines = [
         "FORMAT=extraction.",
+        lang_directive(lang) + " (evidence & questions suivent la langue ; les clés d'axes restent d1..d12)",
         "Tu es un analyste de projets. À partir du RÉCIT LIBRE du porteur, traite CHAQUE dimension :",
         "- si le récit donne assez d'info → captured=true + 'evidence' (courte preuve tirée du récit) ;",
         "- sinon → captured=false + 'question' (UNE question courte et simple pour combler le manque).",
@@ -64,12 +65,15 @@ def build_extraction_prompt(
     return "\n".join(lines)
 
 
-def build_verdict_prompt(*, persona: dict, transcript: str, slide_text: str, conviction: int) -> str:
+def build_verdict_prompt(
+    *, persona: dict, transcript: str, slide_text: str, conviction: int, lang: str = "fr"
+) -> str:
     # Délibération : l'agent donne SON verdict, avec SES mots et son style (Règle d'or n°5).
     # Il juge AUSSI la cohérence entre ce qui est dit (pitch) et ce qui est montré (deck).
     return "\n".join(
         [
             "FORMAT=verdict.",
+            lang_directive(lang),
             f"Tu es {persona['name']}, {persona.get('role', '')} ({persona.get('personality', '')}).",
             f"Ton obsession : {persona.get('obsession', '')}. Ta conviction (−2 à +2) : {conviction}.",
             "Après ce pitch, donne TON verdict en 1-2 phrases, avec TES mots et ton style — franc et utile.",
@@ -88,11 +92,13 @@ def build_pitch_prompt(
     committee_label: str,
     transcript: str,
     slide_text: str,
+    lang: str = "fr",
 ) -> str:
     # Le comité note CHAQUE axe Fond contre ses ancres, à partir du transcript + des slides.
     # Marqueur FORMAT=axes : même contrat de sortie que le scoring Radar (axes + justifications).
     lines = [
         "FORMAT=axes.",
+        lang_directive(lang) + " (les justifications suivent la langue ; les clés d'axes restent inchangées)",
         f"Tu es un comité de pitch ({committee_label}), rigoureux et bienveillant.",
         "Note CHAQUE axe de 0 à 10 EN T'APPUYANT sur ses ancres. Juge le pitch, pas l'enthousiasme.",
         "",
@@ -119,13 +125,14 @@ def build_pitch_prompt(
     return "\n".join(lines)
 
 
-def build_coach_prompt(*, section: str, draft: str, message: str) -> str:
+def build_coach_prompt(*, section: str, draft: str, message: str, lang: str = "fr") -> str:
     # « Construire guidé » : garde-fou central — le porteur RESTE l'auteur. Le coach
     # explique, questionne, structure, donne des exemples — il NE rédige JAMAIS la section
     # à sa place (frontière gratuit/payant : « apprendre à faire », pas « faire avec toi »).
     return "\n".join(
         [
             "FORMAT=coach.",
+            lang_directive(lang),
             "Tu es un coach entrepreneurial bienveillant et exigeant. Le porteur travaille la",
             f"section « {section} » de son projet. **Le porteur reste l'auteur** : tu EXPLIQUES,",
             "tu QUESTIONNES, tu donnes des repères et des exemples — tu ne rédiges JAMAIS la",
@@ -191,6 +198,7 @@ def build_module_opener_prompt(
     project_title: str | None = None,
     sector: str | None = None,
     axis_score: int | None = None,
+    lang: str = "fr",
 ) -> str:
     # Premier message du coach au démarrage d'un module Academy.
     # Il pose les questions de contexte de manière directe et bienveillante.
@@ -208,6 +216,7 @@ def build_module_opener_prompt(
     return "\n".join(
         [
             "FORMAT=module_coach.",
+            lang_directive(lang),
             f"Tu es un coach entrepreneurial travaillant avec le porteur de {projet}{secteur}.",
             f"Tu commences le module « {dimension.upper()} — {label} ».",
             *([score_line] if score_line else []),
@@ -245,6 +254,7 @@ def build_module_turn_prompt(
     label: str,
     history: list[dict],
     message: str,
+    lang: str = "fr",
 ) -> str:
     # Tour de conversation dans un module (phase context).
     hist = "\n".join(
@@ -254,6 +264,7 @@ def build_module_turn_prompt(
     return "\n".join(
         [
             "FORMAT=module_coach.",
+            lang_directive(lang),
             f"Tu coaches le porteur sur « {dimension.upper()} — {label} ».",
             "Ton rôle : comprendre son projet sur cet aspect, poser des questions précises,",
             "expliquer des concepts si besoin. Tu NE rédiges JAMAIS à sa place.",
@@ -290,6 +301,7 @@ def build_module_form_prefill_prompt(
     history: list[dict],
     project_title: str | None = None,
     sector: str | None = None,
+    lang: str = "fr",
 ) -> str:
     # Pré-remplit le formulaire structuré à partir de la conversation de contexte.
     # Ne JAMAIS inventer — seulement ce qui est dans la conversation.
@@ -306,6 +318,7 @@ def build_module_form_prefill_prompt(
     return "\n".join(
         [
             "FORMAT=form_prefill.",
+            lang_directive(lang),
             f"À partir de la conversation sur le module « {dimension.upper()} — {label} »",
             f"pour le projet {projet}{secteur}, pré-remplis les sections du formulaire.",
             "RÈGLE ABSOLUE : ne JAMAIS inventer une info absente de la conversation.",
@@ -328,6 +341,7 @@ def build_module_fiches_prompt(
     form_data: dict,
     project_title: str | None = None,
     sector: str | None = None,
+    lang: str = "fr",
 ) -> str:
     # Génère des fiches de besoin structurées à partir du formulaire rempli.
     projet = f"« {project_title} »" if project_title else "ce projet"
@@ -335,6 +349,7 @@ def build_module_fiches_prompt(
     return "\n".join(
         [
             "FORMAT=fiches.",
+            lang_directive(lang) + " (titres, descriptions et détails suivent la langue ; les need_type restent des clés)",
             f"À partir du formulaire complété sur « {dimension.upper()} — {label} »",
             f"pour le projet {projet}{secteur}, identifie les besoins concrets",
             "qui permettraient de consolider ce projet.",
@@ -425,6 +440,7 @@ def build_pitch_section_prompt(
     evidence: str | None,
     project_title: str | None = None,
     sector: str | None = None,
+    lang: str = "fr",
 ) -> str:
     """Génère ou améliore UNE section de pitch, à partir du travail Workshop.
 
@@ -437,6 +453,7 @@ def build_pitch_section_prompt(
     mode = "AMÉLIORE" if (existing_content or "").strip() else "RÉDIGE"
     lines = [
         "FORMAT=pitch_section.",
+        lang_directive(lang),
         f"Tu es un coach pitch. Tu {mode.lower()}s la section « {section_title} » du pitch de {projet}{secteur}.",
         f"Objectif de la section : {section_hint}",
         "STYLE : court et percutant (2 à 4 phrases MAX), concret, chiffré quand c'est possible.",
@@ -459,6 +476,7 @@ def build_deck_prompt(
     source: str,
     project_title: str | None = None,
     sector: str | None = None,
+    lang: str = "fr",
 ) -> str:
     """Transforme la matière (pitch/Workshop/texte) en SLIDES structurées.
 
@@ -470,6 +488,7 @@ def build_deck_prompt(
     return "\n".join(
         [
             "FORMAT=deck.",
+            lang_directive(lang) + " (titres, bullets, légendes suivent la langue ; image_keyword reste en anglais)",
             f"Tu es un designer de pitch deck. À partir de la MATIÈRE ci-dessous sur {projet}{secteur},",
             "produis un deck de 7 à 10 slides, façon Gamma : PEU de texte, des CHIFFRES, un visuel par slide.",
             "",
