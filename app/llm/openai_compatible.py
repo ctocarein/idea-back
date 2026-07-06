@@ -48,13 +48,18 @@ class OpenAICompatibleProvider:
         self._retry = RetryPolicy(max_attempts=3, base_delay=0.5, retry_on=(TransientLLMError,))
 
     async def _chat(
-        self, messages: list[dict], *, json_mode: bool = False, model: str | None = None
+        self,
+        messages: list[dict],
+        *,
+        json_mode: bool = False,
+        model: str | None = None,
+        max_tokens: int | None = None,
     ) -> dict:
         payload: dict = {
             "model": model or self.model,
             "messages": messages,
             "temperature": self._temperature,
-            "max_tokens": self._max_tokens,
+            "max_tokens": max_tokens or self._max_tokens,
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
@@ -95,13 +100,15 @@ class OpenAICompatibleProvider:
             usage={k: int(v) for k, v in usage.items() if isinstance(v, int)},
         )
 
-    async def analyze_json(self, prompt: str, *, schema: dict | None = None) -> dict:
+    async def analyze_json(
+        self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None
+    ) -> dict:
         # Demande une réponse JSON et la parse strictement (sortie malformée → LLMParseError).
         messages = [
             {"role": "system", "content": "Réponds STRICTEMENT en JSON valide, sans texte autour."},
             {"role": "user", "content": prompt},
         ]
-        data = await self._chat(messages, json_mode=True)
+        data = await self._chat(messages, json_mode=True, max_tokens=max_tokens)
         content = data["choices"][0]["message"]["content"]
         return extract_json_object(content)
 

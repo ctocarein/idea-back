@@ -20,7 +20,7 @@ async def test_vision_sends_image_parts_with_vision_model():
     assert p.supports_vision is True
     captured: dict = {}
 
-    async def fake_chat(messages, *, json_mode=False, model=None):
+    async def fake_chat(messages, *, json_mode=False, model=None, max_tokens=None):
         captured.update(messages=messages, json_mode=json_mode, model=model)
         return {"choices": [{"message": {"content": '{"axes": {"d1": 7}}'}}]}
 
@@ -44,7 +44,7 @@ async def test_vision_degrades_to_text_without_vision_model():
     assert p.supports_vision is False
     captured: dict = {}
 
-    async def fake_chat(messages, *, json_mode=False, model=None):
+    async def fake_chat(messages, *, json_mode=False, model=None, max_tokens=None):
         captured.update(messages=messages, model=model)
         return {"choices": [{"message": {"content": '{"ok": true}'}}]}
 
@@ -63,7 +63,7 @@ class _FakeVision:
     async def analyze_json_with_images(self, prompt, *, images, schema=None):
         return {"saw": len(images)}
 
-    async def analyze_json(self, prompt, *, schema=None):
+    async def analyze_json(self, prompt, *, schema=None, max_tokens=None):
         return {"text_only": True}
 
 
@@ -71,7 +71,7 @@ class _FakeText:
     model = "text"
     supports_vision = False
 
-    async def analyze_json(self, prompt, *, schema=None):
+    async def analyze_json(self, prompt, *, schema=None, max_tokens=None):
         return {"text_only": True}
 
 

@@ -84,7 +84,9 @@ class IdeaExtractionService:
         prompt = build_extraction_prompt(
             idea=idea, axes=AXES, project_name=project_name, lang=lang, currency=currency
         )
-        raw = await self.provider.analyze_json(prompt)
+        # 12 dimensions × (evidence + question + suggestion) : le défaut 1024 tronque le JSON
+        # (→ LLMParseError). On relève le plafond pour cette sortie longue spécifiquement.
+        raw = await self.provider.analyze_json(prompt, max_tokens=3072)
         by_key = raw.get("dimensions")
         by_key = by_key if isinstance(by_key, dict) else {}
 

@@ -19,5 +19,7 @@ class GeminiProvider:
     async def complete(self, prompt: str, *, max_tokens: int = 1024):  # pragma: no cover
         raise ConfigError("Gemini non implémenté.")
 
-    async def analyze_json(self, prompt: str, *, schema: dict | None = None):  # pragma: no cover
+    async def analyze_json(
+        self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None
+    ):  # pragma: no cover
         raise ConfigError("Gemini non implémenté.")

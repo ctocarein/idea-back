@@ -25,8 +25,13 @@ class LLMProvider(Protocol):
         # Complétion texte libre.
         ...
 
-    async def analyze_json(self, prompt: str, *, schema: dict | None = None) -> dict:
+    async def analyze_json(
+        self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None
+    ) -> dict:
         # Complétion contrainte à un JSON validable (parsing strict).
+        # `max_tokens` : plafond de sortie pour cet appel (None → défaut du provider).
+        # Les sorties longues (ex. extraction 12 dimensions) DOIVENT le relever, sinon
+        # le JSON est tronqué → LLMParseError.
         ...
 
 

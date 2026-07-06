@@ -36,8 +36,10 @@ class MockProvider:
             return LLMResult(text=text, model=self.model)
         return LLMResult(text="(mock)", model=self.model)
 
-    async def analyze_json(self, prompt: str, *, schema: dict | None = None) -> dict:
-        # Plusieurs formats selon le marqueur du prompt.
+    async def analyze_json(
+        self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None
+    ) -> dict:
+        # Plusieurs formats selon le marqueur du prompt. (`max_tokens` ignoré : sortie déterministe.)
         if "FORMAT=verdict" in prompt:
             return {
                 "verdict": "(mock) Du potentiel, mais des points à confirmer avant de m'engager.",

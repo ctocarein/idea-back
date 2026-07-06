@@ -16,7 +16,7 @@ REPORT_PROMPT_VERSION = "report-v1"
 COACH_PROMPT_VERSION = "coach-v1"
 PITCH_PROMPT_VERSION = "pitch-v2"  # v2 : cohérence dit/montré
 VERDICT_PROMPT_VERSION = "verdict-v2"  # v2 : le verdict voit le deck + juge la cohérence
-EXTRACTION_PROMPT_VERSION = "extract-v1"  # récit libre → 12 dimensions captées / manquantes
+EXTRACTION_PROMPT_VERSION = "extract-v2"  # v2 : chiffres devinés marqués « ≈ … (à confirmer) »
 MODULE_PROMPT_VERSION = "module-v1"       # modules Academy : opener + turn + form + fiches
 
 
@@ -57,6 +57,9 @@ def build_extraction_prompt(
         "Objectif : qu'il se dise « oui, c'est exactement ça » et n'ait qu'à confirmer ou ajuster.",
         "1 phrase, concret, plausible, humble (pas de promesse grandiose). C'est une intuition, pas une vérité :",
         "reste cohérent avec CE projet précis. Pour tout montant/prix, exprime-le en " + currency + ".",
+        "CHIFFRES : tout nombre que tu n'as PAS lu dans le récit (montant, volume, %, délai) est une",
+        "ESTIMATION — écris-le précédé de « ≈ » et suivi de « (à confirmer) », ex. « ≈ 50 000 " + currency + " (à confirmer) ».",
+        "Ne donne jamais un chiffre inventé comme s'il était un fait établi.",
         "",
         f"NOM du projet fourni : {project_name or '(aucun — déduis-le du récit s’il est nommé, sinon null)'}",
         "",

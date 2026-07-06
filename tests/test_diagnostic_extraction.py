@@ -13,7 +13,7 @@ class _FakeProvider:
     def __init__(self, payload: dict) -> None:
         self._payload = payload
 
-    async def analyze_json(self, prompt: str, *, schema: dict | None = None) -> dict:
+    async def analyze_json(self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None) -> dict:
         return self._payload
 
 

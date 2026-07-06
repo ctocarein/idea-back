@@ -22,7 +22,7 @@ class _Failing:
         self.calls += 1
         raise self.exc
 
-    async def analyze_json(self, prompt: str, *, schema: dict | None = None) -> dict:
+    async def analyze_json(self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None) -> dict:
         self.calls += 1
         raise self.exc
 
@@ -37,7 +37,7 @@ class _Working:
         self.calls += 1
         return LLMResult(text="ok", model=self.model)
 
-    async def analyze_json(self, prompt: str, *, schema: dict | None = None) -> dict:
+    async def analyze_json(self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None) -> dict:
         self.calls += 1
         return {"axes": {"x": 1}}
 
