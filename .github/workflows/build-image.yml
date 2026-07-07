@@ -1,28 +1,27 @@
 # Build & push de l'image Docker (api + worker : une seule image) vers GHCR.
-# Workflow de build dédié : il ne déploie rien. Les workflows de déploiement
-# (deploy.yml / staging.yml) restent responsables de la mise en production.
+# SOURCE UNIQUE de build : appelé par deploy.yml (workflow_call) sur develop/main,
+# et déclenchable seul sur un tag `v*` ou à la main (workflow_dispatch).
 #
 # Tags produits sur ghcr.io/<owner>/idea-back :
 #   - <branche>        develop, main — suit la tête de branche
-#   - <sha complet>    immuable — même convention que deploy.yml (rollback compose)
+#   - <sha complet>    immuable — consommé par les compose (déploiement, rollback)
 #   - X.Y.Z et X.Y     sur tag git `vX.Y.Z` — releases
 #   - latest           sur main uniquement (branche de production)
 
 name: Build image → GHCR
 
 on:
+  workflow_call:
+    outputs:
+      image:
+        description: "Référence immuable de l'image poussée (tag = sha complet)"
+        value: ${{ jobs.build-push.outputs.image }}
   push:
-    branches: [develop, main]
     tags: ["v*"]
   workflow_dispatch:
 
 env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/idea-back
-
-# Un seul build à la fois par ref ; un push plus récent annule le build en cours.
-concurrency:
-  group: build-image-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   build-push:
@@ -31,6 +30,13 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+    # Un seul build à la fois par ref ; un push plus récent annule le build en cours.
+    # Au niveau job : le `concurrency` de niveau workflow est ignoré via workflow_call.
+    concurrency:
+      group: build-image-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - uses: actions/checkout@v4
@@ -46,7 +52,7 @@ jobs:
           password: ${{ secrets.MY_GITHUB_TOKEN }}
 
       # Tags + labels OCI générés depuis l'événement. `prefix=` vide sur le sha
-      # → tag = sha complet nu, aligné sur la convention de deploy.yml.
+      # → tag = sha complet nu, consommé tel quel par les compose.
       - name: Métadonnées image
         id: meta
         uses: docker/metadata-action@v5
@@ -58,6 +64,11 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      # Référence immuable exposée au workflow appelant (deploy.yml).
+      - name: Référence image (sha)
+        id: ref
+        run: echo "image=${{ env.IMAGE }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Build & push
         uses: docker/build-push-action@v6
