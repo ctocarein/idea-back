@@ -220,14 +220,22 @@ def _tagline_width(spec: dict, size: float) -> float:
 def _imports(spec: dict) -> str:
     """@import de la (des) police(s) : wordmark + slogan si différente."""
     urls = {_font(spec)["import"], _tagline_font(spec)["import"]}
-    return "".join(f'@import url("{u}");' for u in urls)
+    # `&` de l'URL Google Fonts échappé → SVG valide en XML (data-URI, <img>, export).
+    return "".join(f'@import url("{u.replace("&", "&amp;")}");' for u in urls)
 
 
 def render_logo_svg(spec: dict, *, standalone: bool = True, background: bool = True) -> str:
     """Compose le logo complet en SVG (chaîne autonome).
 
     background=False : fond transparent (utile en filigrane sur un fond quelconque).
+    Dispatch par `mode` : `typographic` = le picto habite le mot (logo_typo) ; sinon
+    (défaut, rétro-compatible) = layout classique marque + wordmark ci-dessous.
     """
+    if spec.get("mode") == "typographic":
+        from app.studio.typo_render import render_typographic
+
+        return render_typographic(spec, standalone=standalone, background=background)
+
     pal = _pal(spec)
     layout = spec.get("layout", "icon-left")
     name = _wordmark_text(spec)
