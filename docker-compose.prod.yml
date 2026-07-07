@@ -54,7 +54,7 @@ services:
 
   # One-shot : applique les migrations AVANT de (re)démarrer l'API. `restart: "no"`.
   migrate:
-    image: ${IMAGE:-ghcr.io/ctocarein/idea-back:latest}
+    image: ${IMAGE:?export IMAGE=ghcr.io/ctocarein/idea-back:<sha> requis}
     command: ["uv", "run", "alembic", "upgrade", "head"]
     restart: "no"
     env_file: .env
@@ -64,7 +64,7 @@ services:
         condition: service_healthy
 
   api:
-    image: ${IMAGE:-ghcr.io/ctocarein/idea-back:latest}
+    image: ${IMAGE:?export IMAGE=ghcr.io/ctocarein/idea-back:<sha> requis}
     restart: unless-stopped
     # Gunicorn + workers Uvicorn (production). Ajuster `-w` selon les CPU.
     command: ["uv", "run", "gunicorn", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", "-w", "4", "-b", "0.0.0.0:8080"]
@@ -79,16 +79,10 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-    healthcheck:
-      # Liveness : l'app répond (openapi = 200 quand l'app est up).
-      test: ["CMD", "uv", "run", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/api/v1/openapi.json')"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
+    # Healthcheck : celui de l'image (Dockerfile) — /api/v1/health, db + redis + minio.
 
   worker:
-    image: ${IMAGE:-ghcr.io/ctocarein/idea-back:latest}
+    image: ${IMAGE:?export IMAGE=ghcr.io/ctocarein/idea-back:<sha> requis}
     restart: unless-stopped
     command: ["uv", "run", "python", "-m", "app.worker"]
     env_file: .env
