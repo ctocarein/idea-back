@@ -14,6 +14,7 @@ import re
 from typing import Any
 
 from app.llm.prompt import lang_directive
+from app.studio.metaphors import METAPHORS, keyword_to_metaphor, resolve_metaphor
 from app.studio.vocab import (
     CONTAINERS,
     FONTS,
@@ -28,6 +29,29 @@ from app.studio.vocab import (
 
 _HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
+# --- Stratégie des 4 variantes : un ANGLE imposé par slot (diversité garantie) --
+# V1 le nom littéral · V2 l'idée/contexte · V3 jeu de lettres · V4 le mot en belle typo.
+ANGLES = ("name-literal", "concept", "letter-fantasy", "wordmark")
+# Mode de rendu d'une variante (le renderer dispatche dessus).
+MODES = ("typographic", "combination", "monogram", "wordmark")
+# Transforms du mode typographique (le picto habite une lettre).
+TRANSFORMS = ("letter-swap", "letter-inhabit", "letter-attach", "none")
+# Mode par défaut associé à chaque angle (si l'IA ne le précise pas).
+_ANGLE_MODE = {
+    "name-literal": "typographic",
+    "concept": "combination",
+    "letter-fantasy": "monogram",
+    "wordmark": "wordmark",
+}
+
+
+def _default_target(word: str) -> int:
+    """Lettre à transformer par défaut : 1re voyelle (contour rond, reste lisible)."""
+    for i, c in enumerate(word):
+        if c.lower() in "aeiouy":
+            return i
+    return 0
+
 
 def build_logo_prompt(
     *, name: str, sector: str | None, archetype: str | None, description: str | None, lang: str = "fr"
@@ -35,37 +59,47 @@ def build_logo_prompt(
     icons = ", ".join(sorted(ICONS))
     geos = ", ".join(GEOMETRICS)
     fonts = ", ".join(sorted(FONTS))
+    metas = ", ".join(sorted(METAPHORS))
     desc = (description or "").strip()[:600]
     return (
         "FORMAT=logo\n"
         + lang_directive(lang) + " (le slogan/tagline suit la langue ; les autres champs restent des clés)\n"
-        "Tu es directeur artistique de marque. Conçois 4 concepts de LOGO distincts pour une startup. "
-        "Tu ne dessines pas : tu CHOISIS dans des listes fermées et tu proposes une palette.\n\n"
+        "Tu es directeur artistique de marque. Conçois EXACTEMENT 4 concepts de LOGO, UN PAR ANGLE imposé "
+        "(pour garantir 4 pistes franchement différentes). Tu ne dessines pas : tu CHOISIS dans des listes "
+        "fermées et tu proposes une palette.\n\n"
         f"Projet : {name}\n"
         f"Secteur : {sector or 'non précisé'}\n"
         f"Archétype : {archetype or 'non précisé'}\n"
         f"Description : {desc or 'non précisée'}\n\n"
-        "ANALYSE d'abord l'idée : que fait ce projet, pour qui, quelle émotion doit porter la marque ? "
-        "Le logo doit RACONTER CE projet précis — un projet agricole n'évoque pas la même chose qu'un "
-        "projet santé ou fintech. Choisis marque, couleurs et typo qui collent au thème et à l'ambiance : "
-        "ex. agri/vert → tons terre/nature, formes organiques (leaf, waves, drop) ; santé → tons apaisants, "
-        "formes rassurantes (heart, shield, cross) ; fintech → tons confiance, formes nettes (bars, graph, "
-        "hexagon) ; edtech → tons chaleureux, formes ludiques. Évite le générique.\n\n"
+        "ANALYSE d'abord l'idée : que fait ce projet, pour qui, quelle émotion ? Le logo doit RACONTER CE "
+        "projet précis (agri→nature, santé→rassurant, fintech→confiance…). Évite le générique.\n\n"
+        "LES 4 ANGLES (dans cet ordre, un concept chacun) :\n"
+        "1) angle='name-literal', mode='typographic' : le SENS du NOM habite une lettre. Choisis "
+        "target_index (la lettre, 0-based) + transform ∈ [letter-swap, letter-inhabit, letter-attach] + "
+        f"metaphor ∈ [{metas}]. Ex. « hungry »→u=spoon, « lumen »→l=spark.\n"
+        "2) angle='concept', mode='combination' : un EMBLÈME du contexte/secteur (mark_type=icon + "
+        "layout=icon-top). L'icône reflète ce que FAIT le projet, pas le nom.\n"
+        "3) angle='letter-fantasy', mode='monogram' : l'INITIALE stylisée (mark_type=monogram, "
+        "container=rounded/circle).\n"
+        "4) angle='wordmark', mode='wordmark' : le NOM en belle typo (layout=wordmark-only), sans picto ; "
+        "tu peux colorer une lettre via name_parts.\n\n"
         "Contraintes STRICTES (n'invente aucune valeur hors listes) :\n"
-        f"- mark_type ∈ [{', '.join(MARK_TYPES)}]\n"
-        f"- icon ∈ [{icons}] (si mark_type=icon)\n"
-        f"- geometric ∈ [{geos}] (si mark_type=geometric)\n"
-        "- monogram = 1 à 2 lettres (si mark_type=monogram)\n"
-        f"- layout ∈ [{', '.join(LAYOUTS)}]\n"
-        f"- container ∈ [{', '.join(CONTAINERS)}]\n"
-        f"- font ∈ [{fonts}]\n"
-        "- palette = 4 couleurs hex #RRGGBB : primary (marque), secondary, accent, bg (souvent #FFFFFF)\n"
+        f"- mark_type ∈ [{', '.join(MARK_TYPES)}] · layout ∈ [{', '.join(LAYOUTS)}] · "
+        f"container ∈ [{', '.join(CONTAINERS)}] · font ∈ [{fonts}]\n"
+        f"- icon ∈ [{icons}] · geometric ∈ [{geos}] · metaphor ∈ [{metas}]\n"
+        "- palette = 4 hex #RRGGBB : primary, secondary, accent, bg (souvent #FFFFFF). Palette COHÉRENTE "
+        "entre les 4 (même marque).\n"
         "- tagline : courte (3-5 mots) ou vide\n\n"
-        "Varie les concepts (au moins 2 mark_type différents, des palettes cohérentes avec le secteur). "
         "Réponds UNIQUEMENT en JSON : "
-        '{"variations":[{"name":"...","tagline":"...","mark_type":"...","icon":"...","geometric":"...",'
-        '"monogram":"...","layout":"...","container":"...","font":"...",'
-        '"palette":{"primary":"#...","secondary":"#...","accent":"#...","bg":"#FFFFFF"}}]}'
+        '{"variations":[{"angle":"name-literal","mode":"typographic","word":"...","transform":"...",'
+        '"target_index":0,"metaphor":"...","name":"...","tagline":"...","font":"...",'
+        '"palette":{"primary":"#...","secondary":"#...","accent":"#...","bg":"#FFFFFF"}},'
+        '{"angle":"concept","mode":"combination","mark_type":"icon","icon":"...","layout":"icon-top",'
+        '"name":"...","font":"...","palette":{...}},'
+        '{"angle":"letter-fantasy","mode":"monogram","mark_type":"monogram","monogram":"...",'
+        '"container":"rounded","name":"...","font":"...","palette":{...}},'
+        '{"angle":"wordmark","mode":"wordmark","layout":"wordmark-only","name":"...","font":"...",'
+        '"palette":{...}}]}'
     )
 
 
@@ -103,8 +137,13 @@ def coerce_spec(raw: Any, *, name: str, sector: str | None) -> dict[str, Any] | 
     tagline = raw.get("tagline")
     tagline = tagline.strip()[:60] if isinstance(tagline, str) else ""
 
-    return {
+    angle = _pick(raw.get("angle"), ANGLES, "")
+    mode = _pick(raw.get("mode"), MODES, _ANGLE_MODE.get(angle, ""))
+
+    spec = {
         "name": name,
+        "angle": angle or None,
+        "mode": mode or None,
         "tagline": tagline,
         "mark_type": mark_type,
         "icon": _pick(raw.get("icon"), ICONS, hint["icon"]),
@@ -121,6 +160,22 @@ def coerce_spec(raw: Any, *, name: str, sector: str | None) -> dict[str, Any] | 
         "tagline_size": raw.get("tagline_size") if raw.get("tagline_size") in ("s", "m", "l") else "m",
         "tagline_color": raw.get("tagline_color") if _HEX.match(str(raw.get("tagline_color", ""))) else None,
     }
+
+    # Mode typographique : le picto habite une lettre → champs dédiés validés.
+    if mode == "typographic":
+        word = (raw.get("word") or name or "Logo").strip() or "Logo"
+        ti = raw.get("target_index")
+        spec["word"] = word
+        spec["transform"] = _pick(raw.get("transform"), TRANSFORMS, "letter-swap")
+        spec["target_index"] = ti if isinstance(ti, int) and 0 <= ti < len(word) else _default_target(word)
+        spec["metaphor"] = resolve_metaphor(raw.get("metaphor"), fallback_text=f"{name} {sector or ''}")
+        spec["case"] = raw.get("case") if raw.get("case") in ("upper", "lower") else None
+        nested = raw.get("nested")
+        if isinstance(nested, dict) and nested.get("metaphor") in METAPHORS:
+            ncol = nested.get("color")
+            spec["nested"] = {"metaphor": nested["metaphor"],
+                              "color": ncol if _HEX.match(str(ncol or "")) else palette["accent"]}
+    return spec
 
 
 def _coerce_name_parts(parts: Any) -> list[dict[str, str]] | None:
@@ -139,39 +194,53 @@ def _coerce_name_parts(parts: Any) -> list[dict[str, str]] | None:
     return out or None
 
 
-def default_variations(name: str, sector: str | None) -> list[dict[str, Any]]:
-    """Lot déterministe de 4 concepts — toujours propre, sans IA."""
+def _default_for_angle(angle: str, name: str, sector: str | None) -> dict[str, Any]:
+    """Une variante déterministe pour UN angle donné — toujours propre, sans IA."""
     key = sector_key(sector)
     hint = SECTOR_HINTS.get(key, SECTOR_HINTS["default"])
     pal = dict(SECTOR_PALETTES.get(key, SECTOR_PALETTES["default"]))
-    return [
-        {"name": name, "tagline": "", "mark_type": "geometric", "geometric": hint["geometric"],
-         "icon": hint["icon"], "monogram": None, "layout": "icon-left", "container": "none",
-         "font": hint["font"], "palette": pal},
-        {"name": name, "tagline": "", "mark_type": "monogram", "geometric": hint["geometric"],
-         "icon": hint["icon"], "monogram": None, "layout": "icon-left", "container": "rounded",
-         "font": "space", "palette": pal},
-        {"name": name, "tagline": "", "mark_type": "icon", "geometric": hint["geometric"],
-         "icon": hint["icon"], "monogram": None, "layout": "icon-top", "container": "circle",
-         "font": hint["font"], "palette": pal},
-        {"name": name, "tagline": "", "mark_type": "geometric", "geometric": "hexagon",
-         "icon": hint["icon"], "monogram": None, "layout": "mark-only", "container": "none",
-         "font": "inter", "palette": pal},
-    ]
+    base = {"name": name, "angle": angle, "mode": _ANGLE_MODE[angle], "tagline": "",
+            "monogram": None, "font": hint["font"], "palette": pal}
+    if angle == "name-literal":  # le sens du nom habite une lettre
+        word = (name.split() or ["Logo"])[0]
+        return {**base, "word": word, "transform": "letter-swap",
+                "target_index": _default_target(word),
+                "metaphor": keyword_to_metaphor(f"{name} {sector or ''}"),
+                "mark_type": "icon", "icon": hint["icon"], "geometric": hint["geometric"],
+                "layout": "wordmark-only", "container": "none", "case": None}
+    if angle == "concept":  # emblème du contexte + wordmark
+        return {**base, "mark_type": "icon", "icon": hint["icon"], "geometric": hint["geometric"],
+                "layout": "icon-top", "container": "none"}
+    if angle == "letter-fantasy":  # monogramme initiale
+        return {**base, "mark_type": "monogram", "icon": hint["icon"], "geometric": hint["geometric"],
+                "layout": "icon-top", "container": "rounded", "font": "space"}
+    # wordmark : le nom en belle typo
+    return {**base, "mark_type": "monogram", "icon": hint["icon"], "geometric": hint["geometric"],
+            "layout": "wordmark-only", "container": "none"}
+
+
+def default_variations(name: str, sector: str | None) -> list[dict[str, Any]]:
+    """Lot déterministe de 4 concepts — un par angle imposé, toujours propre, sans IA."""
+    return [_default_for_angle(a, name, sector) for a in ANGLES]
 
 
 def parse_variations(llm_text: Any, *, name: str, sector: str | None) -> list[dict[str, Any]]:
-    """Parse la sortie IA en 4 specs valides ; fallback déterministe si insuffisant."""
+    """Parse la sortie IA → 4 specs, UN PAR ANGLE. Chaque angle manquant retombe sur son défaut."""
     data = _extract_json(llm_text)
-    out: list[dict[str, Any]] = []
+    by_angle: dict[str, dict[str, Any]] = {}
     if isinstance(data, dict) and isinstance(data.get("variations"), list):
         for raw in data["variations"]:
             spec = coerce_spec(raw, name=name, sector=sector)
-            if spec is not None:
-                out.append(spec)
-    if len(out) >= 2:
-        # Complète jusqu'à 4 avec des défauts si l'IA en a rendu moins.
-        if len(out) < 4:
-            out += default_variations(name, sector)[len(out):]
-        return out[:4]
-    return default_variations(name, sector)
+            if spec is None:
+                continue
+            angle = spec.get("angle")
+            # Angle non fourni par l'IA → on comble le 1er slot d'angle encore vide.
+            if angle not in ANGLES:
+                angle = next((a for a in ANGLES if a not in by_angle), None)
+                if angle is None:
+                    continue
+                spec["angle"] = angle
+                spec["mode"] = spec.get("mode") or _ANGLE_MODE[angle]
+            by_angle.setdefault(angle, spec)
+    # Garantit exactement 4 variantes, une par angle, dans l'ordre canonique.
+    return [by_angle.get(a) or _default_for_angle(a, name, sector) for a in ANGLES]
