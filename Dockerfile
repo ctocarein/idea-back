@@ -29,7 +29,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Utilisateur non-root (SEC-09 : limite l'impact d'une compromission runtime).
-RUN groupadd --system app && useradd --system --gid app --no-create-home app
+# --create-home : uv, fontconfig (WeasyPrint) et Chromium écrivent leurs caches
+# sous $HOME — sans home inscriptible, `uv run` échoue au démarrage du conteneur.
+RUN groupadd --system app && useradd --system --gid app --create-home app
 
 WORKDIR /app
 
@@ -49,6 +51,10 @@ RUN uv run --no-sync playwright install --with-deps chromium \
 # Code applicatif.
 COPY . .
 RUN uv sync --frozen --no-dev --extra pdf --extra pitch --extra deck
+
+# Runtime : le venv est figé au build et appartient à root — `uv run` ne doit jamais
+# tenter de le resynchroniser (il voudrait ajouter les deps dev et retirer les extras).
+ENV UV_NO_SYNC=1
 
 # Passage à l'utilisateur non-root AVANT le CMD.
 USER app
