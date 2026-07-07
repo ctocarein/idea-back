@@ -89,7 +89,10 @@ class LogoService:
 
         variations: list[dict]
         try:
-            prompt = build_logo_prompt(name=name, sector=sector, archetype=archetype, description=description, lang=ctx.user.language)
+            prompt = build_logo_prompt(
+                name=name, sector=sector, archetype=archetype,
+                description=description, lang=ctx.user.language,
+            )
             # 4 briefs (un par angle) = sortie longue : on relève le plafond sinon JSON tronqué.
             raw = await self.provider.analyze_json(prompt, max_tokens=1800)
             variations = parse_variations(raw, name=name, sector=sector)
