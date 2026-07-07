@@ -36,18 +36,19 @@ WORKDIR /app
 # Couche dépendances (cache) : lockfile + pyproject.toml → build reproductible.
 # `--frozen` : refuse de modifier le lockfile (pas de surprise en CI/prod).
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-install-project --no-dev --extra pdf --extra pitch
+RUN uv sync --frozen --no-install-project --no-dev --extra pdf --extra pitch --extra deck
 
 # Navigateur Chromium + ses libs système (export deck PDF/PPTX via Playwright).
 # En root (avant USER app) ; --with-deps installe les paquets apt requis. On rend
 # le dossier lisible/exécutable par `app`. Sans ça, l'export deck échoue en prod.
-RUN uv run playwright install --with-deps chromium \
+# --no-sync : le code n'est pas encore copié, on utilise le venv tel quel.
+RUN uv run --no-sync playwright install --with-deps chromium \
     && chmod -R a+rx /opt/ms-playwright \
     && rm -rf /var/lib/apt/lists/*
 
 # Code applicatif.
 COPY . .
-RUN uv sync --frozen --no-dev --extra pdf --extra pitch
+RUN uv sync --frozen --no-dev --extra pdf --extra pitch --extra deck
 
 # Passage à l'utilisateur non-root AVANT le CMD.
 USER app
