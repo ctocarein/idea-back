@@ -73,24 +73,28 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
         lang = owner.language if owner is not None else "fr"
 
         # N passes : même rubrique, angle d'analyse variable → dispersion mesurable.
-        passes: list[dict[str, int]] = []
-        justifications: dict[str, str] | None = None
-        raw_outputs: list[dict] = []
-        for k in range(N_PASSES):
+        # Indépendantes entre elles → lancées EN PARALLÈLE (latence ≈ 1 appel, pas N).
+        async def _score_pass(perspective: int) -> dict:
             prompt = build_scoring_prompt(
                 grid.axes,
                 category=project.sector,
                 archetype=project.archetype.value,
                 description=diagnostic.description,
                 answers=diagnostic.answers,
-                perspective=k,
+                perspective=perspective,
                 lang=lang,
             )
-            out = await provider.analyze_json(prompt)
-            raw_outputs.append(out)
-            passes.append({key: int(v) for key, v in out["axes"].items()})
-            if justifications is None:
-                justifications = out.get("justifications")
+            return await provider.analyze_json(prompt)
+
+        raw_outputs: list[dict] = list(
+            await asyncio.gather(*(_score_pass(k) for k in range(N_PASSES)))
+        )
+        passes: list[dict[str, int]] = [
+            {key: int(v) for key, v in out["axes"].items()} for out in raw_outputs
+        ]
+        justifications: dict[str, str] | None = next(
+            (out.get("justifications") for out in raw_outputs if out.get("justifications")), None
+        )
 
         # Consensus + confiance + enregistrement du ScoreRun (rejouable/auditable).
         result = await scoring.build_consensus_score(
