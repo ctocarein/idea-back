@@ -109,9 +109,50 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
             raw_outputs=raw_outputs,
         )
 
-        # Rapport structuré (résumé, description, verdict, risques, concurrence, avancement,
-        # recos, next steps) — GARDÉ : best-effort, un échec n'empêche pas le bilan (le Radar
-        # scoré reste la colonne vertébrale). L'analyste affine ensuite ce rapport.
+        # Routage déterministe : des axes faibles → prochaines actions (leviers typés).
+        # Dépend du SCORE seul (pas du rapport) → appartient à la Phase 1 (Radar).
+        next_actions = derive_next_actions(
+            grid.axes,
+            result.axes,
+            grid.category_weights,
+            project.sector,
+            scale_max=grid.scale_max,
+        )
+
+        radar_score = {"gridVersion": result.grid_version, "axes": result.axes}
+        comprehension = {"pillars": result.pillars, "overall": result.overall}
+
+        # ── PHASE 1 : le Radar est prêt → on l'EXPOSE TOUT DE SUITE ────────────────────
+        # score + compréhension + prochaines actions. Le porteur voit son score sans
+        # attendre le rapport LLM ni le PDF (Phase 2). Statut : reste PENDING ; le front
+        # affiche le Radar dès que `radar_score` est présent.
+        await reports.mark_scored(
+            report,
+            grid_version=result.grid_version,
+            radar_score=radar_score,
+            comprehension=comprehension,
+            next_actions=next_actions,
+        )
+        await projects.set_diagnostic_status(project, DiagnosticStatus.DIAGNOSTIC_COMPLETED)
+        # Routage AUTO vers la revue humaine si le score est incertain (dépend du score).
+        if result.needs_review and project.review_status is ReviewStatus.NEW_DIAGNOSTIC:
+            await projects.set_review_status(project, ReviewStatus.IN_REVIEW)
+        await auditor.record(
+            actor_id=project.owner_id,
+            action="diagnostic.scored",
+            entity="report",
+            entity_id=report.id,
+            new_value={
+                "overall": result.overall,
+                "confidence": result.confidence,
+                "needs_review": result.needs_review,
+            },
+        )
+        await session.commit()  # ← Radar disponible côté front (report PENDING + radar_score)
+
+        # ── PHASE 2 : rapport (LLM) + PDF, en arrière-plan du point de vue porteur ─────
+        # Best-effort : un échec n'empêche pas le bilan (le Radar scoré reste la colonne
+        # vertébrale). L'analyste affine ensuite ce rapport.
         report_data: dict | None = None
         try:
             report_prompt = build_report_prompt(
@@ -127,17 +168,8 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
         except Exception as exc:  # noqa: BLE001 — dégradation gracieuse du rapport
             logger.warning("diagnostic_report_skipped", report_id=str(report.id), error=str(exc))
 
-        # Routage déterministe : des axes faibles → prochaines actions (leviers typés).
-        next_actions = derive_next_actions(
-            grid.axes,
-            result.axes,
-            grid.category_weights,
-            project.sector,
-            scale_max=grid.scale_max,
-        )
-
-        # Génération du PDF du bilan — GARDÉE : toute défaillance (WeasyPrint/MinIO absents,
-        # réseau) est loggée et n'empêche jamais le bilan d'être `ready`. Pas de panne dure.
+        # PDF du bilan — best-effort : toute défaillance (WeasyPrint/MinIO/réseau) est
+        # loggée et n'empêche jamais le bilan d'être `ready`. Pas de panne dure.
         pdf_document_id = None
         try:
             storage = get_storage()
@@ -167,18 +199,19 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
         except Exception as exc:  # noqa: BLE001 — dégradation gracieuse du PDF
             logger.warning("bilan_pdf_skipped", report_id=str(report.id), error=str(exc))
 
-        # Bilan prêt (tableau de compréhension + score ; PDF si disponible).
+        # Bilan COMPLET : insights + PDF ajoutés, statut READY.
         await reports.mark_ready(
             report,
             grid_version=result.grid_version,
-            radar_score={"gridVersion": result.grid_version, "axes": result.axes},
-            comprehension={"pillars": result.pillars, "overall": result.overall},
+            radar_score=radar_score,
+            comprehension=comprehension,
             insights=report_data,
             next_actions=next_actions,
             pdf_document_id=pdf_document_id,
         )
+        await projects.set_diagnostic_status(project, DiagnosticStatus.BILAN_READY)
 
-        # Notifie le porteur : son bilan est prêt.
+        # Notifie le porteur : son bilan complet est prêt.
         try:
             notif_repo = NotificationRepository(session)
             await notif_repo.create(
@@ -189,26 +222,7 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
         except Exception as exc:  # noqa: BLE001 — dégradation gracieuse
             logger.warning("notification_skipped", report_id=str(report.id), error=str(exc))
 
-        # Avance le pipeline diagnostic.
-        await projects.set_diagnostic_status(project, DiagnosticStatus.DIAGNOSTIC_COMPLETED)
-        await projects.set_diagnostic_status(project, DiagnosticStatus.BILAN_READY)
-
-        # Routage AUTO vers la revue humaine si le score est incertain.
-        if result.needs_review and project.review_status is ReviewStatus.NEW_DIAGNOSTIC:
-            await projects.set_review_status(project, ReviewStatus.IN_REVIEW)
-
-        await auditor.record(
-            actor_id=project.owner_id,
-            action="diagnostic.scored",
-            entity="report",
-            entity_id=report.id,
-            new_value={
-                "overall": result.overall,
-                "confidence": result.confidence,
-                "needs_review": result.needs_review,
-            },
-        )
-        await session.commit()
+        await session.commit()  # ← bilan complet (rapport + PDF)
 
     logger.info(
         "diagnostic_scored",
@@ -232,17 +246,33 @@ async def handle_run_diagnostic_failed(payload: dict[str, Any]) -> None:
     # 1) Bascule du statut, commit ISOLÉ : c'est le correctif essentiel (sortir de l'attente).
     #    Rien ne doit l'empêcher de persister — surtout pas une notif défaillante.
     owner_id = None
+    notif_type = "report_failed"
+    notif_title = "On n'a pas pu terminer ton analyse. Notre équipe est prévenue."
     async with factory() as session:
         reports = ReportRepository(session)
         report = await reports.get_by_id(report_id)
         if report is None or report.status is not ReportStatus.PENDING:
             # Déjà prêt (course avec un retry qui a réussi) ou supprimé : rien à faire.
             return
-        await reports.mark_failed(report)
-        project = await ProjectRepository(session).get_by_id(report.project_id)
+        projects = ProjectRepository(session)
+        project = await projects.get_by_id(report.project_id)
         owner_id = project.owner_id if project is not None else None
-        await session.commit()
-    logger.error("diagnostic_failed_terminal", report_id=str(report_id))
+
+        if report.radar_score is not None:
+            # Phase 1 a réussi (le Radar existe) mais la Phase 2 (rapport/PDF) a échoué
+            # définitivement → bilan Radar-only VALIDE plutôt qu'un échec dur qui masquerait
+            # le score déjà calculé. Le porteur voit son Radar ; l'analyste complètera.
+            report.status = ReportStatus.READY
+            if project is not None:
+                await projects.set_diagnostic_status(project, DiagnosticStatus.BILAN_READY)
+            await session.commit()
+            logger.warning("diagnostic_radar_only_ready", report_id=str(report_id))
+            notif_type = "report_ready"
+            notif_title = "Ton bilan de compréhension est prêt."
+        else:
+            await reports.mark_failed(report)
+            await session.commit()
+            logger.error("diagnostic_failed_terminal", report_id=str(report_id))
 
     # 2) Notification du porteur, best-effort dans une transaction séparée.
     if owner_id is None:
@@ -251,12 +281,9 @@ async def handle_run_diagnostic_failed(payload: dict[str, Any]) -> None:
         async with factory() as session:
             await NotificationRepository(session).create(
                 user_id=owner_id,
-                type="report_failed",
-                payload={
-                    "report_id": str(report_id),
-                    "title": "On n'a pas pu terminer ton analyse. Notre équipe est prévenue.",
-                },
+                type=notif_type,
+                payload={"report_id": str(report_id), "title": notif_title},
             )
             await session.commit()
     except Exception as exc:  # noqa: BLE001 — dégradation gracieuse de la notif
-        logger.warning("report_failed_notification_skipped", report_id=str(report_id), error=str(exc))
+        logger.warning("report_terminal_notification_skipped", report_id=str(report_id), error=str(exc))

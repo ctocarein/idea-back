@@ -44,6 +44,24 @@ class ReportRepository:
         )
         return list(result.scalars())
 
+    async def mark_scored(
+        self,
+        report: Report,
+        *,
+        grid_version: str,
+        radar_score: dict,
+        comprehension: dict,
+        next_actions: list | None,
+    ) -> None:
+        # Phase 1 du bilan : le Radar (score + compréhension) est prêt et exposé TOUT DE
+        # SUITE. Le statut reste PENDING (rapport LLM + PDF suivent) ; le front affiche le
+        # Radar dès que `radar_score` est présent, sans attendre `READY`.
+        report.grid_version = grid_version
+        report.radar_score = radar_score
+        report.comprehension = comprehension
+        report.next_actions = next_actions
+        await self.session.flush()
+
     async def mark_ready(
         self,
         report: Report,
