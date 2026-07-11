@@ -86,9 +86,25 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
             )
             return await provider.analyze_json(prompt)
 
-        raw_outputs: list[dict] = list(
-            await asyncio.gather(*(_score_pass(k) for k in range(N_PASSES)))
+        # TOLÉRANT : une passe qui échoue (rate-limit, transitoire, JSON invalide) ne doit pas
+        # faire tomber tout le scoring — l'ensemble sait produire un consensus avec moins de
+        # 3 passes (confiance moindre, signalée). On ne lève QUE si TOUTES échouent.
+        results = await asyncio.gather(
+            *(_score_pass(k) for k in range(N_PASSES)), return_exceptions=True
         )
+        raw_outputs: list[dict] = [
+            r for r in results if isinstance(r, dict) and isinstance(r.get("axes"), dict)
+        ]
+        if not raw_outputs:
+            first_exc = next((r for r in results if isinstance(r, Exception)), None)
+            raise first_exc or RuntimeError("scoring : toutes les passes LLM ont échoué")
+        if len(raw_outputs) < N_PASSES:
+            logger.warning(
+                "scoring_partial_passes",
+                report_id=str(report.id),
+                kept=len(raw_outputs),
+                total=N_PASSES,
+            )
         passes: list[dict[str, int]] = [
             {key: int(v) for key, v in out["axes"].items()} for out in raw_outputs
         ]
