@@ -17,8 +17,13 @@ from app.project_memory.contradictions import (
     deduplication_key,
     persist_findings,
 )
-from app.project_memory.evaluation import build_dimension_projections, select_adaptive_questions
+from app.project_memory.evaluation import (
+    CONTRADICTION_CONFIDENCE_CAP,
+    build_dimension_projections,
+    select_adaptive_questions,
+)
 from app.project_memory.models import EvidenceState, MemoryItemType, ProvenanceType
+from app.scoring.ensemble import EnsembleThresholds
 
 AXES = [
     {"key": f"d{i}", "code": f"D{i}", "label": f"Axe {i}", "pillar": "sens", "guiding_questions": ["Q ?"]}
@@ -145,18 +150,38 @@ class TestEffetSurLaProjection:
             axes=AXES, score_run=FakeScoreRun(), memory_items=items, next_actions=[], scale_max=10
         )
 
-    def test_la_confiance_NE_depend_PAS_des_contradictions(self) -> None:
-        """Comportement réel, épinglé pour éviter qu'on le suppose à nouveau.
+    def test_une_contradiction_plafonne_la_confiance(self) -> None:
+        """IDX-MEM-06 — le correctif du défaut mesuré.
 
-        `_axis_confidence` ne lit QUE l'étendue entre passes de scoring. Le
-        `contradiction_gap = 0.5` vit dans `select_adaptive_questions` et ne pilote que la
-        priorité des questions. Conséquence : **un dossier contredit garde une confiance
-        élevée** — la non-discrimination du Radar n'est donc PAS réparée par S9.
-        Décision assumée ou à corriger : voir IDX-MEM-06.
+        Les 3 passes de scoring peuvent s'accorder parfaitement (étendue nulle ⇒ confiance 1,0)
+        sur un dossier qui se contredit lui-même : c'est ainsi qu'un dossier auto-contradictoire
+        ressortait à 96,6 % de confiance. L'accord entre passes porte sur la LECTURE du récit,
+        pas sur sa COHÉRENCE.
         """
         propre = {p.dimension: p for p in self._project([])}
         contredit = {p.dimension: p for p in self._project([FakeItem("d6")])}
-        assert contredit["d6"].confidence == propre["d6"].confidence
+        assert propre["d6"].confidence == 1.0  # passes unanimes
+        assert contredit["d6"].confidence == CONTRADICTION_CONFIDENCE_CAP
+
+    def test_le_plafond_passe_sous_le_seuil_de_revue_humaine(self) -> None:
+        # Une dimension contredite doit basculer du bon côté du routage vers l'analyste.
+        assert CONTRADICTION_CONFIDENCE_CAP < EnsembleThresholds().min_confidence
+
+    def test_le_plafond_ne_remonte_jamais_une_confiance_deja_basse(self) -> None:
+        # C'est un PLAFOND, pas une affectation : un axe déjà incertain le reste.
+        run = FakeScoreRun()
+        run.spread = {f"d{i}": 5 for i in range(1, 13)}  # forte divergence entre passes
+        projections = build_dimension_projections(
+            axes=AXES, score_run=run, memory_items=[FakeItem("d6")], next_actions=[], scale_max=10
+        )
+        contredit = {p.dimension: p for p in projections}["d6"]
+        assert contredit.confidence == 0.0
+
+    def test_un_seul_constat_suffit_a_plafonner(self) -> None:
+        # Le plafond ne se durcit pas avec le nombre : une contradiction disqualifie la certitude.
+        une = {p.dimension: p for p in self._project([FakeItem("d6")])}
+        trois = {p.dimension: p for p in self._project([FakeItem("d6"), FakeItem("d6"), FakeItem("d6")])}
+        assert une["d6"].confidence == trois["d6"].confidence
 
     def test_une_contradiction_declenche_une_demande_de_clarification(self) -> None:
         # L'effet RÉEL sur la dimension : elle réclame une information, même bien notée.

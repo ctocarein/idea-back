@@ -57,14 +57,22 @@ comportement semble manquer, relire `evaluation.py` avant d'ajouter du code.
 - [x] La chaîne existante n'a pas été réécrite, seulement alimentée.
 - [x] Un échec de la passe contradictions laisse le diagnostic aboutir.
 
+- **IDX-MEM-06** Plafond de confiance sur dimension contredite `[3]` — **option (b) retenue.**
+  `CONTRADICTION_CONFIDENCE_CAP = 0.5` dans [`evaluation.py`](../app/project_memory/evaluation.py),
+  calé sous `EnsembleThresholds.min_confidence` (0,60) pour que l'axe bascule aussi du bon côté du
+  routage vers la revue humaine. C'est un **plafond**, pas une affectation : un axe déjà incertain
+  ne remonte jamais. Il ne se durcit pas avec le nombre de constats.
+  - Motif : l'accord entre passes porte sur la **lecture** du récit, pas sur sa **cohérence**.
+    Trois passes peuvent s'entendre parfaitement sur un dossier qui se contredit — c'est
+    exactement ainsi qu'un dossier auto-contradictoire ressortait à 96,6 % de confiance.
+  - ⚠️ **Change une valeur déjà exposée au front.** Aucun champ nouveau, mais des seuils et des
+    couleurs vont se déclencher plus souvent. À annoncer au front, pas à découvrir en production.
+
 ### ⬜ Suite directe
-- **IDX-MEM-06** Décider si une contradiction doit peser sur la confiance `[3]` — aujourd'hui elle
-  ne pèse pas, et le Radar reste donc non discriminant. Deux options : (a) **assumer** — la V2 §9
-  veut score, confiance et contradictions comme signaux *séparés*, et mélanger les deux brouille
-  le sens de « confiance » (= accord entre passes) ; (b) **plafonner** la confiance d'une dimension
-  contredite (`min(confidence, 0.5)`), au motif qu'on ne peut pas être sûr d'un axe dont les
-  affirmations se contredisent. **(b) change une valeur déjà exposée au front** : à mesurer et à
-  annoncer, jamais à glisser en douce.
+- **IDX-MEM-07** Affiner la dimension d'un constat `internal` `[3]` — vu en démonstration : un
+  constat portant sur le calendrier et le financement a été rattaché à « Traction & Preuves »
+  parce que `internal → d7` est un repli générique. Piste : faire qualifier l'axe par le modèle
+  — ce qui **exigera de re-mesurer le corpus**.
 
 ---
 

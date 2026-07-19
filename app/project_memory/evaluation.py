@@ -50,6 +50,22 @@ _EVIDENCE_GAP = {
 }
 
 
+# Plafond de confiance d'une dimension dont les affirmations se contredisent (IDX-MEM-06).
+#
+# La confiance mesure normalement l'ACCORD ENTRE LES PASSES de scoring. Or trois passes peuvent
+# s'accorder parfaitement sur un dossier qui se contredit lui-même : c'est exactement le défaut
+# mesuré — un dossier auto-contradictoire ressortait à 96,6 % de confiance. L'accord entre passes
+# ne dit rien de la cohérence du récit.
+#
+# On plafonne donc : on ne peut pas être sûr à plus de la moitié d'un axe dont les propres
+# affirmations s'opposent. Valeur calée sous `EnsembleThresholds.min_confidence` (0,60) pour que
+# la dimension bascule aussi du bon côté du routage vers la revue humaine.
+#
+# Le plafond ne se durcit PAS avec le nombre de contradictions : rien ne le justifierait par la
+# mesure, et une contradiction suffit à disqualifier la certitude.
+CONTRADICTION_CONFIDENCE_CAP = 0.5
+
+
 def _axis_confidence(run: ScoreRun, dimension: str, *, scale_max: int) -> float:
     spread = (run.spread or {}).get(dimension)
     if spread is not None:
@@ -111,6 +127,10 @@ def build_dimension_projections(
             for item in items
             if item.item_type is MemoryItemType.CONTRADICTION
         ]
+        # Un axe qui se contredit ne peut pas être tenu pour sûr, même si les passes de
+        # scoring étaient unanimes : l'unanimité porte sur la lecture, pas sur la cohérence.
+        if contradictions:
+            confidence = min(confidence, CONTRADICTION_CONFIDENCE_CAP)
         guiding_questions = axis.get("guiding_questions") or []
         needs_clarification = (
             score is None

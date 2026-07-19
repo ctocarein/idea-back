@@ -110,13 +110,14 @@ ul{margin:0;padding-left:1.15rem}li{margin-bottom:.3rem;color:var(--soft)}
     <span class="arrow">↺</span>
     <div class="step soon"><span class="n">S9</span><span class="t">Contradictions affichées</span></div>
   </div>
-  <div class="callout dead">
-    <p><strong>Le point faible connu, et il survit à S9.</strong> Les étapes 4 à 7 reposent sur un
-    score qui ne distingue pas un bon dossier d'un mauvais : un dossier volontairement
-    auto-contradictoire est ressorti à <span class="mono">96,6 % de confiance</span>.</p>
-    <p>La confiance ne dépend que de <strong>l'accord entre les passes de scoring</strong> — pas
-    des contradictions. S9 les rend visibles et les fait remonter en tête des questions, mais
-    <strong>ne fait pas baisser la confiance</strong>. Décision ouverte : <span class="mono">IDX-MEM-06</span>.</p>
+  <div class="callout">
+    <p><strong>Le défaut d'origine, et son correctif.</strong> La confiance ne mesurait que
+    <em>l'accord entre les passes de scoring</em> : trois passes peuvent s'entendre parfaitement
+    sur un dossier qui se contredit lui-même. C'est ainsi qu'un dossier auto-contradictoire
+    ressortait à <span class="mono">96,6 % de confiance</span>.</p>
+    <p>Depuis S9, une dimension contredite voit sa confiance <strong>plafonnée à 0,50</strong> —
+    sous le seuil de routage vers la revue humaine. L'accord entre passes porte sur la lecture
+    du récit, jamais sur sa cohérence.</p>
   </div>
 </section>
 
