@@ -1,0 +1,125 @@
+{
+  "note": "Corpus de test du détecteur de contradictions (Magicien d'Oz). Chaque cas contient un RÉCIT réaliste de porteur et un CORRIGÉ : les contradictions volontairement plantées, connues de l'humain qui vérifie. Le cas `livraison-logistique` est un CONTRÔLE PROPRE — il ne contient aucune contradiction, et sert à mesurer les faux positifs. Un détecteur qui signale quelque chose dans ce dossier est aussi inutile qu'un détecteur aveugle.",
+  "cases": [
+    {
+      "id": "agrilink-agritech",
+      "category": "agritech",
+      "archetype": "field",
+      "recit": "AgriLink. Je m'appelle Kouassi, j'ai grandi dans une famille de producteurs de cacao dans la région de Daloa. Le problème que je vois tous les jours : les petits producteurs vendent leur récolte au premier acheteur qui passe, sans connaître le cours réel, et se font avoir sur le prix comme sur le poids. AgriLink est une application mobile qui donne le cours du jour, met en relation directement avec des acheteurs vérifiés, et permet de peser avec une balance connectée que nous fournissons. Nous avons lancé il y a un an. Aujourd'hui, 1 200 producteurs sont abonnés à 5 000 FCFA par mois, ce qui nous fait environ 400 000 FCFA de chiffre d'affaires mensuel. Nous sommes présents dans 4 régions avec un suivi terrain hebdomadaire chez chaque coopérative partenaire. L'équipe, c'est mon associé et moi — nous n'avons pas encore recruté d'agents terrain, tout passe par l'application. Ce qui me manque aujourd'hui, c'est du financement pour acheter plus de balances connectées, parce que c'est ce qui coûte cher et c'est ce qui convainc les producteurs.",
+      "corrige": [
+        {
+          "ref": "C1",
+          "type": "arithmetique",
+          "difficulte": "moyenne",
+          "attendu": "1 200 abonnés x 5 000 FCFA = 6 000 000 FCFA/mois, incompatible avec les 400 000 FCFA de chiffre d'affaires mensuel annoncés (facteur 15)."
+        },
+        {
+          "ref": "C2",
+          "type": "capacite",
+          "difficulte": "moyenne",
+          "attendu": "Un suivi terrain hebdomadaire dans 4 regions est incompatible avec une equipe de 2 personnes sans aucun agent terrain."
+        }
+      ]
+    },
+    {
+      "id": "tontine-fintech",
+      "category": "fintech",
+      "archetype": "digital",
+      "recit": "TontineSûre. Les tontines, tout le monde en fait ici, mais ça repose sur la confiance et quand quelqu'un disparaît avec la caisse, il n'y a aucun recours. Notre application numérise le cycle : chaque membre cotise par mobile money, l'application enregistre chaque versement avec une preuve horodatée, et redistribue automatiquement selon l'ordre convenu entre les membres. Nous avons lancé il y a 4 mois et nous avons déjà 60 groupes actifs, soit environ 700 membres. Nos 2 ans d'historique de remboursement montrent un taux de défaut de seulement 3 %, ce qui prouve que le système fonctionne. Les cotisations sont conservées sur notre compte d'attente le temps du cycle, puis reversées au bénéficiaire du tour. Sur le plan réglementaire, nous n'avons pas besoin d'agrément : nous ne sommes qu'une application technique, nous ne faisons pas de banque. Notre modèle, c'est 2 % de commission sur chaque cycle complété. À terme nous voulons proposer du micro-crédit adossé à l'historique de cotisation.",
+      "corrige": [
+        {
+          "ref": "C3",
+          "type": "temporelle",
+          "difficulte": "facile",
+          "attendu": "Un lancement il y a 4 mois rend impossible l'existence de 2 ans d'historique de remboursement."
+        },
+        {
+          "ref": "C4",
+          "type": "reglementaire",
+          "difficulte": "haute",
+          "attendu": "Conserver les cotisations des membres sur son propre compte d'attente est une detention de fonds de tiers, incompatible avec l'affirmation qu'aucun agrement n'est necessaire."
+        }
+      ]
+    },
+    {
+      "id": "ecolezen-edtech",
+      "category": "edtech",
+      "archetype": "digital",
+      "recit": "EcoleZen. Au collège et au lycée, les classes montent à 60 élèves, les parents qui en ont les moyens paient des répétiteurs à domicile, et les autres décrochent. EcoleZen propose du soutien scolaire en ligne : des cours vidéo courts alignés sur le programme national, des exercices auto-corrigés, et une session en visio avec un professeur deux fois par semaine. Notre cible, ce sont les familles modestes des quartiers populaires, celles qui ne peuvent pas se payer un répétiteur. L'abonnement est à 15 000 FCFA par mois et par enfant. Il n'existe aucune solution comparable sur notre marché. Contrairement aux répétiteurs à domicile et aux plateformes de cours en ligne existantes, nous sommes alignés sur le programme national et nous coûtons moins cher qu'un répétiteur. Nous avons développé le prototype et 40 élèves l'ont testé pendant un trimestre avec de bons retours. Nous cherchons maintenant à passer à l'échelle.",
+      "corrige": [
+        {
+          "ref": "C5",
+          "type": "marche",
+          "difficulte": "moyenne",
+          "attendu": "Cibler les familles modestes qui ne peuvent pas payer un repetiteur est incoherent avec un abonnement a 15 000 FCFA par mois et par enfant."
+        },
+        {
+          "ref": "C6",
+          "type": "interne",
+          "difficulte": "facile",
+          "attendu": "Affirmer qu'aucune solution comparable n'existe, puis se comparer immediatement aux repetiteurs a domicile et aux plateformes de cours en ligne existantes."
+        }
+      ]
+    },
+    {
+      "id": "livraison-logistique",
+      "category": "commerce",
+      "archetype": "field",
+      "controle_propre": true,
+      "recit": "LivraisonPlus. Je livre pour des restaurants et des petits commerces à Abidjan depuis deux ans. Le problème, je le connais bien : les commerçants n'ont pas les moyens d'avoir leur propre livreur, et les plateformes existantes prennent des commissions que beaucoup trouvent trop lourdes. Nous avons monté un réseau de 18 livreurs à moto, coordonnés par une application simple de répartition des courses. Nous faisons environ 40 courses par jour, facturées 1 500 FCFA en moyenne au commerçant, sur lesquelles nous prenons 20 % — le reste va au livreur. Ça représente à peu près 360 000 FCFA de revenu mensuel pour la structure. Nous sommes trois à l'encadrement : moi sur les opérations, un associé sur la relation commerçants, et un développeur à temps partiel. Ce que je ne sais pas encore, c'est si le modèle tient en dehors d'Abidjan, où la densité de commandes est plus faible. Nous n'avons pas non plus mesuré notre coût d'acquisition d'un nouveau commerçant : on a surtout grandi par le bouche-à-oreille. Notre besoin actuel, c'est de structurer la gestion pour absorber plus de volume sans casser la qualité de service.",
+      "corrige": []
+    },
+    {
+      "id": "coupdepouce-france",
+      "category": "edtech",
+      "archetype": "digital",
+      "pays_attendu": "France",
+      "devise_attendue": "EUR",
+      "recit": "CoupDePouce Scolaire. Dans les quartiers prioritaires, les élèves de collège décrochent en maths et en français, et les parents qui en ont les moyens paient des cours particuliers à domicile. Les autres n'ont rien. Nous proposons du soutien scolaire en ligne : des modules courts alignés sur le programme de l'Éducation nationale, des exercices corrigés automatiquement, et deux visioconférences par semaine avec un professeur certifié. Notre cible, ce sont les familles bénéficiaires des minima sociaux, celles qui ne peuvent pas financer de cours particuliers. L'abonnement est à 149 € par mois et par enfant. Nous avons lancé le service en janvier dernier et l'accueil est très encourageant. Nos trois années de données montrent une progression moyenne de 2,4 points de moyenne générale sur l'année. L'équipe compte deux cofondateurs enseignants et un développeur. Nous cherchons à nouer des partenariats avec les collectivités pour financer les abonnements.",
+      "corrige": [
+        {
+          "ref": "C9",
+          "type": "marche",
+          "difficulte": "moyenne",
+          "attendu": "Cibler des familles beneficiaires des minima sociaux est incoherent avec un abonnement a 149 EUR par mois et par enfant (le RSA socle tourne autour de 600 EUR mensuels)."
+        },
+        {
+          "ref": "C10",
+          "type": "temporelle",
+          "difficulte": "facile",
+          "attendu": "Un lancement en janvier de l'annee en cours rend impossible l'existence de trois annees de donnees."
+        }
+      ]
+    },
+    {
+      "id": "atelier-velo-france",
+      "category": "commerce",
+      "archetype": "field",
+      "pays_attendu": "France",
+      "devise_attendue": "EUR",
+      "controle_propre": true,
+      "recit": "Atelier Roue Libre. Je répare des vélos depuis huit ans, d'abord en association puis à mon compte. Avec le développement des trajets domicile-travail à vélo, la demande de réparation a beaucoup augmenté, mais les délais chez les enseignes sont longs et les clients repartent souvent sans solution le jour même. Nous avons ouvert un atelier avec trois salariés, dont deux mécaniciens formés. Nous traitons environ 12 réparations par jour, pour un panier moyen de 45 €, soit à peu près 12 000 € de chiffre d'affaires mensuel sur 22 jours ouvrés. Nous proposons aussi un abonnement entretien annuel, encore très peu souscrit. Ce que je ne sais pas encore, c'est si un second atelier serait rentable dans une ville moyenne, où le volume de passage est plus faible. Nous n'avons pas non plus calculé précisément le coût de revient par réparation, on fonctionne au ressenti. Mon besoin, c'est de structurer la gestion avant d'envisager une seconde implantation.",
+      "corrige": []
+    },
+    {
+      "id": "santeconnect-sante",
+      "category": "sante",
+      "archetype": "digital",
+      "recit": "SantéConnect. Dans les zones rurales, le premier médecin est parfois à 60 kilomètres, et les gens attendent que ça devienne grave avant de se déplacer. SantéConnect est une application de téléconsultation : le patient décrit ses symptômes, un algorithme d'orientation détermine le niveau d'urgence, et le met en relation avec un médecin partenaire par appel vidéo, ou audio quand la connexion est faible. Nous avons déjà 15 000 utilisateurs actifs sur la plateforme et les retours sont très positifs. Nos protocoles d'orientation ont été validés médicalement et suivent les standards internationaux. Je suis développeur de formation et je porte le projet seul pour l'instant, avec l'aide de prestataires ponctuels. Nous cherchons actuellement nos premiers utilisateurs pilotes pour tester l'application en conditions réelles dans deux villages de la région. Le modèle économique envisagé est un paiement par consultation, autour de 2 000 FCFA, avec une partie reversée au médecin partenaire.",
+      "corrige": [
+        {
+          "ref": "C7",
+          "type": "interne",
+          "difficulte": "facile",
+          "attendu": "Annoncer 15 000 utilisateurs actifs puis declarer chercher ses premiers utilisateurs pilotes pour tester l'application."
+        },
+        {
+          "ref": "C8",
+          "type": "capacite",
+          "difficulte": "moyenne",
+          "attendu": "Affirmer une validation medicale des protocoles alors que le porteur est developpeur, seul, sans aucun profil ni partenaire medical mentionne."
+        }
+      ]
+    }
+  ]
+}
