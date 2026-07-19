@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ideaxion — les flux du produit</title>
+<style>
+:root{
+  --paper:#f6f7f9; --surface:#fff; --sunken:#eef1f5;
+  --ink:#121821; --soft:#4a5561; --faint:#7c8794;
+  --rule:#dde2e8; --firm:#c3cbd4;
+  --accent:#0b6e6b; --dead:#a8332b; --warn:#9a5b12;
+  --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
+  --sans:"Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono","SF Mono","JetBrains Mono",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#0d1117;--surface:#151b23;--sunken:#10161d;--ink:#e6ebf1;--soft:#a3aebb;
+  --faint:#6f7a87;--rule:#262e38;--firm:#39434f;--accent:#4fd1cb;--dead:#e5766c;--warn:#e0a458}
+}
+:root[data-theme="dark"]{--paper:#0d1117;--surface:#151b23;--sunken:#10161d;--ink:#e6ebf1;
+  --soft:#a3aebb;--faint:#6f7a87;--rule:#262e38;--firm:#39434f;--accent:#4fd1cb;--dead:#e5766c;--warn:#e0a458}
+:root[data-theme="light"]{--paper:#f6f7f9;--surface:#fff;--sunken:#eef1f5;--ink:#121821;
+  --soft:#4a5561;--faint:#7c8794;--rule:#dde2e8;--firm:#c3cbd4;--accent:#0b6e6b;--dead:#a8332b;--warn:#9a5b12}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:16px;line-height:1.6;padding:3rem 1.5rem 5rem}
+.wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:2.75rem}
+
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin:0}
+h1{font-family:var(--serif);font-size:clamp(1.9rem,4.5vw,2.7rem);font-weight:400;line-height:1.15;
+  margin:.5rem 0 0;text-wrap:balance}
+.standfirst{max-width:64ch;color:var(--soft);margin:.75rem 0 0}
+h2{font-family:var(--serif);font-size:1.4rem;font-weight:400;margin:0;
+  padding-bottom:.5rem;border-bottom:2px solid var(--firm)}
+h3{font-family:var(--serif);font-size:1.08rem;font-weight:400;margin:0 0 .35rem}
+section{display:flex;flex-direction:column;gap:1.1rem}
+p{margin:0}
+.lead{color:var(--soft);max-width:66ch}
+strong{font-weight:600}
+
+.chain{display:flex;flex-wrap:wrap;align-items:stretch;gap:.4rem;margin:0}
+.step{background:var(--surface);border:1px solid var(--rule);border-radius:3px;
+  padding:.55rem .7rem;min-width:0;flex:1 1 130px;display:flex;flex-direction:column;gap:.15rem}
+.step .n{font-family:var(--mono);font-size:.64rem;letter-spacing:.08em;color:var(--faint)}
+.step .t{font-size:.88rem;line-height:1.35}
+.step.key{border-color:var(--accent);border-left:3px solid var(--accent);background:var(--sunken)}
+.step.soon{border-style:dashed;color:var(--soft)}
+.arrow{align-self:center;color:var(--faint);font-size:.85rem;flex:0 0 auto}
+
+.callout{background:var(--surface);border:1px solid var(--firm);border-left:3px solid var(--accent);
+  border-radius:3px;padding:1rem 1.2rem}
+.callout p+p{margin-top:.6rem}
+.callout.warn{border-left-color:var(--warn)}
+.callout.dead{border-left-color:var(--dead)}
+
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{border:1px solid var(--rule);padding:.55rem .7rem;text-align:left;vertical-align:top}
+th{background:var(--sunken);font-weight:600;font-size:.8rem;letter-spacing:.02em}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.scroll{overflow-x:auto}
+
+.tag{font-family:var(--mono);font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;
+  padding:.1rem .4rem;border:1px solid currentColor;border-radius:2px;white-space:nowrap}
+.tag.live{color:var(--accent)}
+.tag.soon{color:var(--warn);border-style:dashed}
+.tag.frozen{color:var(--faint)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.8rem}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:.9rem 1rem}
+.card h3{margin-bottom:.3rem}
+.card p{font-size:.88rem;color:var(--soft)}
+.mono{font-family:var(--mono);font-size:.82rem}
+footer{color:var(--faint);font-size:.85rem;border-top:1px solid var(--rule);padding-top:1rem}
+ul{margin:0;padding-left:1.15rem}li{margin-bottom:.3rem;color:var(--soft)}
+@media(max-width:620px){.arrow{display:none}.step{flex:1 1 100%}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Ideaxion · architecture produit</p>
+  <h1>Deux parcours, un seul organe</h1>
+  <p class="standfirst">Le porteur raconte et progresse. L'institution trie et paie. Entre les deux,
+  <strong>le même détecteur d'incohérences</strong> — et c'est ce partage qui permet de vendre
+  avant d'avoir tout construit.</p>
+</header>
+
+<section>
+  <h2>Parcours porteur</h2>
+  <p class="lead">Ce qui tourne aujourd'hui. Gratuit, anonyme jusqu'à la récompense.</p>
+  <div class="chain">
+    <div class="step"><span class="n">01</span><span class="t">Récit libre, sans compte</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">02</span><span class="t">Extraction sur 12 dimensions</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">03</span><span class="t">Scoring, 3 passes</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">04</span><span class="t">Radar affiché</span></div>
+  </div>
+  <div class="chain">
+    <div class="step"><span class="n">05</span><span class="t">Porte d'accès : compte requis</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">06</span><span class="t">Bilan + 3 actions</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">07</span><span class="t">Workshop, re-score un axe</span></div>
+    <span class="arrow">↺</span>
+    <div class="step soon"><span class="n">S9</span><span class="t">Contradictions affichées</span></div>
+  </div>
+  <div class="callout dead">
+    <p><strong>Le point faible connu.</strong> Les étapes 4 à 7 reposent sur un score qui ne
+    distingue pas encore un bon dossier d'un mauvais : un dossier volontairement auto-contradictoire
+    est ressorti à <span class="mono">96,6 % de confiance</span>, sans la moindre alerte.</p>
+    <p>La boucle est belle et creuse tant que le détecteur ne l'alimente pas.</p>
+  </div>
+</section>
+
+<section>
+  <h2>Parcours audit — l'offre qui se vend</h2>
+  <p class="lead">En ligne de commande, sans interface, par choix. Pour les premiers audits,
+  c'est toi le système.</p>
+  <div class="chain">
+    <div class="step"><span class="n">01</span><span class="t">Dossiers du client, anonymisés</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">02</span><span class="t">Ingestion, écarts déclarés</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">03</span><span class="t">Contexte : pays, devise, pouvoir d'achat</span></div>
+  </div>
+  <div class="chain">
+    <div class="step"><span class="n">04</span><span class="t">2 passes parallèles</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">05</span><span class="t">Ancrage des citations</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">06</span><span class="t">Déduplication</span></div>
+    <span class="arrow">→</span>
+    <div class="step key"><span class="n">07</span><span class="t">Relecture humaine</span></div>
+    <span class="arrow">→</span>
+    <div class="step"><span class="n">08</span><span class="t">Rapport HTML · CSV · PDF</span></div>
+  </div>
+  <div class="callout">
+    <p><strong>L'étape 07 est le produit, pas une formalité.</strong> Rien ne se publie tant qu'un
+    constat n'a pas été tranché — la règle est câblée en code, pas confiée à la discipline.</p>
+    <p>Sur le lot de démonstration, la relecture a écarté un constat <em>ancré, bien formé et
+    plausible</em> : le modèle citait « cotisations reversées <em>intégralement</em> » alors que le
+    dossier ne contient pas ce mot. Il avait ajouté le mot qui créait la contradiction.
+    <strong>Aucune règle automatique ne pouvait l'attraper.</strong></p>
+  </div>
+</section>
+
+<section>
+  <h2>L'organe partagé</h2>
+  <p class="lead">Les étapes 03 à 06 de l'audit sont exactement ce qui manque au parcours porteur.
+  Un moteur, deux produits.</p>
+  <div class="grid">
+    <div class="card">
+      <h3>Vers l'institution</h3>
+      <p>« Voici les incohérences de vos 300 dossiers, avec les deux phrases qui se contredisent. »
+      Vérifiable en cinq secondes, sans calibration. <strong>Tu factures.</strong></p>
+    </div>
+    <div class="card">
+      <h3>Vers le porteur</h3>
+      <p>« Voici ce qui ne tient pas dans ton récit — un jury le verra en trente secondes. »
+      Ce que fait un bon mentor. <strong>Tu retiens.</strong></p>
+    </div>
+  </div>
+  <div class="callout">
+    <p><strong>Toute la chaîne aval existe déjà côté porteur et n'a jamais servi.</strong>
+    La collecte des contradictions, la chute de confiance
+    (<span class="mono">contradiction_gap = 0.5</span>), la remontée dans l'état de dimension :
+    tout est branché, rien ne l'alimente. Le détecteur n'était pas absent — il n'avait pas de capteur.</p>
+    <p>C'est pourquoi <strong>S9 coûte peu et rapporte beaucoup</strong> : on pose le capteur,
+    le reste s'allume seul — et le Radar recommence à discriminer sans qu'on touche au scoring.</p>
+  </div>
+</section>
+
+<section>
+  <h2>État réel</h2>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Brique</th><th>État</th><th>Mesure</th></tr></thead>
+      <tbody>
+        <tr><td>Détecteur d'incohérences</td><td><span class="tag live">Livré</span></td>
+            <td class="num">0 faux positif · 3 runs</td></tr>
+        <tr><td>Chaîne d'audit complète</td><td><span class="tag live">Livré</span></td>
+            <td class="num">~3 appels / dossier</td></tr>
+        <tr><td>Détection pays &amp; devise</td><td><span class="tag live">Livré</span></td>
+            <td class="num">4 pays vérifiés</td></tr>
+        <tr><td>Rapport client + relecture</td><td><span class="tag live">Livré</span></td>
+            <td class="num">351 tests verts</td></tr>
+        <tr><td>Contradictions côté porteur</td><td><span class="tag soon">Sprint 9</span></td>
+            <td class="num">chaîne aval prête</td></tr>
+        <tr><td>Premier audit livré à un client</td><td><span class="tag soon">À faire</span></td>
+            <td class="num">ne se code pas</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Gelé, et sous quelle condition</h2>
+  <p class="lead">Rien n'est abandonné. Tout attend un signal précis — écrit pour qu'aucun chantier
+  ne redémarre un soir de motivation.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Chantier</th><th>Feu vert requis</th></tr></thead>
+      <tbody>
+        <tr><td>Couche institutionnelle (organisations, programmes, cohortes, file d'exceptions)</td>
+            <td>Un client payant</td></tr>
+        <tr><td>Entitlements, quotas, paiement</td>
+            <td>Intention d'achat mesurée, puis encaissement réel</td></tr>
+        <tr><td>Multi-projet côté porteur</td>
+            <td>Intention d'achat mesurée <span class="mono">(le back le supporte déjà)</span></td></tr>
+        <tr><td>Calibration experte du Radar</td>
+            <td>L'audit a prouvé que le tri est bien la douleur</td></tr>
+        <tr><td>Studio, deck, simulateur de pitch</td>
+            <td>Gelés — personne n'a jamais payé pour ça</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>Trois principes, appris par l'échec</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Ce que le prompt rate deux fois passe en code</h3>
+      <p>Déduplication, ancrage des citations, refus de publier : trois consignes qui ont échoué,
+      trois règles déterministes qui tiennent.</p>
+    </div>
+    <div class="card">
+      <h3>Le nom d'un champ est une garde</h3>
+      <p>Renommer <span class="mono">contradictions</span> en <span class="mono">findings</span> a
+      triplé les faux positifs : un mot neutre accueille n'importe quelle observation.</p>
+    </div>
+    <div class="card">
+      <h3>Mesurer avant de bâtir</h3>
+      <p>Chaque décision de cette architecture vient d'un banc d'essai, pas d'une intuition.
+      Et toute annonce de performance cite son nombre de runs.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Document de référence — à mettre à jour quand S9 branche le détecteur sur le parcours porteur.
+  Détail des sprints dans <span class="mono">sprints/</span>, kit commercial dans
+  <span class="mono">docs/kit-audit-retrospectif.md</span>.
+</footer>
+
+</div>
+</body>
+</html>
