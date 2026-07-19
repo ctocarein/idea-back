@@ -30,6 +30,7 @@ qui ressortait à 96,6 % de confiance) — sans toucher au scoring.
 - **IDX-MEM-01 ★** Passe contexte + contradictions dans `run_diagnostic` `[5]` — ajouter au `asyncio.gather` existant ([`handlers.py:100`](../app/diagnostics/handlers.py)) : les passes sont indépendantes, **la latence reste celle d'un appel**.
 - **IDX-MEM-02 ★** Persistance `ProjectMemoryItem(CONTRADICTION)` `[5]` — via le projector, avec provenance `NARRATIVE` et les deux citations en `source_excerpt` / `attributes`.
 - **IDX-MEM-03** Exposition côté porteur `[5]` — contradictions visibles dans le workspace et le bilan, **toujours avec les deux passages**. Ton de coach, pas de police : « un jury verra ça en trente secondes ».
+  - ⚠️ **Extension de contrat nécessaire.** La projection actuelle ne produit que `{"id", "statement"}` ([`evaluation.py:97`](../app/project_memory/evaluation.py)) — **les deux citations manquent**, alors qu'elles sont tout le produit. Il faut porter `quote_a` / `quote_b` jusqu'à `DimensionEvaluationOut.contradictions`, et prévenir le front : c'est un ajout de champs, pas une rupture.
 - **IDX-MEM-04** Tolérance `[2]` — l'échec de la passe contradictions ne fait **pas** tomber le diagnostic ; même politique que les passes de scoring (`return_exceptions=True`).
 - **IDX-MEM-05** Tests `[5]` — récit contradictoire connu ⇒ confiance abaissée et contradictions présentes ; **récit propre ⇒ strictement inchangé** (protection contre le faux positif côté porteur, où il coûte la confiance de l'utilisateur).
 
