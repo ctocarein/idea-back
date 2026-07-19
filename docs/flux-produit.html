@@ -111,10 +111,12 @@ ul{margin:0;padding-left:1.15rem}li{margin-bottom:.3rem;color:var(--soft)}
     <div class="step soon"><span class="n">S9</span><span class="t">Contradictions affichées</span></div>
   </div>
   <div class="callout dead">
-    <p><strong>Le point faible connu.</strong> Les étapes 4 à 7 reposent sur un score qui ne
-    distingue pas encore un bon dossier d'un mauvais : un dossier volontairement auto-contradictoire
-    est ressorti à <span class="mono">96,6 % de confiance</span>, sans la moindre alerte.</p>
-    <p>La boucle est belle et creuse tant que le détecteur ne l'alimente pas.</p>
+    <p><strong>Le point faible connu, et il survit à S9.</strong> Les étapes 4 à 7 reposent sur un
+    score qui ne distingue pas un bon dossier d'un mauvais : un dossier volontairement
+    auto-contradictoire est ressorti à <span class="mono">96,6 % de confiance</span>.</p>
+    <p>La confiance ne dépend que de <strong>l'accord entre les passes de scoring</strong> — pas
+    des contradictions. S9 les rend visibles et les fait remonter en tête des questions, mais
+    <strong>ne fait pas baisser la confiance</strong>. Décision ouverte : <span class="mono">IDX-MEM-06</span>.</p>
   </div>
 </section>
 
@@ -168,11 +170,11 @@ ul{margin:0;padding-left:1.15rem}li{margin-bottom:.3rem;color:var(--soft)}
   </div>
   <div class="callout">
     <p><strong>Toute la chaîne aval existe déjà côté porteur et n'a jamais servi.</strong>
-    La collecte des contradictions, la chute de confiance
-    (<span class="mono">contradiction_gap = 0.5</span>), la remontée dans l'état de dimension :
-    tout est branché, rien ne l'alimente. Le détecteur n'était pas absent — il n'avait pas de capteur.</p>
-    <p>C'est pourquoi <strong>S9 coûte peu et rapporte beaucoup</strong> : on pose le capteur,
-    le reste s'allume seul — et le Radar recommence à discriminer sans qu'on touche au scoring.</p>
+    La collecte des contradictions, la demande de clarification, la priorité dans les questions
+    adaptatives : tout est branché, rien ne l'alimente. Le détecteur n'était pas absent — il
+    n'avait pas de capteur. <strong>S9 pose le capteur.</strong></p>
+    <p>Ce que S9 fait réellement : les contradictions deviennent visibles avec leurs deux
+    citations, la dimension concernée réclame une clarification et passe en tête des questions.</p>
   </div>
 </section>
 
