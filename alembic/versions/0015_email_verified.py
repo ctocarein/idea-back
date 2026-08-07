@@ -7,6 +7,7 @@ Revises: 0014_logo
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0015_email_verified"
@@ -19,9 +20,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     cols = {
         r[0]
-        for r in conn.execute(
-            sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='users'")
-        )
+        for r in conn.execute(sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='users'"))
     }
     if "email_verified" not in cols:
         op.add_column(

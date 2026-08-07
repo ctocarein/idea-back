@@ -1,0 +1,576 @@
+{
+  "corpus": "C:\\dev\\Idea-Projet\\idea-back\\calibration\\exception_corpus.json",
+  "model": "mistral-small-latest→deepseek-chat",
+  "prompt_version": "scoring-v3",
+  "runs": [
+    {
+      "temperature": null,
+      "n_cases_total": 14,
+      "n_cases_measured": 14,
+      "dimension_exception_rate": 0.006,
+      "project_review_rate": 0.071,
+      "mean_confidence": 0.906,
+      "by_quality": {
+        "thin": 0.028,
+        "medium": 0.0,
+        "rich": 0.0
+      },
+      "per_dimension_uncertain": {
+        "d11": 1
+      },
+      "excluded": [],
+      "hypothesis_max": 0.2,
+      "cases": [
+        {
+          "id": "tontine-fintech",
+          "tags": {
+            "quality": "medium",
+            "stage": "validation"
+          },
+          "kept_passes": 3,
+          "confidence": 0.8,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 1,
+            "d3": 1,
+            "d4": 1,
+            "d5": 2,
+            "d6": 1,
+            "d7": 0,
+            "d8": 2,
+            "d9": 2,
+            "d10": 1,
+            "d11": 0,
+            "d12": 1
+          },
+          "consensus_axes": {
+            "d1": 7,
+            "d2": 8,
+            "d3": 7,
+            "d4": 6,
+            "d5": 5,
+            "d6": 4,
+            "d7": 6,
+            "d8": 5,
+            "d9": 4,
+            "d10": 5,
+            "d11": 6,
+            "d12": 4
+          }
+        },
+        {
+          "id": "irrigation-agritech",
+          "tags": {
+            "quality": "medium",
+            "stage": "mvp"
+          },
+          "kept_passes": 3,
+          "confidence": 0.9,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 1,
+            "d4": 0,
+            "d5": 0,
+            "d6": 1,
+            "d7": 1,
+            "d8": 0,
+            "d9": 1,
+            "d10": 0,
+            "d11": 1,
+            "d12": 1
+          },
+          "consensus_axes": {
+            "d1": 7,
+            "d2": 6,
+            "d3": 6,
+            "d4": 5,
+            "d5": 4,
+            "d6": 5,
+            "d7": 6,
+            "d8": 5,
+            "d9": 4,
+            "d10": 5,
+            "d11": 6,
+            "d12": 4
+          }
+        },
+        {
+          "id": "tutorat-edtech-generique",
+          "tags": {
+            "quality": "thin",
+            "stage": "idea"
+          },
+          "kept_passes": 3,
+          "confidence": 0.85,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 1,
+            "d4": 1,
+            "d5": 1,
+            "d6": 1,
+            "d7": 0,
+            "d8": 1,
+            "d9": 1,
+            "d10": 1,
+            "d11": 1,
+            "d12": 1
+          },
+          "consensus_axes": {
+            "d1": 4,
+            "d2": 5,
+            "d3": 5,
+            "d4": 6,
+            "d5": 3,
+            "d6": 4,
+            "d7": 2,
+            "d8": 4,
+            "d9": 3,
+            "d10": 5,
+            "d11": 3,
+            "d12": 3
+          }
+        },
+        {
+          "id": "teleconsult-sante",
+          "tags": {
+            "quality": "rich",
+            "stage": "traction"
+          },
+          "kept_passes": 3,
+          "confidence": 0.916,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 1,
+            "d4": 1,
+            "d5": 1,
+            "d6": 0,
+            "d7": 0,
+            "d8": 1,
+            "d9": 0,
+            "d10": 0,
+            "d11": 1,
+            "d12": 0
+          },
+          "consensus_axes": {
+            "d1": 8,
+            "d2": 7,
+            "d3": 7,
+            "d4": 7,
+            "d5": 6,
+            "d6": 7,
+            "d7": 8,
+            "d8": 6,
+            "d9": 5,
+            "d10": 6,
+            "d11": 8,
+            "d12": 6
+          }
+        },
+        {
+          "id": "livraison-derniere-boucle",
+          "tags": {
+            "quality": "medium",
+            "stage": "mvp"
+          },
+          "kept_passes": 3,
+          "confidence": 0.966,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 0,
+            "d4": 0,
+            "d5": 0,
+            "d6": 1,
+            "d7": 0,
+            "d8": 1,
+            "d9": 0,
+            "d10": 0,
+            "d11": 0,
+            "d12": 0
+          },
+          "consensus_axes": {
+            "d1": 6,
+            "d2": 5,
+            "d3": 5,
+            "d4": 6,
+            "d5": 4,
+            "d6": 6,
+            "d7": 7,
+            "d8": 5,
+            "d9": 4,
+            "d10": 5,
+            "d11": 6,
+            "d12": 4
+          }
+        },
+        {
+          "id": "recyclage-plastique",
+          "tags": {
+            "quality": "thin",
+            "stage": "idea"
+          },
+          "kept_passes": 3,
+          "confidence": 0.866,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 2,
+            "d3": 2,
+            "d4": 1,
+            "d5": 0,
+            "d6": 0,
+            "d7": 1,
+            "d8": 1,
+            "d9": 0,
+            "d10": 0,
+            "d11": 1,
+            "d12": 0
+          },
+          "consensus_axes": {
+            "d1": 2,
+            "d2": 3,
+            "d3": 3,
+            "d4": 3,
+            "d5": 1,
+            "d6": 2,
+            "d7": 1,
+            "d8": 2,
+            "d9": 1,
+            "d10": 2,
+            "d11": 1,
+            "d12": 1
+          }
+        },
+        {
+          "id": "saas-gestion-pharmacies",
+          "tags": {
+            "quality": "rich",
+            "stage": "traction"
+          },
+          "kept_passes": 3,
+          "confidence": 0.966,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 1,
+            "d4": 0,
+            "d5": 0,
+            "d6": 0,
+            "d7": 0,
+            "d8": 0,
+            "d9": 1,
+            "d10": 0,
+            "d11": 0,
+            "d12": 0
+          },
+          "consensus_axes": {
+            "d1": 8,
+            "d2": 7,
+            "d3": 7,
+            "d4": 6,
+            "d5": 6,
+            "d6": 8,
+            "d7": 9,
+            "d8": 7,
+            "d9": 5,
+            "d10": 7,
+            "d11": 8,
+            "d12": 5
+          }
+        },
+        {
+          "id": "marketplace-artisans",
+          "tags": {
+            "quality": "medium",
+            "stage": "validation"
+          },
+          "kept_passes": 3,
+          "confidence": 0.816,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 1,
+            "d2": 1,
+            "d3": 2,
+            "d4": 1,
+            "d5": 1,
+            "d6": 0,
+            "d7": 0,
+            "d8": 1,
+            "d9": 1,
+            "d10": 1,
+            "d11": 1,
+            "d12": 1
+          },
+          "consensus_axes": {
+            "d1": 6,
+            "d2": 5,
+            "d3": 6,
+            "d4": 6,
+            "d5": 4,
+            "d6": 5,
+            "d7": 6,
+            "d8": 5,
+            "d9": 4,
+            "d10": 5,
+            "d11": 6,
+            "d12": 5
+          }
+        },
+        {
+          "id": "energie-solaire-kiosques",
+          "tags": {
+            "quality": "medium",
+            "stage": "mvp"
+          },
+          "kept_passes": 3,
+          "confidence": 0.984,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 0,
+            "d4": 0,
+            "d5": 0,
+            "d6": 0,
+            "d7": 0,
+            "d8": 0,
+            "d9": 0,
+            "d10": 1,
+            "d11": 0,
+            "d12": 0
+          },
+          "consensus_axes": {
+            "d1": 8,
+            "d2": 7,
+            "d3": 6,
+            "d4": 7,
+            "d5": 5,
+            "d6": 6,
+            "d7": 8,
+            "d8": 6,
+            "d9": 4,
+            "d10": 5,
+            "d11": 7,
+            "d12": 5
+          }
+        },
+        {
+          "id": "credit-scoring-informel",
+          "tags": {
+            "quality": "rich",
+            "stage": "validation"
+          },
+          "kept_passes": 3,
+          "confidence": 0.95,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 0,
+            "d4": 1,
+            "d5": 1,
+            "d6": 0,
+            "d7": 0,
+            "d8": 0,
+            "d9": 0,
+            "d10": 0,
+            "d11": 0,
+            "d12": 1
+          },
+          "consensus_axes": {
+            "d1": 8,
+            "d2": 7,
+            "d3": 7,
+            "d4": 7,
+            "d5": 6,
+            "d6": 7,
+            "d7": 8,
+            "d8": 6,
+            "d9": 5,
+            "d10": 6,
+            "d11": 7,
+            "d12": 7
+          }
+        },
+        {
+          "id": "app-fitness-vague",
+          "tags": {
+            "quality": "thin",
+            "stage": "idea"
+          },
+          "kept_passes": 3,
+          "confidence": 0.85,
+          "needs_review": true,
+          "uncertain_axes": [
+            "d11"
+          ],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 0,
+            "d4": 0,
+            "d5": 1,
+            "d6": 0,
+            "d7": 1,
+            "d8": 1,
+            "d9": 1,
+            "d10": 1,
+            "d11": 3,
+            "d12": 1
+          },
+          "consensus_axes": {
+            "d1": 2,
+            "d2": 3,
+            "d3": 4,
+            "d4": 3,
+            "d5": 1,
+            "d6": 2,
+            "d7": 1,
+            "d8": 2,
+            "d9": 1,
+            "d10": 3,
+            "d11": 2,
+            "d12": 1
+          }
+        },
+        {
+          "id": "logistique-froid-agri",
+          "tags": {
+            "quality": "medium",
+            "stage": "mvp"
+          },
+          "kept_passes": 3,
+          "confidence": 0.9,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 1,
+            "d4": 1,
+            "d5": 1,
+            "d6": 0,
+            "d7": 0,
+            "d8": 0,
+            "d9": 1,
+            "d10": 1,
+            "d11": 1,
+            "d12": 0
+          },
+          "consensus_axes": {
+            "d1": 8,
+            "d2": 7,
+            "d3": 7,
+            "d4": 7,
+            "d5": 5,
+            "d6": 6,
+            "d7": 7,
+            "d8": 6,
+            "d9": 5,
+            "d10": 5,
+            "d11": 6,
+            "d12": 5
+          }
+        },
+        {
+          "id": "contradiction-traction-modele",
+          "tags": {
+            "quality": "medium",
+            "stage": "traction",
+            "note": "cas volontairement incohérent"
+          },
+          "kept_passes": 3,
+          "confidence": 0.966,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 0,
+            "d4": 0,
+            "d5": 0,
+            "d6": 0,
+            "d7": 0,
+            "d8": 0,
+            "d9": 0,
+            "d10": 1,
+            "d11": 0,
+            "d12": 1
+          },
+          "consensus_axes": {
+            "d1": 7,
+            "d2": 4,
+            "d3": 6,
+            "d4": 6,
+            "d5": 3,
+            "d6": 2,
+            "d7": 7,
+            "d8": 4,
+            "d9": 3,
+            "d10": 4,
+            "d11": 7,
+            "d12": 5
+          }
+        },
+        {
+          "id": "assurance-indicielle-agri",
+          "tags": {
+            "quality": "rich",
+            "stage": "validation"
+          },
+          "kept_passes": 3,
+          "confidence": 0.95,
+          "needs_review": false,
+          "uncertain_axes": [],
+          "per_axis_spread": {
+            "d1": 0,
+            "d2": 0,
+            "d3": 1,
+            "d4": 1,
+            "d5": 0,
+            "d6": 0,
+            "d7": 0,
+            "d8": 0,
+            "d9": 0,
+            "d10": 0,
+            "d11": 1,
+            "d12": 0
+          },
+          "consensus_axes": {
+            "d1": 8,
+            "d2": 7,
+            "d3": 7,
+            "d4": 7,
+            "d5": 6,
+            "d6": 7,
+            "d7": 7,
+            "d8": 6,
+            "d9": 5,
+            "d10": 6,
+            "d11": 7,
+            "d12": 6
+          }
+        }
+      ]
+    }
+  ]
+}

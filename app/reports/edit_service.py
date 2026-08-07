@@ -15,6 +15,8 @@ from uuid import UUID
 from app.audit.service import AuditService
 from app.core.errors import NotFoundError
 from app.iam.dependencies import AuthContext, guard_assigned_or_admin
+from app.project_memory.evaluation import ProjectEvaluationProjector
+from app.project_memory.repository import ProjectMemoryRepository
 from app.projects.models import Project
 from app.projects.repository import ProjectRepository
 from app.reports.models import Report
@@ -22,6 +24,7 @@ from app.reports.repository import ReportRepository
 from app.reports.schemas import DiagnosticReport, ReportDetailOut, ScoreAdjustIn
 from app.scoring.actions import derive_next_actions
 from app.scoring.models import ScoreSource
+from app.scoring.repository import ScoreRunRepository
 from app.scoring.schemas import ScoreResult
 from app.scoring.service import ScoringService
 
@@ -78,6 +81,15 @@ class ReportEditService:
                 project.sector,
                 scale_max=grid.scale_max,
             )
+            score_run = await ScoreRunRepository(self.session).get_by_id(result.run_id)
+            if score_run is not None:
+                await ProjectEvaluationProjector(ProjectMemoryRepository(self.session)).persist_from_score_run(
+                    project_id=project.id,
+                    axes=grid.axes,
+                    score_run=score_run,
+                    next_actions=report.next_actions,
+                    scale_max=grid.scale_max,
+                )
         await self.auditor.record(
             actor_id=ctx.user.id,
             action="report.rescored",

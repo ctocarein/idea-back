@@ -91,9 +91,7 @@ class AcademyRepository:
         )
         return result.scalar_one_or_none()
 
-    async def list_started_dimensions(
-        self, owner_id: UUID
-    ) -> list[tuple[str, str, UUID, int | None]]:
+    async def list_started_dimensions(self, owner_id: UUID) -> list[tuple[str, str, UUID, int | None]]:
         """Retourne [(dimension, phase, session_id, axis_score_after)] par module."""
         result = await self.session.execute(
             select(
@@ -146,17 +144,13 @@ class AcademyRepository:
 
     async def list_fiches_for_owner(self, owner_id: UUID) -> list[NeedFiche]:
         result = await self.session.execute(
-            select(NeedFiche)
-            .where(NeedFiche.owner_id == owner_id)
-            .order_by(NeedFiche.created_at.desc())
+            select(NeedFiche).where(NeedFiche.owner_id == owner_id).order_by(NeedFiche.created_at.desc())
         )
         return list(result.scalars())
 
     async def list_fiches_for_session(self, session_id: UUID) -> list[NeedFiche]:
         result = await self.session.execute(
-            select(NeedFiche)
-            .where(NeedFiche.session_id == session_id)
-            .order_by(NeedFiche.created_at)
+            select(NeedFiche).where(NeedFiche.session_id == session_id).order_by(NeedFiche.created_at)
         )
         return list(result.scalars())
 
@@ -164,7 +158,5 @@ class AcademyRepository:
         return await self.session.get(NeedFiche, fiche_id)
 
     async def get_fiche_by_token_hash(self, token_hash: str) -> NeedFiche | None:
-        result = await self.session.execute(
-            select(NeedFiche).where(NeedFiche.share_token_hash == token_hash)
-        )
+        result = await self.session.execute(select(NeedFiche).where(NeedFiche.share_token_hash == token_hash))
         return result.scalar_one_or_none()

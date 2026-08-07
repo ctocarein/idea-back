@@ -54,20 +54,14 @@ def _geometric(style: str, pri: str, sec: str, acc: str, bg: str) -> str:
     if style == "hexagon":
         return f'<polygon points="50,6 88,28 88,72 50,94 12,72 12,28" fill="{pri}"/>'
     if style == "triangle":
-        return (
-            f'<polygon points="50,8 92,86 8,86" fill="{pri}"/>'
-            f'<polygon points="50,40 72,82 28,82" fill="{acc}"/>'
-        )
+        return f'<polygon points="50,8 92,86 8,86" fill="{pri}"/><polygon points="50,40 72,82 28,82" fill="{acc}"/>'
     if style == "diamond":
         return (
             f'<polygon points="50,6 94,50 50,94 6,50" fill="{pri}"/>'
             f'<polygon points="50,32 68,50 50,68 32,50" fill="{bg}"/>'
         )
     if style == "arc":
-        return (
-            f'<circle cx="50" cy="50" r="40" fill="{pri}"/>'
-            f'<circle cx="66" cy="42" r="34" fill="{bg}"/>'
-        )
+        return f'<circle cx="50" cy="50" r="40" fill="{pri}"/><circle cx="66" cy="42" r="34" fill="{bg}"/>'
     if style == "waves":
         return (
             f'<path d="M8 42 Q29 24 50 42 T92 42" fill="none" stroke="{pri}" stroke-width="9" stroke-linecap="round"/>'
@@ -108,9 +102,9 @@ def _mark(spec: dict, box: float) -> str:
     # Fond (conteneur) derrière la marque.
     if on_container:
         if container == "circle":
-            parts.append(f'<circle cx="{box/2}" cy="{box/2}" r="{box/2}" fill="{pal["primary"]}"/>')
+            parts.append(f'<circle cx="{box / 2}" cy="{box / 2}" r="{box / 2}" fill="{pal["primary"]}"/>')
         elif container == "rounded":
-            parts.append(f'<rect x="0" y="0" width="{box}" height="{box}" rx="{box*0.24}" fill="{pal["primary"]}"/>')
+            parts.append(f'<rect x="0" y="0" width="{box}" height="{box}" rx="{box * 0.24}" fill="{pal["primary"]}"/>')
         else:  # square
             parts.append(f'<rect x="0" y="0" width="{box}" height="{box}" fill="{pal["primary"]}"/>')
 
@@ -131,16 +125,20 @@ def _mark(spec: dict, box: float) -> str:
         f = _font(spec)
         fill = ink if on_container else pal["primary"]
         parts.append(
-            f'<text x="{box/2}" y="{box/2}" text-anchor="middle" dominant-baseline="central" '
+            f'<text x="{box / 2}" y="{box / 2}" text-anchor="middle" dominant-baseline="central" '
             f'font-family="{escape(f["display"])}, sans-serif" font-weight="{f["weight"]}" '
-            f'font-size="{box*0.52}" fill="{fill}">{escape(_initials(spec))}</text>'
+            f'font-size="{box * 0.52}" fill="{fill}">{escape(_initials(spec))}</text>'
         )
     else:  # geometric
         if on_container:
             # Sur conteneur : marque en blanc/accent, réduite dans la box.
-            inner = _geometric(spec.get("geometric", "orbit"), "#FFFFFF", pal["secondary"], pal["accent"], pal["primary"])  # noqa: E501
+            inner = _geometric(
+                spec.get("geometric", "orbit"), "#FFFFFF", pal["secondary"], pal["accent"], pal["primary"]
+            )  # noqa: E501
         else:
-            inner = _geometric(spec.get("geometric", "orbit"), pal["primary"], pal["secondary"], pal["accent"], pal["bg"])  # noqa: E501
+            inner = _geometric(
+                spec.get("geometric", "orbit"), pal["primary"], pal["secondary"], pal["accent"], pal["bg"]
+            )  # noqa: E501
         s = box / 100 * (0.72 if on_container else 1.0)
         off = (box - 100 * s) / 2
         parts.append(f'<g transform="translate({off},{off}) scale({s})">{inner}</g>')
@@ -180,8 +178,7 @@ def _wordmark(spec: dict, x: float, y: float, anchor: str, size: float) -> str:
     if parts:
         # Wordmark multicolore : un tspan par segment (couleur propre).
         content = "".join(
-            f'<tspan fill="{p.get("color") or name_color}">{escape(str(p.get("text", "")))}</tspan>'
-            for p in parts
+            f'<tspan fill="{p.get("color") or name_color}">{escape(str(p.get("text", "")))}</tspan>' for p in parts
         )
     else:
         content = escape(spec.get("name") or "")
@@ -198,9 +195,9 @@ def _wordmark(spec: dict, x: float, y: float, anchor: str, size: float) -> str:
         tscale = _TAGLINE_SCALE.get(spec.get("tagline_size", "m"), 0.30)
         tcolor = spec.get("tagline_color") or pal["secondary"]
         out.append(
-            f'<text x="{x}" y="{y + size*0.62}" text-anchor="{anchor}" '
+            f'<text x="{x}" y="{y + size * 0.62}" text-anchor="{anchor}" '
             f'font-family="{escape(tf["body"])}, sans-serif" font-weight="500" '
-            f'font-size="{size*tscale}" fill="{tcolor}" letter-spacing="0.5">{escape(tagline)}</text>'
+            f'font-size="{size * tscale}" fill="{tcolor}" letter-spacing="0.5">{escape(tagline)}</text>'
         )
     return "".join(out)
 
@@ -262,7 +259,7 @@ def render_logo_svg(spec: dict, *, standalone: bool = True, background: bool = T
         tw = max(_text_width(name, size), _tagline_width(spec, size))
         w = max(M, tw) + 2 * P
         h = P + M + 22 + size + (size * 0.7 if tagline else 0) + P
-        mark = f'<g transform="translate({(w - M)/2},{P})">{_mark(spec, M)}</g>'
+        mark = f'<g transform="translate({(w - M) / 2},{P})">{_mark(spec, M)}</g>'
         text = _wordmark(spec, w / 2, P + M + 22 + size * 0.82, "middle", size)
         body = mark + text
 
@@ -284,5 +281,5 @@ def render_logo_svg(spec: dict, *, standalone: bool = True, background: bool = T
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w:.0f} {h:.0f}" '
         f'width="{w:.0f}" height="{h:.0f}" role="img" aria-label="{escape(name)} logo">'
-        f'{style}{bg_rect}{body}</svg>'
+        f"{style}{bg_rect}{body}</svg>"
     )

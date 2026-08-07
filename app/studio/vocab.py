@@ -40,22 +40,54 @@ GEOMETRICS = ("orbit", "hexagon", "triangle", "diamond", "arc", "waves", "bars",
 # --- Pairings typographiques (Google Fonts) ------------------------------------
 # display = titre/wordmark, body = tagline. `import` = URL @import Google Fonts.
 FONTS: dict[str, dict[str, str]] = {
-    "poppins": {"display": "Poppins", "body": "Poppins", "weight": "700",
-                "import": "https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"},
-    "inter": {"display": "Inter", "body": "Inter", "weight": "800",
-              "import": "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap"},
-    "montserrat": {"display": "Montserrat", "body": "Montserrat", "weight": "700",
-                   "import": "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap"},
-    "space": {"display": "Space Grotesk", "body": "Space Grotesk", "weight": "700",
-              "import": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap"},
-    "sora": {"display": "Sora", "body": "Sora", "weight": "700",
-             "import": "https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap"},
-    "playfair": {"display": "Playfair Display", "body": "Inter", "weight": "700",
-                 "import": "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500&display=swap"},
-    "fraunces": {"display": "Fraunces", "body": "Inter", "weight": "600",
-                 "import": "https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500&display=swap"},
-    "dmsans": {"display": "DM Sans", "body": "DM Sans", "weight": "700",
-               "import": "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap"},
+    "poppins": {
+        "display": "Poppins",
+        "body": "Poppins",
+        "weight": "700",
+        "import": "https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap",
+    },
+    "inter": {
+        "display": "Inter",
+        "body": "Inter",
+        "weight": "800",
+        "import": "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap",
+    },
+    "montserrat": {
+        "display": "Montserrat",
+        "body": "Montserrat",
+        "weight": "700",
+        "import": "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap",
+    },
+    "space": {
+        "display": "Space Grotesk",
+        "body": "Space Grotesk",
+        "weight": "700",
+        "import": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap",
+    },
+    "sora": {
+        "display": "Sora",
+        "body": "Sora",
+        "weight": "700",
+        "import": "https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&display=swap",
+    },
+    "playfair": {
+        "display": "Playfair Display",
+        "body": "Inter",
+        "weight": "700",
+        "import": "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500&display=swap",
+    },
+    "fraunces": {
+        "display": "Fraunces",
+        "body": "Inter",
+        "weight": "600",
+        "import": "https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500&display=swap",
+    },
+    "dmsans": {
+        "display": "DM Sans",
+        "body": "DM Sans",
+        "weight": "700",
+        "import": "https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap",
+    },
 }
 
 # --- Palettes par défaut selon le secteur (fallback déterministe) --------------

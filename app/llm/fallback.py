@@ -37,16 +37,12 @@ class FallbackProvider:
     async def complete(self, prompt: str, *, max_tokens: int = 1024) -> LLMResult:
         return await self._with_failover("complete", lambda p: p.complete(prompt, max_tokens=max_tokens))
 
-    async def analyze_json(
-        self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None
-    ) -> dict:
+    async def analyze_json(self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None) -> dict:
         return await self._with_failover(
             "analyze_json", lambda p: p.analyze_json(prompt, schema=schema, max_tokens=max_tokens)
         )
 
-    async def analyze_json_with_images(
-        self, prompt: str, *, images: list[str], schema: dict | None = None
-    ) -> dict:
+    async def analyze_json_with_images(self, prompt: str, *, images: list[str], schema: dict | None = None) -> dict:
         # Bascule UNIQUEMENT sur les providers qui voient les images (Pixtral…).
         vision = [p for p in self._providers if getattr(p, "supports_vision", False)]
         last_exc: Exception | None = None

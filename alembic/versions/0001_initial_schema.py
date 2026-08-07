@@ -12,12 +12,10 @@ Create Date: 2026-06-23
 
 from __future__ import annotations
 
-from alembic import op
-
-from app.core.database import Base
-
 # Importer l'agrégateur enregistre TOUTES les tables sur Base.metadata.
 import app.models  # noqa: F401
+from alembic import op
+from app.core.database import Base
 
 revision = "0001_initial"
 down_revision = None

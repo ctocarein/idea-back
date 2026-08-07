@@ -36,7 +36,7 @@ class _Storage:
     def __init__(self, data):
         self._data = data
 
-    def get_bytes(self, _key):
+    async def aget_bytes(self, _key):
         return self._data
 
 
@@ -54,7 +54,13 @@ class _PS:
 
 def _svc(provider, storage, deck=_Deck()) -> PitchSessionService:
     return PitchSessionService(
-        _Repo(), None, None, _Decks(deck), None, provider, storage  # type: ignore[arg-type]
+        _Repo(),
+        None,
+        None,
+        _Decks(deck),
+        None,
+        provider,
+        storage,  # type: ignore[arg-type]
     )
 
 

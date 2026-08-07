@@ -50,7 +50,6 @@ class ShareService:
         await self.repo.create(
             project_id=project_id,
             owner_id=ctx.user.id,
-            token=token,
             token_hash=_hash(token),
             consent_at=now,
             expires_at=now + timedelta(days=SHARE_DEFAULT_TTL_DAYS),
@@ -70,18 +69,21 @@ class ShareService:
         rows = await self.repo.list_by_owner_with_title(ctx.user.id)
         result = []
         for share, project_title in rows:
-            token = share.token or ""
-            result.append(ShareStatsOut(
-                id=share.id,
-                project_id=share.project_id,
-                project_title=project_title,
-                share_url=f"/shared/{token}" if token else "",
-                is_active=share.is_active,
-                expires_at=share.expires_at,
-                view_count=share.view_count,
-                last_viewed_at=share.last_viewed_at,
-                created_at=share.created_at,
-            ))
+            result.append(
+                ShareStatsOut(
+                    id=share.id,
+                    project_id=share.project_id,
+                    project_title=project_title,
+                    # Le token brut n'est révélé qu'à la création et n'est jamais
+                    # persisté. Un lien perdu doit être révoqué puis régénéré.
+                    share_url="",
+                    is_active=share.is_active,
+                    expires_at=share.expires_at,
+                    view_count=share.view_count,
+                    last_viewed_at=share.last_viewed_at,
+                    created_at=share.created_at,
+                )
+            )
         return result
 
     async def set_visibility(self, ctx: AuthContext, project_id: UUID, is_public: bool) -> None:

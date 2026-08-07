@@ -7,7 +7,6 @@ permission ET appartenance (cf. archi §5.4).
 
 from __future__ import annotations
 
-import asyncio
 from uuid import UUID
 
 from app.core.errors import ConflictError, NotFoundError
@@ -78,7 +77,7 @@ class ReportService:
         from datetime import UTC, datetime
 
         from app.reports.pdf import render_bilan_html
-        from app.scoring.constants import AXES, PILLARS, SCALE_MAX
+        from app.scoring.constants import AXES, GRID_VERSION_V2, PILLARS, SCALE_MAX
 
         report = await self.reports.get_by_id(report_id)
         if report is None:
@@ -100,7 +99,7 @@ class ReportService:
             pillar_scores=comprehension.get("pillars", {}),
             overall=int(comprehension.get("overall", 0)),
             scale_max=SCALE_MAX,
-            grid_version=radar.get("gridVersion", "v2-placeholder"),
+            grid_version=radar.get("gridVersion", GRID_VERSION_V2),
             generated_at=datetime.now(UTC).strftime("%d/%m/%Y"),
             report=report.insights,
             next_actions=report.next_actions or [],
@@ -119,5 +118,4 @@ class ReportService:
         storage = get_storage()
         if storage is None:
             raise NotFoundError("Stockage indisponible.")
-        # Clé déterministe (cf. handler). presigned_get est synchrone → thread.
-        return await asyncio.to_thread(storage.presigned_get, f"bilans/{report.id}.pdf")
+        return await storage.apresigned_get(f"bilans/{report.id}.pdf")

@@ -12,6 +12,7 @@ Create Date: 2026-06-27
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0003_user_onboarding_profile"
@@ -47,7 +48,13 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     cols = _columns("users")
-    for col in ["onboarding_completed", "weekly_availability", "project_stage",
-                "professional_status", "city", "country"]:
+    for col in [
+        "onboarding_completed",
+        "weekly_availability",
+        "project_stage",
+        "professional_status",
+        "city",
+        "country",
+    ]:
         if col in cols:
             op.drop_column("users", col)

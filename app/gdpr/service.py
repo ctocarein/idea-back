@@ -99,6 +99,6 @@ class GdprService:
         if self.storage is not None:
             for key in object_keys:
                 try:
-                    self.storage.remove_object(key)
+                    await self.storage.aremove_object(key)
                 except Exception:  # noqa: BLE001
                     pass

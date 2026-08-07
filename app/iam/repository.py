@@ -105,9 +105,7 @@ class RefreshTokenRepository:
 
     async def find_user_id_by_hash(self, token_hash: str) -> UUID | None:
         """Retrouve le user_id d'un token même révoqué — pour détecter les replays."""
-        result = await self.session.execute(
-            select(RefreshToken.user_id).where(RefreshToken.token_hash == token_hash)
-        )
+        result = await self.session.execute(select(RefreshToken.user_id).where(RefreshToken.token_hash == token_hash))
         row = result.one_or_none()
         return row.user_id if row else None
 

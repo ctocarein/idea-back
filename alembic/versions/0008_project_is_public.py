@@ -8,6 +8,7 @@ Create Date: 2026-06-30
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0008_project_is_public"
@@ -18,9 +19,10 @@ depends_on = None
 
 def upgrade() -> None:
     conn = op.get_bind()
-    cols = {r[0] for r in conn.execute(sa.text(
-        "SELECT column_name FROM information_schema.columns WHERE table_name='projects'"
-    ))}
+    cols = {
+        r[0]
+        for r in conn.execute(sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='projects'"))
+    }
     if "is_public" not in cols:
         op.add_column(
             "projects",

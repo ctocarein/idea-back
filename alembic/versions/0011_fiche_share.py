@@ -7,6 +7,7 @@ Revises: 0010_module_rescore
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0011_fiche_share"
@@ -20,9 +21,7 @@ def upgrade() -> None:
     existing_cols = {
         r[0]
         for r in conn.execute(
-            sa.text(
-                "SELECT column_name FROM information_schema.columns WHERE table_name='need_fiches'"
-            )
+            sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='need_fiches'")
         )
     }
     if "share_token_hash" not in existing_cols:
@@ -30,9 +29,7 @@ def upgrade() -> None:
             "need_fiches",
             sa.Column("share_token_hash", sa.String(64), nullable=True),
         )
-        op.create_unique_constraint(
-            "uq_need_fiches_share_token_hash", "need_fiches", ["share_token_hash"]
-        )
+        op.create_unique_constraint("uq_need_fiches_share_token_hash", "need_fiches", ["share_token_hash"])
 
 
 def downgrade() -> None:

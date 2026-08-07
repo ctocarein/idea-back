@@ -19,8 +19,11 @@ from statistics import median
 
 @dataclass(frozen=True)
 class EnsembleThresholds:
-    # Un axe est "incertain" si l'étendue de ses passes dépasse `axis_spread_tolerance`.
-    axis_spread_tolerance: int = 20  # points 0-100
+    # Un axe est "incertain" si l'étendue de ses passes dépasse cette part de
+    # l'échelle. Un seuil relatif évite de mélanger les grilles /10 et /100.
+    axis_spread_tolerance_ratio: float = 0.20
+    # Surcharge absolue, utile pour une grille calibrée ou un test ciblé.
+    axis_spread_tolerance: float | None = None
     # Confiance globale plancher sous laquelle on route systématiquement vers l'humain.
     min_confidence: float = 0.60
     # Nombre d'axes incertains tolérés avant de déclencher la revue.
@@ -39,35 +42,61 @@ class ConsensusResult:
     reasons: list[str] = field(default_factory=list)
 
 
-def _confidence_from_spread(mean_spread: float) -> float:
-    # Mappe l'étendue moyenne (0..100) en confiance (1..0). 0 pt → 1.0 ; 50 pts → 0.0.
-    return round(max(0.0, min(1.0, 1.0 - mean_spread / 50.0)), 3)
+def _validate_thresholds(thresholds: EnsembleThresholds) -> None:
+    if not 0 <= thresholds.axis_spread_tolerance_ratio <= 1:
+        raise ValueError("axis_spread_tolerance_ratio doit être compris entre 0 et 1.")
+    if thresholds.axis_spread_tolerance is not None and thresholds.axis_spread_tolerance < 0:
+        raise ValueError("axis_spread_tolerance doit être positif.")
+    if not 0 <= thresholds.min_confidence <= 1:
+        raise ValueError("min_confidence doit être compris entre 0 et 1.")
+
+
+def _confidence_from_spread(mean_spread: float, scale_max: int) -> float:
+    # Une divergence moyenne égale à la moitié de l'échelle donne une confiance
+    # nulle. La formule reste ainsi identique pour une grille /10 ou /100.
+    zero_confidence_spread = scale_max * 0.5
+    return round(max(0.0, min(1.0, 1.0 - mean_spread / zero_confidence_spread)), 3)
 
 
 def consensus(
     passes: Sequence[dict[str, int]],
     axis_keys: Sequence[str],
     thresholds: EnsembleThresholds | None = None,
+    *,
+    scale_max: int = 10,
 ) -> ConsensusResult:
     # passes = liste de jeux d'axes (une entrée par passe LLM). Chacune couvre axis_keys.
     if not passes:
         raise ValueError("Au moins une passe est requise.")
+    if scale_max <= 0:
+        raise ValueError("scale_max doit être strictement positif.")
     thresholds = thresholds or EnsembleThresholds()
+    _validate_thresholds(thresholds)
+    tolerance = (
+        thresholds.axis_spread_tolerance
+        if thresholds.axis_spread_tolerance is not None
+        else scale_max * thresholds.axis_spread_tolerance_ratio
+    )
 
     axes: dict[str, int] = {}
     spread: dict[str, int] = {}
     uncertain: list[str] = []
 
     for key in axis_keys:
-        values = [int(p[key]) for p in passes]
+        try:
+            values = [int(p[key]) for p in passes]
+        except KeyError as exc:
+            raise ValueError(f"Dimension manquante dans une passe : {key}.") from exc
+        if any(value < 0 or value > scale_max for value in values):
+            raise ValueError(f"Dimension '{key}' hors bornes (0-{scale_max}).")
         axes[key] = round(median(values))
         rng = max(values) - min(values)
         spread[key] = rng
-        if rng > thresholds.axis_spread_tolerance:
+        if rng > tolerance:
             uncertain.append(key)
 
     mean_spread = round(sum(spread.values()) / len(spread), 2) if spread else 0.0
-    confidence = _confidence_from_spread(mean_spread)
+    confidence = _confidence_from_spread(mean_spread, scale_max)
 
     reasons: list[str] = []
     if len(uncertain) > thresholds.max_uncertain_axes:

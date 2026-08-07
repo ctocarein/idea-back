@@ -32,7 +32,9 @@ class ShareStatsOut(BaseModel):
     id: UUID
     project_id: UUID
     project_title: str
-    share_url: str          # /shared/{token}
+    # Renseigné uniquement quand un ancien stockage permettait encore de relire
+    # le token. Les nouveaux liens sont révélés une seule fois à leur création.
+    share_url: str
     is_active: bool
     expires_at: datetime
     view_count: int

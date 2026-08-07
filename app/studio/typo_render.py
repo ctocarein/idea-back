@@ -19,14 +19,59 @@ from app.studio.vocab import FONTS
 # Avance par caractère (fraction de l'em) — gras géométrique approximé. Sert UNIQUEMENT
 # à estimer les largeurs pour la découpe ; le rendu final utilise la vraie fonte.
 _ADV: dict[str, float] = {
-    "A": .70, "B": .68, "C": .72, "D": .74, "E": .60, "F": .58, "G": .76, "H": .76,
-    "I": .30, "J": .44, "K": .68, "L": .56, "M": .92, "N": .76, "O": .80, "P": .66,
-    "Q": .80, "R": .70, "S": .64, "T": .60, "U": .74, "V": .70, "W": .96, "X": .68,
-    "Y": .66, "Z": .64,
-    "a": .58, "b": .60, "c": .54, "d": .60, "e": .58, "f": .36, "g": .60, "h": .60,
-    "i": .26, "j": .28, "k": .54, "l": .26, "m": .90, "n": .60, "o": .60, "p": .60,
-    "q": .60, "r": .40, "s": .52, "t": .38, "u": .60, "v": .54, "w": .82, "x": .54,
-    "y": .54, "z": .52, " ": .34,
+    "A": 0.70,
+    "B": 0.68,
+    "C": 0.72,
+    "D": 0.74,
+    "E": 0.60,
+    "F": 0.58,
+    "G": 0.76,
+    "H": 0.76,
+    "I": 0.30,
+    "J": 0.44,
+    "K": 0.68,
+    "L": 0.56,
+    "M": 0.92,
+    "N": 0.76,
+    "O": 0.80,
+    "P": 0.66,
+    "Q": 0.80,
+    "R": 0.70,
+    "S": 0.64,
+    "T": 0.60,
+    "U": 0.74,
+    "V": 0.70,
+    "W": 0.96,
+    "X": 0.68,
+    "Y": 0.66,
+    "Z": 0.64,
+    "a": 0.58,
+    "b": 0.60,
+    "c": 0.54,
+    "d": 0.60,
+    "e": 0.58,
+    "f": 0.36,
+    "g": 0.60,
+    "h": 0.60,
+    "i": 0.26,
+    "j": 0.28,
+    "k": 0.54,
+    "l": 0.26,
+    "m": 0.90,
+    "n": 0.60,
+    "o": 0.60,
+    "p": 0.60,
+    "q": 0.60,
+    "r": 0.40,
+    "s": 0.52,
+    "t": 0.38,
+    "u": 0.60,
+    "v": 0.54,
+    "w": 0.82,
+    "x": 0.54,
+    "y": 0.54,
+    "z": 0.52,
+    " ": 0.34,
 }
 
 
@@ -88,16 +133,22 @@ def render_typographic(spec: dict, *, standalone: bool = True, background: bool 
     parts: list[str] = []
 
     if transform == "letter-swap":
-        prefix, suffix = word[:ti], word[ti + 1:]
+        prefix, suffix = word[:ti], word[ti + 1 :]
         wp = _width(prefix, fs)
         slot = max(_adv(word[ti], fs), 0.72 * fs)
         icon_cx = pad + wp + slot / 2
         parts.append(_text(prefix, pad, baseline, fs, f, pal["ink"]))
         parts.append(_icon(metaphor, icon_cx, baseline - cap, cap, pal["ink"]))
         if nested:
-            parts.append(_icon(resolve_metaphor(nested.get("metaphor"), fallback_text=word),
-                               icon_cx, baseline - cap * 0.66, cap * 0.34,
-                               nested.get("color") or pal["accent"]))
+            parts.append(
+                _icon(
+                    resolve_metaphor(nested.get("metaphor"), fallback_text=word),
+                    icon_cx,
+                    baseline - cap * 0.66,
+                    cap * 0.34,
+                    nested.get("color") or pal["accent"],
+                )
+            )
         parts.append(_text(suffix, pad + wp + slot, baseline, fs, f, pal["ink"]))
         total = wp + slot + _width(suffix, fs)
     else:
@@ -119,7 +170,7 @@ def render_typographic(spec: dict, *, standalone: bool = True, background: bool 
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w:.0f} {h:.0f}" '
         f'width="{w:.0f}" height="{h:.0f}" role="img" aria-label="{escape(word)} logo">'
-        f'{style}{bg}{"".join(parts)}</svg>'
+        f"{style}{bg}{''.join(parts)}</svg>"
     )
 
 

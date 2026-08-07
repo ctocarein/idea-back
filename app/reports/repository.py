@@ -34,6 +34,12 @@ class ReportRepository:
         )
         return list(result.scalars())
 
+    async def get_latest_for_project(self, project_id: UUID) -> Report | None:
+        result = await self.session.execute(
+            select(Report).where(Report.project_id == project_id).order_by(Report.created_at.desc()).limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def list_for_owner(self, owner_id: UUID) -> list[Report]:
         # Bilans du porteur courant (jointure sur la propriété du projet).
         result = await self.session.execute(

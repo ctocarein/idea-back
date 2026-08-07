@@ -16,10 +16,10 @@ from app.iam.repository import UserRepository
 from app.projects.models import (
     DiagnosticStatus,
     ReviewStatus,
-    can_transition_review,
 )
 from app.projects.repository import ProjectRepository
 from app.projects.schemas import ProjectAdminOut
+from app.projects.state_service import ProjectStateService
 
 
 class ProjectAdminService:
@@ -27,6 +27,7 @@ class ProjectAdminService:
         self.repo = repo
         self.users = users
         self.auditor = auditor
+        self.states = ProjectStateService(repo, auditor)
         self.session = repo.session
 
     async def list_projects(
@@ -55,18 +56,7 @@ class ProjectAdminService:
         project = await self.repo.get_by_id(project_id)
         if project is None:
             raise NotFoundError("project")
-        current = project.review_status
-        if not can_transition_review(current, target):
-            raise BusinessRuleError(f"Transition de curation illégale : {current.value} → {target.value}")
-        await self.repo.set_review_status(project, target)
-        await self.auditor.record(
-            actor_id=ctx.user.id,
-            action="project.review_status",
-            entity="project",
-            entity_id=project_id,
-            old_value=current,
-            new_value=target,
-        )
+        await self.states.transition_review(project, target, actor_id=ctx.user.id)
         await self.session.commit()
         return ProjectAdminOut.model_validate(project)
 

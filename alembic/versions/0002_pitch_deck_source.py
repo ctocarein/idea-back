@@ -12,6 +12,7 @@ Create Date: 2026-06-26
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0002_pitch_deck_source"
@@ -30,9 +31,7 @@ def upgrade() -> None:
     if "source_key" not in cols:
         op.add_column("pitch_decks", sa.Column("source_key", sa.String(length=300), nullable=True))
     if "source_content_type" not in cols:
-        op.add_column(
-            "pitch_decks", sa.Column("source_content_type", sa.String(length=100), nullable=True)
-        )
+        op.add_column("pitch_decks", sa.Column("source_content_type", sa.String(length=100), nullable=True))
 
 
 def downgrade() -> None:

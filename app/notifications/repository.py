@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy import select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.notifications.models import Notification
@@ -46,9 +48,12 @@ class NotificationRepository:
             await self.session.flush()
 
     async def mark_all_read(self, user_id: UUID) -> int:
-        result = await self.session.execute(
-            update(Notification)
-            .where(Notification.user_id == user_id, Notification.read_at.is_(None))
-            .values(read_at=datetime.now(UTC))
+        result = cast(
+            CursorResult[Any],
+            await self.session.execute(
+                update(Notification)
+                .where(Notification.user_id == user_id, Notification.read_at.is_(None))
+                .values(read_at=datetime.now(UTC))
+            ),
         )
-        return result.rowcount  # type: ignore[return-value]
+        return result.rowcount

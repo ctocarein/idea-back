@@ -29,7 +29,7 @@ class Pitch(Base):
     # Sections : [{ "key": "problem", "title": "Problème", "content": "…" }, ...].
     sections: Mapped[list] = mapped_column(JSONB, default=list)
     # Deck visuel (V1.3) : thème + slides structurées (générées depuis les sections).
-    # Slide : { layout, title, subtitle?, bullets[], stat{value,label}?, chart{type,labels[],values[]}?, image_keyword? }.
+    # Slide : {layout, title, subtitle?, bullets[], stat?, chart?, image_keyword?}.
     template_id: Mapped[str] = mapped_column(String(40), default="base")
     slides: Mapped[list] = mapped_column(JSONB, default=list)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

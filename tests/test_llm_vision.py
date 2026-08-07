@@ -9,9 +9,7 @@ from app.llm.openai_compatible import OpenAICompatibleProvider
 
 
 def _provider(vision_model: str | None = None) -> OpenAICompatibleProvider:
-    return OpenAICompatibleProvider(
-        api_key="k", base_url="https://x/v1", model="text-model", vision_model=vision_model
-    )
+    return OpenAICompatibleProvider(api_key="k", base_url="https://x/v1", model="text-model", vision_model=vision_model)
 
 
 @pytest.mark.asyncio
@@ -25,9 +23,7 @@ async def test_vision_sends_image_parts_with_vision_model():
         return {"choices": [{"message": {"content": '{"axes": {"d1": 7}}'}}]}
 
     p._chat = fake_chat  # type: ignore[method-assign]
-    out = await p.analyze_json_with_images(
-        "Juge le deck.", images=["data:image/png;base64,AAA"]
-    )
+    out = await p.analyze_json_with_images("Juge le deck.", images=["data:image/png;base64,AAA"])
     assert out == {"axes": {"d1": 7}}
     # On a bien basculé sur le modèle vision + JSON mode.
     assert captured["model"] == "pixtral-12b-2409"

@@ -46,7 +46,7 @@ class DocumentService:
             size=data.size,
             object_key=object_key,
         )
-        url = storage.presigned_put(object_key)
+        url = await storage.apresigned_put(object_key)
         await self.session.commit()
         return UploadUrlOut(document_id=doc.id, upload_url=url, object_key=object_key)
 
@@ -59,14 +59,14 @@ class DocumentService:
         # SEC-06 : vérifier que l'objet a bien été uploadé et qu'il respecte les contraintes.
         if self.storage is not None:
             try:
-                actual_size, actual_ct = self.storage.stat_object(doc.object_key)
+                actual_size, actual_ct = await self.storage.astat_object(doc.object_key)
             except Exception:  # noqa: BLE001 — objet absent
                 raise BusinessRuleError("Le fichier n'a pas encore été uploadé.") from None
             if actual_size > MAX_SIZE_BYTES:
-                self.storage.remove_object(doc.object_key)
+                await self.storage.aremove_object(doc.object_key)
                 raise BusinessRuleError("Fichier trop volumineux — upload refusé.")
             if actual_ct and actual_ct.split(";")[0].strip() not in ALLOWED_CONTENT_TYPES:
-                self.storage.remove_object(doc.object_key)
+                await self.storage.aremove_object(doc.object_key)
                 raise BusinessRuleError("Type de fichier non autorisé.")
 
         await self.repo.confirm(doc)
@@ -85,7 +85,7 @@ class DocumentService:
         # Suppression de l'objet MinIO best-effort (ne bloque pas la suppression métadonnées).
         if self.storage is not None:
             try:
-                self.storage.remove_object(doc.object_key)
+                await self.storage.aremove_object(doc.object_key)
             except Exception:  # noqa: BLE001
                 pass
         await self.repo.delete(doc)

@@ -7,6 +7,7 @@ Revises: 0008_project_is_public
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0009_academy_modules"
@@ -22,9 +23,7 @@ def upgrade() -> None:
     existing_cols = {
         r[0]
         for r in conn.execute(
-            sa.text(
-                "SELECT column_name FROM information_schema.columns WHERE table_name='guided_sessions'"
-            )
+            sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='guided_sessions'")
         )
     }
 
@@ -52,25 +51,13 @@ def upgrade() -> None:
 
     # Index sur dimension pour chercher les sessions par axe Radar
     idx_existing = {
-        r[0]
-        for r in conn.execute(
-            sa.text(
-                "SELECT indexname FROM pg_indexes WHERE tablename='guided_sessions'"
-            )
-        )
+        r[0] for r in conn.execute(sa.text("SELECT indexname FROM pg_indexes WHERE tablename='guided_sessions'"))
     }
     if "ix_guided_sessions_dimension" not in idx_existing:
         op.create_index("ix_guided_sessions_dimension", "guided_sessions", ["dimension"])
 
     # --- need_fiches ---
-    tables = {
-        r[0]
-        for r in conn.execute(
-            sa.text(
-                "SELECT tablename FROM pg_tables WHERE schemaname='public'"
-            )
-        )
-    }
+    tables = {r[0] for r in conn.execute(sa.text("SELECT tablename FROM pg_tables WHERE schemaname='public'"))}
     if "need_fiches" not in tables:
         op.create_table(
             "need_fiches",
@@ -100,9 +87,7 @@ def upgrade() -> None:
             sa.Column("need_type", sa.String(40), nullable=False),
             sa.Column("title", sa.String(200), nullable=False),
             sa.Column("description", sa.Text(), nullable=False, server_default=""),
-            sa.Column(
-                "details", sa.dialects.postgresql.JSONB(), nullable=False, server_default="{}"
-            ),
+            sa.Column("details", sa.dialects.postgresql.JSONB(), nullable=False, server_default="{}"),
             sa.Column(
                 "is_validated",
                 sa.Boolean(),

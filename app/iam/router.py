@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import RedirectResponse
 
+from app.core.errors import AppError
 from app.core.ratelimit import rate_limit
-from app.iam.dependencies import AuthContext, get_auth_service, get_current_user
+from app.iam.dependencies import (
+    AuthContext,
+    get_auth_service,
+    get_current_user,
+    get_oauth_service,
+)
+from app.iam.oauth_service import OAuthService
 from app.iam.schemas import (
     FounderProfileUpdateIn,
     LoginIn,
     MeOut,
+    OAuthExchangeIn,
     OnboardingIn,
     RefreshIn,
     RegisterIn,
@@ -56,6 +65,48 @@ async def refresh(
     svc: AuthService = Depends(get_auth_service),
 ) -> TokenPair:
     return await svc.refresh(refresh_token=body.refresh_token)
+
+
+# --- OAuth (Google, LinkedIn) — cf. OAuthService : design « code à usage unique » -------
+
+
+@router.get("/oauth/{provider}/authorize")
+async def oauth_authorize(
+    provider: str,
+    redirect_uri: str = Query(..., description="Callback FRONT où renvoyer le porteur."),
+    svc: OAuthService = Depends(get_oauth_service),
+) -> RedirectResponse:
+    # Navigation navigateur : sur erreur on renvoie vers le login front (pas un JSON).
+    try:
+        url = await svc.build_authorize_redirect(provider, front_redirect_uri=redirect_uri)
+    except AppError:
+        return RedirectResponse(svc.public_login_error("oauth_provider"), status_code=307)
+    return RedirectResponse(url, status_code=307)
+
+
+@router.get("/oauth/{provider}/callback")
+async def oauth_callback(
+    provider: str,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    svc: OAuthService = Depends(get_oauth_service),
+) -> RedirectResponse:
+    front_url = await svc.handle_callback(provider, code=code, state=state, error=error)
+    return RedirectResponse(front_url, status_code=307)
+
+
+@router.post(
+    "/oauth/exchange",
+    response_model=TokenPair,
+    dependencies=[Depends(rate_limit("oauth_exchange", limit=10, window_seconds=60))],
+)
+async def oauth_exchange(
+    body: OAuthExchangeIn,
+    svc: OAuthService = Depends(get_oauth_service),
+) -> TokenPair:
+    # Le front échange le code à usage unique côté serveur → TokenPair (409 si conflit).
+    return await svc.exchange(body.code)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)

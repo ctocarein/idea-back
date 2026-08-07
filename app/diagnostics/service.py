@@ -27,6 +27,7 @@ from app.projects.models import (
     ReviewStatus,
 )
 from app.projects.repository import ProjectRepository
+from app.projects.state_service import ProjectStateService
 from app.reports.repository import ReportRepository
 
 # Type de job consommé par le worker (épic LLM/DIAG-03).
@@ -51,6 +52,7 @@ class DiagnosticService:
         self.auditor = auditor
         self.documents = documents
         self.session = projects.session
+        self.states = ProjectStateService(projects, auditor)
 
     async def start_guided(self, *, owner_id: UUID, data: ManualDiagnosticIn) -> DiagnosticCreatedOut:
         return await self._start(
@@ -70,6 +72,7 @@ class DiagnosticService:
         # SEC-07 : vérifier que le document appartient bien au porteur.
         if data.document_id is not None and self.documents is not None:
             from app.core.errors import ForbiddenError, NotFoundError
+
             doc = await self.documents.get_by_id(data.document_id)
             if doc is None:
                 raise NotFoundError("document")
@@ -102,14 +105,14 @@ class DiagnosticService:
         funding_need: int | None,
         document_id: UUID | None,
     ) -> DiagnosticCreatedOut:
-        # 1) Projet : diagnostic lancé d'emblée (in_progress) + entrée en curation (new).
+        # 1) Projet créé en brouillon, puis transition auditée vers le traitement.
         project = await self.projects.create(
             owner_id=owner_id,
             title=title,
             sector=sector,
             archetype=archetype,
             stage=stage,
-            diagnostic_status=DiagnosticStatus.DIAGNOSTIC_IN_PROGRESS,
+            diagnostic_status=DiagnosticStatus.DRAFT,
             review_status=ReviewStatus.NEW_DIAGNOSTIC,
         )
         # 2) Diagnostic (l'entrée du porteur).
@@ -121,6 +124,11 @@ class DiagnosticService:
             answers=answers,
             funding_need=funding_need,
             document_id=document_id,
+        )
+        await self.states.transition_diagnostic(
+            project,
+            DiagnosticStatus.DIAGNOSTIC_IN_PROGRESS,
+            actor_id=owner_id,
         )
         # 3) Bilan en attente (rempli par le worker).
         report = await self.reports.create_pending(project_id=project.id, diagnostic_id=diagnostic.id)
@@ -140,6 +148,9 @@ class DiagnosticService:
                 "report_id": str(report.id),
                 "mode": mode.value,
             },
+            idempotency_key=f"{RUN_DIAGNOSTIC_JOB}:{diagnostic.id}",
+            correlation_id=diagnostic.id,
+            project_id=project.id,
         )
         await self.session.commit()
 

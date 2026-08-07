@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends, status
 
 from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
+from app.projects.schemas import VisibilityIn
 from app.sharing.dependencies import get_share_service
 from app.sharing.schemas import ProjectVisibilityOut, ShareCreateIn, SharedFicheOut, ShareOut, ShareStatsOut
-from app.projects.schemas import VisibilityIn
 from app.sharing.service import ShareService
 
 router = APIRouter(tags=["sharing"])

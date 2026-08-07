@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 from typing import Any
+from uuid import UUID
 
 import app.models  # noqa: F401 — enregistre TOUTES les tables sur Base.metadata (FK cross-features)
 from app.core.database import get_session_factory
@@ -24,6 +25,7 @@ from app.jobs.service import JobService
 logger = get_logger("worker")
 
 POLL_INTERVAL = 2.0  # secondes entre deux sondages quand la file est vide
+HEARTBEAT_INTERVAL = 30.0
 
 # Registry type → handler. Rempli au fil des sprints.
 HandlerFn = Callable[[dict[str, Any]], Awaitable[None]]
@@ -46,14 +48,34 @@ async def _process(job: Job, jobs: JobService) -> None:
         # Type inconnu : on échoue proprement plutôt que de boucler dessus.
         await jobs.fail(job, RuntimeError(f"handler manquant pour le type '{job.type}'"))
         return
+    heartbeat = asyncio.create_task(_heartbeat(job.id))
+    error: Exception | None = None
     try:
         await handler(job.payload)
     except Exception as exc:  # noqa: BLE001 — on capture tout pour décider du retry
-        terminal = await jobs.fail(job, exc)
+        error = exc
+    finally:
+        heartbeat.cancel()
+        try:
+            await heartbeat
+        except asyncio.CancelledError:
+            pass
+        except Exception as exc:  # noqa: BLE001 — le heartbeat ne masque pas le résultat métier
+            logger.warning("job_heartbeat_failed", job_id=str(job.id), error=str(exc))
+    if error is not None:
+        terminal = await jobs.fail(job, error)
         if terminal:
             await _cleanup_terminal(job)
         return
     await jobs.complete(job)
+
+
+async def _heartbeat(job_id: UUID) -> None:
+    factory = get_session_factory()
+    while True:
+        await asyncio.sleep(HEARTBEAT_INTERVAL)
+        async with factory() as session:
+            await JobService(JobRepository(session)).heartbeat(job_id)
 
 
 async def _cleanup_terminal(job: Job) -> None:
@@ -75,6 +97,9 @@ async def run() -> None:
     while True:
         async with factory() as session:
             jobs = JobService(JobRepository(session))
+            for stale_job in await jobs.recover_stale():
+                logger.error("stale_job_failed", job_id=str(stale_job.id), type=stale_job.type)
+                await _cleanup_terminal(stale_job)
             job = await jobs.claim()
             if job is None:
                 await asyncio.sleep(POLL_INTERVAL)

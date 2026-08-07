@@ -47,6 +47,11 @@ class RefreshIn(BaseModel):
     refresh_token: str
 
 
+class OAuthExchangeIn(BaseModel):
+    # Code à usage unique émis par le backend au retour du fournisseur (cf. OAuthService).
+    code: str = Field(min_length=1, max_length=256)
+
+
 class TokenPair(BaseModel):
     # Réponse d'authentification : access (court) + refresh (rotatif).
     access_token: str

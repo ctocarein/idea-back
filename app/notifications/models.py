@@ -16,9 +16,7 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     # report_ready | new_lesson (extensible sans migration)
     type: Mapped[str] = mapped_column(String(50))
     # Données contextuelles libres : report_id, title, lesson_slug…

@@ -63,7 +63,8 @@ def build_logo_prompt(
     desc = (description or "").strip()[:600]
     return (
         "FORMAT=logo\n"
-        + lang_directive(lang) + " (le slogan/tagline suit la langue ; les autres champs restent des clés)\n"
+        + lang_directive(lang)
+        + " (le slogan/tagline suit la langue ; les autres champs restent des clés)\n"
         "Tu es directeur artistique de marque. Conçois EXACTEMENT 4 concepts de LOGO, UN PAR ANGLE imposé "
         "(pour garantir 4 pistes franchement différentes). Tu ne dessines pas : tu CHOISIS dans des listes "
         "fermées et tu proposes une palette.\n\n"
@@ -173,8 +174,10 @@ def coerce_spec(raw: Any, *, name: str, sector: str | None) -> dict[str, Any] | 
         nested = raw.get("nested")
         if isinstance(nested, dict) and nested.get("metaphor") in METAPHORS:
             ncol = nested.get("color")
-            spec["nested"] = {"metaphor": nested["metaphor"],
-                              "color": ncol if _HEX.match(str(ncol or "")) else palette["accent"]}
+            spec["nested"] = {
+                "metaphor": nested["metaphor"],
+                "color": ncol if _HEX.match(str(ncol or "")) else palette["accent"],
+            }
     return spec
 
 
@@ -199,24 +202,58 @@ def _default_for_angle(angle: str, name: str, sector: str | None) -> dict[str, A
     key = sector_key(sector)
     hint = SECTOR_HINTS.get(key, SECTOR_HINTS["default"])
     pal = dict(SECTOR_PALETTES.get(key, SECTOR_PALETTES["default"]))
-    base = {"name": name, "angle": angle, "mode": _ANGLE_MODE[angle], "tagline": "",
-            "monogram": None, "font": hint["font"], "palette": pal}
+    base = {
+        "name": name,
+        "angle": angle,
+        "mode": _ANGLE_MODE[angle],
+        "tagline": "",
+        "monogram": None,
+        "font": hint["font"],
+        "palette": pal,
+    }
     if angle == "name-literal":  # le sens du nom habite une lettre
         word = (name.split() or ["Logo"])[0]
-        return {**base, "word": word, "transform": "letter-swap",
-                "target_index": _default_target(word),
-                "metaphor": keyword_to_metaphor(f"{name} {sector or ''}"),
-                "mark_type": "icon", "icon": hint["icon"], "geometric": hint["geometric"],
-                "layout": "wordmark-only", "container": "none", "case": None}
+        return {
+            **base,
+            "word": word,
+            "transform": "letter-swap",
+            "target_index": _default_target(word),
+            "metaphor": keyword_to_metaphor(f"{name} {sector or ''}"),
+            "mark_type": "icon",
+            "icon": hint["icon"],
+            "geometric": hint["geometric"],
+            "layout": "wordmark-only",
+            "container": "none",
+            "case": None,
+        }
     if angle == "concept":  # emblème du contexte + wordmark
-        return {**base, "mark_type": "icon", "icon": hint["icon"], "geometric": hint["geometric"],
-                "layout": "icon-top", "container": "none"}
+        return {
+            **base,
+            "mark_type": "icon",
+            "icon": hint["icon"],
+            "geometric": hint["geometric"],
+            "layout": "icon-top",
+            "container": "none",
+        }
     if angle == "letter-fantasy":  # monogramme initiale
-        return {**base, "mark_type": "monogram", "icon": hint["icon"], "geometric": hint["geometric"],
-                "layout": "icon-top", "container": "rounded", "font": "space"}
+        return {
+            **base,
+            "mark_type": "monogram",
+            "icon": hint["icon"],
+            "geometric": hint["geometric"],
+            "layout": "icon-top",
+            "container": "rounded",
+            "font": "space",
+        }
     # wordmark : le nom en belle typo
-    return {**base, "mark_type": "monogram", "icon": hint["icon"], "geometric": hint["geometric"],
-            "layout": "wordmark-only", "container": "none"}
+    return {
+        **base,
+        "mark_type": "monogram",
+        "icon": hint["icon"],
+        "geometric": hint["geometric"],
+        "layout": "wordmark-only",
+        "container": "none",
+    }
 
 
 def default_variations(name: str, sector: str | None) -> list[dict[str, Any]]:

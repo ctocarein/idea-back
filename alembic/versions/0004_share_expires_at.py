@@ -8,6 +8,7 @@ Create Date: 2026-06-28
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0004_share_expires_at"
@@ -18,7 +19,12 @@ depends_on = None
 
 def upgrade() -> None:
     conn = op.get_bind()
-    cols = {r[0] for r in conn.execute(sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='project_shares'"))}
+    cols = {
+        r[0]
+        for r in conn.execute(
+            sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='project_shares'")
+        )
+    }
     if "expires_at" not in cols:
         # 1) Ajout nullable (PostgreSQL interdit les refs à d'autres colonnes dans DEFAULT).
         op.add_column(

@@ -18,6 +18,7 @@ from sqlalchemy import Boolean, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
+from app.core.project_stage import ProjectStage
 
 
 class Archetype(str, Enum):
@@ -25,13 +26,6 @@ class Archetype(str, Enum):
     # côté DTO (app/diagnostics/schemas.py), jamais stocké autrement que "field".
     DIGITAL = "digital"  # appli, plateforme, logiciel, service en ligne
     FIELD = "field"  # "terrain" : commerce, production, agro, service local, artisanat
-
-
-class ProjectStage(str, Enum):
-    IDEA = "idea"
-    PROTOTYPE = "prototype"
-    FIRST_CUSTOMERS = "first_customers"
-    GROWING = "growing"
 
 
 class DiagnosticStatus(str, Enum):

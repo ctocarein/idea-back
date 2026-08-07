@@ -7,6 +7,7 @@ Revises: 0012_pitch
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0013_pitch_deck"
@@ -19,9 +20,7 @@ def upgrade() -> None:
     conn = op.get_bind()
     cols = {
         r[0]
-        for r in conn.execute(
-            sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='pitches'")
-        )
+        for r in conn.execute(sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='pitches'"))
     }
     if "template_id" not in cols:
         op.add_column(

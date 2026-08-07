@@ -109,3 +109,9 @@ class ScoreRunRepository:
             select(ScoreRun).where(ScoreRun.project_id == project_id).order_by(ScoreRun.created_at.desc())
         )
         return list(result.scalars())
+
+    async def get_latest_for_project(self, project_id: UUID) -> ScoreRun | None:
+        result = await self.session.execute(
+            select(ScoreRun).where(ScoreRun.project_id == project_id).order_by(ScoreRun.created_at.desc()).limit(1)
+        )
+        return result.scalar_one_or_none()

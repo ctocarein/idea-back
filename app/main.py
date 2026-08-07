@@ -21,7 +21,11 @@ from app.core.logging import configure_logging, get_logger
 
 _KNOWN_WEAK_SECRETS = {
     # Valeurs de démo/dev qu'on ne doit JAMAIS retrouver en production.
-    "changeme", "secret", "ideaxion", "devsecret", "devjwt",
+    "changeme",
+    "secret",
+    "ideaxion",
+    "devsecret",
+    "devjwt",
     "3f9c1d7a4b8e2f6c0a5d9e3b7c1f4a8d2e6b0c9f5a3d7e1b",  # JWT du .env local
 }
 
