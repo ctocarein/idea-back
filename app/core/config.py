@@ -35,6 +35,16 @@ class Settings(BaseSettings):
     # --- Email (vérification d'adresse) ---
     # URL publique du front, pour construire les liens des emails.
     public_base_url: str = "http://localhost:3000"
+
+    # --- OAuth (connexion par fournisseur d'identité : Google, LinkedIn) ---
+    # URL publique du BACKEND : sert à construire le redirect_uri déclaré aux fournisseurs
+    # (le provider renvoie sur `{backend_base_url}/api/v1/auth/oauth/{provider}/callback`).
+    # Cette URL doit être enregistrée à l'identique côté Google/LinkedIn.
+    backend_base_url: str = "http://localhost:8080"
+    google_client_id: str | None = None
+    google_client_secret: SecretStr | None = None
+    linkedin_client_id: str | None = None
+    linkedin_client_secret: SecretStr | None = None
     # SMTP optionnel : si smtp_host est absent, on LOGGE le lien (dev) au lieu d'envoyer.
     smtp_host: str | None = None
     smtp_port: int = 587
@@ -77,6 +87,11 @@ class Settings(BaseSettings):
     minio_secret_key: SecretStr | None = None
     minio_bucket: str = "ideaxion"
     minio_secure: bool = False
+    minio_region: str | None = None
+    minio_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
+    minio_max_attempts: int = Field(default=3, ge=1, le=5)
+    minio_circuit_failure_threshold: int = Field(default=3, ge=1, le=20)
+    minio_circuit_reset_seconds: int = Field(default=30, ge=1, le=300)
 
     # --- Monétisation (V1.2) ---
     # Paywall de l'export du pitch : False = gratuit au lancement (défaut).

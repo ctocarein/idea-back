@@ -88,9 +88,7 @@ def create_email_token(subject: UUID) -> str:
 
 def decode_email_token(token: str) -> UUID:
     # Lève jwt.PyJWTError si invalide/expiré, ValueError si mauvais purpose.
-    payload = jwt.decode(
-        token, get_settings().jwt_secret.get_secret_value(), algorithms=[_JWT_ALGORITHM]
-    )
+    payload = jwt.decode(token, get_settings().jwt_secret.get_secret_value(), algorithms=[_JWT_ALGORITHM])
     if payload.get("purpose") != "email_verify":
         raise ValueError("token de mauvais type")
     return UUID(payload["sub"])

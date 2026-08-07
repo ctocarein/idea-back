@@ -93,9 +93,7 @@ class PitchService:
             raise ForbiddenError()
         return pitch
 
-    async def update_section(
-        self, ctx: AuthContext, pitch_id: UUID, key: str, content: str
-    ) -> PitchOut:
+    async def update_section(self, ctx: AuthContext, pitch_id: UUID, key: str, content: str) -> PitchOut:
         pitch = await self._load_owned(ctx, pitch_id)
         if key not in _SECTION_BY_KEY:
             raise BusinessRuleError(f"Section inconnue : {key}")
@@ -133,9 +131,7 @@ class PitchService:
                     return "\n".join(parts)
         return None
 
-    async def generate_section(
-        self, ctx: AuthContext, pitch_id: UUID, key: str
-    ) -> SectionGenerateOut:
+    async def generate_section(self, ctx: AuthContext, pitch_id: UUID, key: str) -> SectionGenerateOut:
         pitch = await self._load_owned(ctx, pitch_id)
         meta = _SECTION_BY_KEY.get(key)
         if meta is None:
@@ -155,9 +151,7 @@ class PitchService:
         result = await self.provider.complete(prompt)
         return SectionGenerateOut(key=key, content=result.text.strip())
 
-    async def export_pitch(
-        self, ctx: AuthContext, pitch_id: UUID, fmt: str
-    ) -> tuple[bytes, str, str]:
+    async def export_pitch(self, ctx: AuthContext, pitch_id: UUID, fmt: str) -> tuple[bytes, str, str]:
         """Exporte le pitch en PDF ou PPTX. Retourne (bytes, media_type, filename).
 
         Paywall « prêt mais off » : si `pitch_export_paid` est activé et que le
@@ -231,9 +225,7 @@ class PitchService:
         await self.session.refresh(pitch)
         return self._to_out(pitch)
 
-    async def update_slide(
-        self, ctx: AuthContext, pitch_id: UUID, index: int, fields: dict
-    ) -> PitchOut:
+    async def update_slide(self, ctx: AuthContext, pitch_id: UUID, index: int, fields: dict) -> PitchOut:
         """Met à jour les champs d'UNE slide (édition structurée)."""
         pitch = await self._load_owned(ctx, pitch_id)
         slides = [dict(s) for s in (pitch.slides or [])]
@@ -258,9 +250,7 @@ class PitchService:
         await self.session.refresh(pitch)
         return self._to_out(pitch)
 
-    async def reorder_slides(
-        self, ctx: AuthContext, pitch_id: UUID, order: list[int]
-    ) -> PitchOut:
+    async def reorder_slides(self, ctx: AuthContext, pitch_id: UUID, order: list[int]) -> PitchOut:
         pitch = await self._load_owned(ctx, pitch_id)
         slides = list(pitch.slides or [])
         if sorted(order) != list(range(len(slides))):
@@ -270,15 +260,13 @@ class PitchService:
         await self.session.refresh(pitch)
         return self._to_out(pitch)
 
-    async def generate_deck(
-        self, ctx: AuthContext, pitch_id: UUID, source: str | None = None
-    ) -> PitchOut:
+    async def generate_deck(self, ctx: AuthContext, pitch_id: UUID, source: str | None = None) -> PitchOut:
         """Génère les slides structurées depuis la source (texte fourni ou sections)."""
         pitch = await self._load_owned(ctx, pitch_id)
         material = (source or "").strip()
         if not material:
             material = "\n\n".join(
-                f"{s.get('title','')} : {s.get('content','')}"
+                f"{s.get('title', '')} : {s.get('content', '')}"
                 for s in (pitch.sections or [])
                 if str(s.get("content", "")).strip()
             )
@@ -309,7 +297,7 @@ class PitchService:
         if self.academy is None:
             return ""
         parts: list[str] = []
-        for dim, _phase, sid, _after in await self.academy.list_started_dimensions(ctx.user.id):
+        for dim, _phase, _sid, _after in await self.academy.list_started_dimensions(ctx.user.id):
             module = await self.academy.get_module_session(ctx.user.id, dim)
             if module and module.form_data:
                 vals = [str(v) for v in module.form_data.values() if str(v).strip()]

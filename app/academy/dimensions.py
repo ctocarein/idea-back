@@ -21,7 +21,11 @@ DIMENSION_MODULES: dict[str, dict] = {
             {"key": "frequency", "label": "Fréquence", "hint": "À quelle fréquence ce problème survient-il ?"},
             {"key": "existing_solutions", "label": "Solutions actuelles", "hint": "Ce qui existe déjà pour y répondre"},
             {"key": "proof", "label": "Preuves du problème", "hint": "Entretiens, données, observations terrain"},
-            {"key": "missing", "label": "Ce qui manque", "hint": "Ce qu'il faut pour valider définitivement le problème"},
+            {
+                "key": "missing",
+                "label": "Ce qui manque",
+                "hint": "Ce qu'il faut pour valider définitivement le problème",
+            },
         ],
     },
     "d2": {
@@ -32,11 +36,23 @@ DIMENSION_MODULES: dict[str, dict] = {
             "Qu'est-ce qui est déjà construit ou testé ?",
         ],
         "form_sections": [
-            {"key": "solution_description", "label": "Ta solution", "hint": "Description concrète de ce que fait ta solution"},
+            {
+                "key": "solution_description",
+                "label": "Ta solution",
+                "hint": "Description concrète de ce que fait ta solution",
+            },
             {"key": "how_it_works", "label": "Comment ça fonctionne", "hint": "Mécanisme technique ou opérationnel"},
             {"key": "built_status", "label": "Ce qui est construit", "hint": "Idée, prototype, MVP, produit lancé ?"},
-            {"key": "technical_feasibility", "label": "Faisabilité technique", "hint": "Stack, ressources, compétences nécessaires"},
-            {"key": "missing_to_build", "label": "Ce qui manque pour construire", "hint": "Technologies, compétences, ressources"},
+            {
+                "key": "technical_feasibility",
+                "label": "Faisabilité technique",
+                "hint": "Stack, ressources, compétences nécessaires",
+            },
+            {
+                "key": "missing_to_build",
+                "label": "Ce qui manque pour construire",
+                "hint": "Technologies, compétences, ressources",
+            },
         ],
     },
     "d3": {
@@ -48,8 +64,16 @@ DIMENSION_MODULES: dict[str, dict] = {
         ],
         "form_sections": [
             {"key": "value_prop", "label": "La promesse", "hint": "En une phrase claire et mémorable"},
-            {"key": "differentiators", "label": "Ce qui différencie", "hint": "Par rapport aux alternatives existantes"},
-            {"key": "target_customer", "label": "Pour qui", "hint": "Le profil client qui bénéficie le plus de cette promesse"},
+            {
+                "key": "differentiators",
+                "label": "Ce qui différencie",
+                "hint": "Par rapport aux alternatives existantes",
+            },
+            {
+                "key": "target_customer",
+                "label": "Pour qui",
+                "hint": "Le profil client qui bénéficie le plus de cette promesse",
+            },
             {"key": "before_after", "label": "Avant / Après", "hint": "La vie du client avant et après ton produit"},
         ],
     },
@@ -62,9 +86,17 @@ DIMENSION_MODULES: dict[str, dict] = {
         ],
         "form_sections": [
             {"key": "market_size", "label": "Taille du marché", "hint": "TAM/SAM/SOM si disponible, sinon estimation"},
-            {"key": "target_segment", "label": "Segment initial", "hint": "Sous-marché prioritaire pour les 12 premiers mois"},
+            {
+                "key": "target_segment",
+                "label": "Segment initial",
+                "hint": "Sous-marché prioritaire pour les 12 premiers mois",
+            },
             {"key": "market_growth", "label": "Croissance du marché", "hint": "Tendances, croissance annuelle estimée"},
-            {"key": "access_strategy", "label": "Comment y accéder", "hint": "Canaux, réseaux, partenariats pour atteindre ce segment"},
+            {
+                "key": "access_strategy",
+                "label": "Comment y accéder",
+                "hint": "Canaux, réseaux, partenariats pour atteindre ce segment",
+            },
             {"key": "missing", "label": "Ce qui manque", "hint": "Données de marché, validations, accès à confirmer"},
         ],
     },
@@ -77,9 +109,17 @@ DIMENSION_MODULES: dict[str, dict] = {
         ],
         "form_sections": [
             {"key": "direct_competitors", "label": "Concurrents directs", "hint": "Qui fait la même chose ou presque"},
-            {"key": "indirect_competitors", "label": "Concurrents indirects", "hint": "Solutions alternatives au problème"},
+            {
+                "key": "indirect_competitors",
+                "label": "Concurrents indirects",
+                "hint": "Solutions alternatives au problème",
+            },
             {"key": "competitive_advantage", "label": "Ton avantage", "hint": "En quoi tu es meilleur ou différent"},
-            {"key": "barriers", "label": "Barrières à l'entrée", "hint": "Ce qui protège ton avantage (brevet, réseau, data, marque...)"},
+            {
+                "key": "barriers",
+                "label": "Barrières à l'entrée",
+                "hint": "Ce qui protège ton avantage (brevet, réseau, data, marque...)",
+            },
             {"key": "positioning", "label": "Positionnement", "hint": "Prix, qualité, spécialisation, géographie"},
         ],
     },
@@ -91,12 +131,36 @@ DIMENSION_MODULES: dict[str, dict] = {
             "À partir de combien de clients ton projet est-il viable ?",
         ],
         "form_sections": [
-            {"key": "revenue_model", "label": "Comment tu génères des revenus", "hint": "Abonnement, commission, vente, licence..."},
-            {"key": "capex", "label": "Investissement initial (CAPEX)", "hint": "Matériel, dev, installation, équipement"},
-            {"key": "opex", "label": "Charges mensuelles (OPEX)", "hint": "Salaires, hébergement, marketing, maintenance"},
-            {"key": "mvp_cost", "label": "Coût du MVP", "hint": "Ce qu'il faut pour lancer une première version testable"},
-            {"key": "break_even", "label": "Point d'équilibre", "hint": "Nombre de clients ou revenus pour couvrir les charges"},
-            {"key": "missing_resources", "label": "Ressources manquantes", "hint": "Ce qui manque pour que le modèle tienne"},
+            {
+                "key": "revenue_model",
+                "label": "Comment tu génères des revenus",
+                "hint": "Abonnement, commission, vente, licence...",
+            },
+            {
+                "key": "capex",
+                "label": "Investissement initial (CAPEX)",
+                "hint": "Matériel, dev, installation, équipement",
+            },
+            {
+                "key": "opex",
+                "label": "Charges mensuelles (OPEX)",
+                "hint": "Salaires, hébergement, marketing, maintenance",
+            },
+            {
+                "key": "mvp_cost",
+                "label": "Coût du MVP",
+                "hint": "Ce qu'il faut pour lancer une première version testable",
+            },
+            {
+                "key": "break_even",
+                "label": "Point d'équilibre",
+                "hint": "Nombre de clients ou revenus pour couvrir les charges",
+            },
+            {
+                "key": "missing_resources",
+                "label": "Ressources manquantes",
+                "hint": "Ce qui manque pour que le modèle tienne",
+            },
         ],
     },
     "d7": {
@@ -110,8 +174,16 @@ DIMENSION_MODULES: dict[str, dict] = {
             {"key": "current_users", "label": "Utilisateurs / clients actuels", "hint": "Nombre, profil, source"},
             {"key": "revenue", "label": "Revenus générés", "hint": "Montant, récurrence, mode de paiement"},
             {"key": "testimonials", "label": "Témoignages et retours", "hint": "Citations, feedback terrain, NPS"},
-            {"key": "growth_signals", "label": "Signaux de croissance", "hint": "Rétention, références, inscription organique"},
-            {"key": "missing_proof", "label": "Preuve manquante", "hint": "Ce qu'il te faudrait pour démontrer la traction"},
+            {
+                "key": "growth_signals",
+                "label": "Signaux de croissance",
+                "hint": "Rétention, références, inscription organique",
+            },
+            {
+                "key": "missing_proof",
+                "label": "Preuve manquante",
+                "hint": "Ce qu'il te faudrait pour démontrer la traction",
+            },
         ],
     },
     "d8": {
@@ -122,10 +194,26 @@ DIMENSION_MODULES: dict[str, dict] = {
             "Quels effets réseau ou avantages de volume peux-tu créer ?",
         ],
         "form_sections": [
-            {"key": "growth_levers", "label": "Leviers de croissance", "hint": "Ce qui fait grossir le projet sans proportionner les coûts"},
-            {"key": "scalability", "label": "Scalabilité", "hint": "Comment les coûts évoluent vs les revenus quand tu grandis"},
-            {"key": "network_effects", "label": "Effets réseau", "hint": "La valeur augmente-t-elle avec plus d'utilisateurs ?"},
-            {"key": "automation", "label": "Automatisation possible", "hint": "Quelles tâches peuvent être automatisées"},
+            {
+                "key": "growth_levers",
+                "label": "Leviers de croissance",
+                "hint": "Ce qui fait grossir le projet sans proportionner les coûts",
+            },
+            {
+                "key": "scalability",
+                "label": "Scalabilité",
+                "hint": "Comment les coûts évoluent vs les revenus quand tu grandis",
+            },
+            {
+                "key": "network_effects",
+                "label": "Effets réseau",
+                "hint": "La valeur augmente-t-elle avec plus d'utilisateurs ?",
+            },
+            {
+                "key": "automation",
+                "label": "Automatisation possible",
+                "hint": "Quelles tâches peuvent être automatisées",
+            },
             {"key": "expansion", "label": "Plan d'expansion", "hint": "Géographie, segments, produits suivants"},
         ],
     },
@@ -137,10 +225,22 @@ DIMENSION_MODULES: dict[str, dict] = {
             "Comment vas-tu lancer concrètement dans les 3 prochains mois ?",
         ],
         "form_sections": [
-            {"key": "acquisition_channels", "label": "Canaux d'acquisition", "hint": "Comment tu trouves et convaincs les clients"},
+            {
+                "key": "acquisition_channels",
+                "label": "Canaux d'acquisition",
+                "hint": "Comment tu trouves et convaincs les clients",
+            },
             {"key": "cac", "label": "Coût d'acquisition", "hint": "Combien coûte en moyenne l'acquisition d'un client"},
-            {"key": "first_100_plan", "label": "Plan 100 premiers clients", "hint": "Actions concrètes pour les premiers clients"},
-            {"key": "launch_timeline", "label": "Timeline de lancement", "hint": "Ce qui se passe dans les 30-60-90 prochains jours"},
+            {
+                "key": "first_100_plan",
+                "label": "Plan 100 premiers clients",
+                "hint": "Actions concrètes pour les premiers clients",
+            },
+            {
+                "key": "launch_timeline",
+                "label": "Timeline de lancement",
+                "hint": "Ce qui se passe dans les 30-60-90 prochains jours",
+            },
             {"key": "missing", "label": "Ce qui manque", "hint": "Budget, équipe commerciale, contenu, partenariats"},
         ],
     },
@@ -153,9 +253,21 @@ DIMENSION_MODULES: dict[str, dict] = {
         ],
         "form_sections": [
             {"key": "current_team", "label": "Équipe actuelle", "hint": "Qui fait quoi, compétences, disponibilité"},
-            {"key": "missing_skills", "label": "Compétences manquantes", "hint": "Ce dont le projet a besoin mais n'a pas encore"},
-            {"key": "key_hires", "label": "Recrutements prioritaires", "hint": "Les 1-2 profils les plus urgents à trouver"},
-            {"key": "cofondateur", "label": "Besoin d'un cofondateur", "hint": "Oui/non, quel profil, quel rôle, quelle association"},
+            {
+                "key": "missing_skills",
+                "label": "Compétences manquantes",
+                "hint": "Ce dont le projet a besoin mais n'a pas encore",
+            },
+            {
+                "key": "key_hires",
+                "label": "Recrutements prioritaires",
+                "hint": "Les 1-2 profils les plus urgents à trouver",
+            },
+            {
+                "key": "cofondateur",
+                "label": "Besoin d'un cofondateur",
+                "hint": "Oui/non, quel profil, quel rôle, quelle association",
+            },
             {"key": "timeline", "label": "Timing", "hint": "Quand as-tu besoin de ces renforts ?"},
         ],
     },
@@ -167,11 +279,19 @@ DIMENSION_MODULES: dict[str, dict] = {
             "Quelle est la prochaine étape clé et qu'est-ce qui te bloque ?",
         ],
         "form_sections": [
-            {"key": "what_is_done", "label": "Ce qui est fait", "hint": "Prototype, MVP, validations, revenus, équipe..."},
+            {
+                "key": "what_is_done",
+                "label": "Ce qui est fait",
+                "hint": "Prototype, MVP, validations, revenus, équipe...",
+            },
             {"key": "what_is_missing", "label": "Ce qui manque", "hint": "Pour atteindre la prochaine étape"},
             {"key": "next_milestone", "label": "Prochain jalon", "hint": "L'objectif concret à 3-6 mois"},
             {"key": "blockers", "label": "Bloqueurs actuels", "hint": "Ce qui empêche d'avancer aujourd'hui"},
-            {"key": "resources_needed", "label": "Ressources nécessaires", "hint": "Financement, temps, compétences, équipe"},
+            {
+                "key": "resources_needed",
+                "label": "Ressources nécessaires",
+                "hint": "Financement, temps, compétences, équipe",
+            },
         ],
     },
     "d12": {
@@ -182,11 +302,27 @@ DIMENSION_MODULES: dict[str, dict] = {
             "Y a-t-il des contraintes réglementaires ou légales à anticiper ?",
         ],
         "form_sections": [
-            {"key": "top_risks", "label": "Top 3 risques", "hint": "Les risques qui pourraient faire échouer le projet"},
+            {
+                "key": "top_risks",
+                "label": "Top 3 risques",
+                "hint": "Les risques qui pourraient faire échouer le projet",
+            },
             {"key": "mitigation", "label": "Plan de mitigation", "hint": "Comment tu comptes réduire chaque risque"},
-            {"key": "dependencies", "label": "Dépendances critiques", "hint": "Fournisseurs, partenaires, technologies dont tu dépends"},
-            {"key": "regulatory", "label": "Risques réglementaires", "hint": "Licences, conformité, réglementation sectorielle"},
-            {"key": "missing_expertise", "label": "Expertises manquantes", "hint": "Domaines où tu manques de connaissances"},
+            {
+                "key": "dependencies",
+                "label": "Dépendances critiques",
+                "hint": "Fournisseurs, partenaires, technologies dont tu dépends",
+            },
+            {
+                "key": "regulatory",
+                "label": "Risques réglementaires",
+                "hint": "Licences, conformité, réglementation sectorielle",
+            },
+            {
+                "key": "missing_expertise",
+                "label": "Expertises manquantes",
+                "hint": "Domaines où tu manques de connaissances",
+            },
         ],
     },
 }

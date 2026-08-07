@@ -13,9 +13,7 @@ from io import BytesIO
 MAX_RENDER_PAGES = 10  # un deck principal reste court
 
 
-def render_pdf_to_pngs(
-    data: bytes, *, max_pages: int = MAX_RENDER_PAGES, scale: float = 1.5
-) -> list[bytes]:
+def render_pdf_to_pngs(data: bytes, *, max_pages: int = MAX_RENDER_PAGES, scale: float = 1.5) -> list[bytes]:
     """PDF (octets) → liste de PNG (un par page, bornée à `max_pages`)."""
     import pypdfium2 as pdfium
 

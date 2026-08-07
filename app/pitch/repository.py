@@ -19,16 +19,11 @@ class PitchRepository:
 
     async def get_latest_for_owner(self, owner_id: UUID) -> Pitch | None:
         result = await self.session.execute(
-            select(Pitch)
-            .where(Pitch.owner_id == owner_id)
-            .order_by(Pitch.created_at.desc())
-            .limit(1)
+            select(Pitch).where(Pitch.owner_id == owner_id).order_by(Pitch.created_at.desc()).limit(1)
         )
         return result.scalar_one_or_none()
 
-    async def create(
-        self, *, owner_id: UUID, project_id: UUID | None, title: str, sections: list[dict]
-    ) -> Pitch:
+    async def create(self, *, owner_id: UUID, project_id: UUID | None, title: str, sections: list[dict]) -> Pitch:
         pitch = Pitch(owner_id=owner_id, project_id=project_id, title=title, sections=sections)
         self.session.add(pitch)
         await self.session.flush()

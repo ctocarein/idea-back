@@ -211,6 +211,10 @@ class AuthService:
 
     # --- Helpers internes --------------------------------------------------
 
+    async def issue_tokens(self, user: User) -> TokenPair:
+        """Émet un TokenPair pour un compte déjà authentifié (ex. retour OAuth)."""
+        return await self._issue_tokens(user)
+
     async def _issue_tokens(self, user: User) -> TokenPair:
         # Émet l'access token + un refresh rotatif, et COMMITE la transaction courante
         # (incluant toute écriture en attente : création user, audit, rehash, rotation).

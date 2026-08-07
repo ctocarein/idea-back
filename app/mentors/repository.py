@@ -5,11 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from datetime import datetime
-
 from sqlalchemy import select
-from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.iam.invitations import Invitation, InvitationStatus
 from app.iam.models import Role, User
@@ -106,9 +104,7 @@ class MentorRepository:
         )
         return [(req, name) for req, name in result.all()]
 
-    async def transition_request(
-        self, req: MentorRequest, *, status: str, session_at: datetime | None = None
-    ) -> None:
+    async def transition_request(self, req: MentorRequest, *, status: str, session_at: datetime | None = None) -> None:
         req.status = status
         if session_at is not None:
             req.session_at = session_at

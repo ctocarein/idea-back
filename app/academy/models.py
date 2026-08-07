@@ -93,10 +93,14 @@ class NeedFiche(Base):
         ForeignKey("guided_sessions.id", ondelete="SET NULL"), default=None, index=True
     )
     dimension: Mapped[str] = mapped_column(String(10))  # d1..d12
-    need_type: Mapped[str] = mapped_column(String(40))  # dev | expert | cofondateur | partenaire | outil | financement | formation | autre
+    need_type: Mapped[str] = mapped_column(
+        String(40)
+    )  # dev | expert | cofondateur | partenaire | outil | financement | formation | autre
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text, default="")
-    details: Mapped[dict] = mapped_column(JSONB, default=dict)  # profile, skills, budget, timeline, deliverables, priority, ...
+    details: Mapped[dict] = mapped_column(
+        JSONB, default=dict
+    )  # profile, skills, budget, timeline, deliverables, priority, ...
     is_validated: Mapped[bool] = mapped_column(Boolean, default=False)  # porteur a confirmé la fiche
     # Partage : token (hashé, jamais en clair) pour un lien public read-only. Null = non partagée.
     share_token_hash: Mapped[str | None] = mapped_column(String(64), unique=True, default=None)

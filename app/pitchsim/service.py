@@ -49,14 +49,12 @@ from app.scoring import engine
 MAX_DECK_BYTES = 20 * 1024 * 1024  # 20 Mo
 
 
-def deck_to_out(
-    deck: PitchDeck, slides: list[PitchSlide], storage: ObjectStorage | None
-) -> DeckOut:
+async def deck_to_out(deck: PitchDeck, slides: list[PitchSlide], storage: ObjectStorage | None) -> DeckOut:
     """DeckOut + URL présignée du fichier source (présentation dans le salon)."""
     file_url: str | None = None
     if deck.source_key and storage is not None:
         try:
-            file_url = storage.presigned_get(deck.source_key)
+            file_url = await storage.apresigned_get(deck.source_key)
         except Exception:  # storage indisponible → on dégrade (deck sans aperçu visuel)
             file_url = None
     return DeckOut(
@@ -98,7 +96,7 @@ class PitchDeckService:
             raise BusinessRuleError("Aucune slide détectée dans le fichier.")
         deck = await self.repo.create_deck(owner_id=ctx.user.id, project_id=project_id, title=title)
         await self.repo.add_slides(deck.id, SlideKind.MAIN, slides)
-        store_deck_source(self.storage, deck, content_type, data)  # présentation persistée
+        await store_deck_source(self.storage, deck, content_type, data)  # présentation persistée
         await self.session.commit()
         return await self._deck_out(deck)
 
@@ -132,18 +130,16 @@ class PitchDeckService:
 
     async def _deck_out(self, deck: PitchDeck) -> DeckOut:
         rows = await self.repo.slides_for_deck(deck.id)
-        return deck_to_out(deck, rows, self.storage)
+        return await deck_to_out(deck, rows, self.storage)
 
 
-def store_deck_source(
-    storage: ObjectStorage | None, deck: PitchDeck, content_type: str, data: bytes
-) -> None:
+async def store_deck_source(storage: ObjectStorage | None, deck: PitchDeck, content_type: str, data: bytes) -> None:
     """Persiste le fichier source du deck (présentation visuelle) si présentable + storage dispo."""
     if storage is None or content_type not in PRESENTABLE_TYPES:
         return
     key = f"pitch-decks/{deck.id}/source"
     try:
-        storage.put_bytes(key=key, data=data, content_type=content_type)
+        await storage.aput_bytes(key=key, data=data, content_type=content_type)
         deck.source_key = key
         deck.source_content_type = content_type
     except Exception:  # storage KO → deck sans aperçu (dégradation gracieuse)
@@ -202,7 +198,7 @@ class PitchSessionService:
         if deck is None or not deck.source_key:
             return []
         try:
-            data = await asyncio.to_thread(self.storage.get_bytes, deck.source_key)
+            data = await self.storage.aget_bytes(deck.source_key)
         except Exception:  # objet absent / storage KO → on dégrade (critique texte seul)
             return []
         ctype = deck.source_content_type or ""
@@ -294,7 +290,13 @@ class PitchSessionService:
         await self.session.commit()
         return await self._out(ps)
 
-    async def _score(self, ps: PitchSession, turns: list[PitchTurn], verdicts: list[dict] | None = None, lang: str = "fr") -> None:
+    async def _score(
+        self,
+        ps: PitchSession,
+        turns: list[PitchTurn],
+        verdicts: list[dict] | None = None,
+        lang: str = "fr",
+    ) -> None:
         rubric = await self.rubrics.get_active()
         if rubric is None:
             raise BusinessRuleError("Aucune rubrique de pitch active.")
@@ -411,7 +413,7 @@ class PitchSessionService:
             deck = await self.decks.get_deck(ps.deck_id)
             if deck is not None:
                 slides = await self.decks.slides_for_deck(deck.id)
-                deck_out = deck_to_out(deck, slides, self.storage)
+                deck_out = await deck_to_out(deck, slides, self.storage)
         return SessionOut(
             id=ps.id,
             committee_key=ps.committee_key,
@@ -424,29 +426,23 @@ class PitchSessionService:
             deck=deck_out,
         )
 
-    async def attach_deck(
-        self, ctx: AuthContext, session_id: UUID, *, content_type: str, data: bytes
-    ) -> SessionOut:
+    async def attach_deck(self, ctx: AuthContext, session_id: UUID, *, content_type: str, data: bytes) -> SessionOut:
         """Le porteur partage son deck dans le salon → persisté + rattaché à la session."""
         # Portes d'entrée AVANT tout accès DB (fail-fast + testable sans dépôt).
         if content_type not in PRESENTABLE_TYPES:
-            raise BusinessRuleError(
-                "Format non présentable. Exporte ton PowerPoint en PDF (ou partage une image)."
-            )
+            raise BusinessRuleError("Format non présentable. Exporte ton PowerPoint en PDF (ou partage une image).")
         if not data:
             raise BusinessRuleError("Fichier vide.")
         if len(data) > MAX_DECK_BYTES:
             raise BusinessRuleError("Fichier trop volumineux (max 20 Mo).")
         ps = await self._load_owned(ctx, session_id)
-        deck = await self.decks.create_deck(
-            owner_id=ctx.user.id, project_id=ps.project_id, title="Deck de pitch"
-        )
+        deck = await self.decks.create_deck(owner_id=ctx.user.id, project_id=ps.project_id, title="Deck de pitch")
         # Texte pour les juges : seulement le PDF (les images n'ont pas de texte extractible).
         if content_type in PDF_TYPES:
             slides = parse_deck(content_type, data)[:MAX_MAIN_SLIDES]
             if slides:
                 await self.decks.add_slides(deck.id, SlideKind.MAIN, slides)
-        store_deck_source(self.storage, deck, content_type, data)
+        await store_deck_source(self.storage, deck, content_type, data)
         ps.deck_id = deck.id
         await self.session.commit()
         return await self._out(ps)

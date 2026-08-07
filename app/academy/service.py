@@ -47,11 +47,10 @@ from app.llm.prompt import (
     build_scoring_prompt,
 )
 from app.projects.repository import ProjectRepository
-from app.reports.repository import ReportRepository
-from app.scoring.repository import ScoringRepository
 from app.reports.models import ReportStatus
+from app.reports.repository import ReportRepository
 from app.scoring.constants import AXES
-
+from app.scoring.repository import ScoringRepository
 
 _AXES_BY_KEY: dict[str, dict] = {a["key"]: a for a in AXES}
 
@@ -185,18 +184,13 @@ class AcademyService:
 
         axes_scores: dict[str, int] = radar.get("axes") or {}
         # Trier les dimensions par score croissant → les plus faibles en premier
-        scored = [
-            (key, int(score))
-            for key, score in axes_scores.items()
-            if key in _AXES_BY_KEY
-        ]
+        scored = [(key, int(score)) for key, score in axes_scores.items() if key in _AXES_BY_KEY]
         scored.sort(key=lambda x: x[1])
         top3 = scored[:3]
 
         # Charger les sessions existantes : (phase, session_id, score re-mesuré).
         started = {
-            dim: (phase, sid, after)
-            for dim, phase, sid, after in await self.repo.list_started_dimensions(ctx.user.id)
+            dim: (phase, sid, after) for dim, phase, sid, after in await self.repo.list_started_dimensions(ctx.user.id)
         }
 
         # Un axe est « renforcé » quand son module a produit des fiches (phase "fiches").
@@ -356,9 +350,7 @@ class AcademyService:
         await self.session.commit()
         return await self._build_module_out(gs)
 
-    async def save_module_form(
-        self, ctx: AuthContext, session_id: UUID, form_data: dict
-    ) -> ModuleSessionOut:
+    async def save_module_form(self, ctx: AuthContext, session_id: UUID, form_data: dict) -> ModuleSessionOut:
         """Le porteur enregistre le formulaire complété/corrigé."""
         gs = await self._load_owned_session(ctx, session_id)
         if gs.dimension is None:
@@ -430,9 +422,7 @@ class AcademyService:
         if gs.dimension is None:
             raise BusinessRuleError("Cette session n'est pas un module Academy.")
         if gs.phase != "fiches" or not gs.form_data:
-            raise BusinessRuleError(
-                "Termine le module (synthèse + fiches) avant de mesurer ta progression."
-            )
+            raise BusinessRuleError("Termine le module (synthèse + fiches) avant de mesurer ta progression.")
         if self.scoring is None:
             raise BusinessRuleError("Le scoring n'est pas disponible.")
 

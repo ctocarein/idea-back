@@ -11,13 +11,17 @@ from __future__ import annotations
 
 import json
 
+from app.inconsistencies.dedup import InconsistencyType
+
 PROMPT_VERSION = "scoring-v3"  # v3 : scoring honnête (« à compléter » au lieu d'inventer)
 REPORT_PROMPT_VERSION = "report-v1"
 COACH_PROMPT_VERSION = "coach-v1"
 PITCH_PROMPT_VERSION = "pitch-v2"  # v2 : cohérence dit/montré
 VERDICT_PROMPT_VERSION = "verdict-v2"  # v2 : le verdict voit le deck + juge la cohérence
 EXTRACTION_PROMPT_VERSION = "extract-v2"  # v2 : chiffres devinés marqués « ≈ … (à confirmer) »
-MODULE_PROMPT_VERSION = "module-v1"       # modules Academy : opener + turn + form + fiches
+MODULE_PROMPT_VERSION = "module-v1"  # modules Academy : opener + turn + form + fiches
+CONTEXT_PROMPT_VERSION = "context-v1"  # pays + devise + repère de pouvoir d'achat
+INCONSISTENCY_PROMPT_VERSION = "inconsistency-v1"  # mesuré 9/10 constats, 0 faux positif
 
 
 # --- Bilingue : directive de langue injectée en tête des prompts génératifs -----
@@ -45,7 +49,8 @@ def build_extraction_prompt(
     # l'info est déjà là (preuve) ou s'il faut la demander (question) + un brouillon proposé.
     lines = [
         "FORMAT=extraction.",
-        lang_directive(lang) + " (evidence, questions & suggestions suivent la langue ; les clés d'axes restent d1..d12)",
+        lang_directive(lang)
+        + " (evidence, questions & suggestions suivent la langue ; les clés d'axes restent d1..d12)",
         "Tu es un analyste de projets. À partir du RÉCIT LIBRE du porteur, traite CHAQUE dimension :",
         "- si le récit donne assez d'info → captured=true + 'evidence' (courte preuve tirée du récit) ;",
         "- sinon → captured=false + 'question' (UNE question courte et simple) + 'suggestion' (voir ci-dessous).",
@@ -58,7 +63,9 @@ def build_extraction_prompt(
         "1 phrase, concret, plausible, humble (pas de promesse grandiose). C'est une intuition, pas une vérité :",
         "reste cohérent avec CE projet précis. Pour tout montant/prix, exprime-le en " + currency + ".",
         "CHIFFRES : tout nombre que tu n'as PAS lu dans le récit (montant, volume, %, délai) est une",
-        "ESTIMATION — écris-le précédé de « ≈ » et suivi de « (à confirmer) », ex. « ≈ 50 000 " + currency + " (à confirmer) ».",
+        "ESTIMATION — écris-le précédé de « ≈ » et suivi de « (à confirmer) », ex. « ≈ 50 000 "
+        + currency
+        + " (à confirmer) ».",
         "Ne donne jamais un chiffre inventé comme s'il était un fait établi.",
         "",
         f"NOM du projet fourni : {project_name or '(aucun — déduis-le du récit s’il est nommé, sinon null)'}",
@@ -73,7 +80,7 @@ def build_extraction_prompt(
         "RÉCIT DU PORTEUR :",
         idea,
         "",
-        "Réponds STRICTEMENT en JSON : { \"project_name\": \"<nom ou null>\", \"dimensions\": {",
+        'Réponds STRICTEMENT en JSON : { "project_name": "<nom ou null>", "dimensions": {',
         '  "<key d1..d12>": { "captured": <true|false>, "evidence": "<preuve si captured, sinon \\"\\">", '
         '"question": "<question courte si manquant, sinon \\"\\">", '
         '"suggestion": "<brouillon 1re personne si manquant, sinon \\"\\">" } } }',
@@ -81,9 +88,7 @@ def build_extraction_prompt(
     return "\n".join(lines)
 
 
-def build_verdict_prompt(
-    *, persona: dict, transcript: str, slide_text: str, conviction: int, lang: str = "fr"
-) -> str:
+def build_verdict_prompt(*, persona: dict, transcript: str, slide_text: str, conviction: int, lang: str = "fr") -> str:
     # Délibération : l'agent donne SON verdict, avec SES mots et son style (Règle d'or n°5).
     # Il juge AUSSI la cohérence entre ce qui est dit (pitch) et ce qui est montré (deck).
     return "\n".join(
@@ -253,8 +258,7 @@ def build_module_opener_prompt(
             "adaptés au secteur du projet, jamais des placeholders vagues.",
             "Exemple de formulation :",
             "**Comment génères-tu des revenus ?**",
-            "*ex : abonnement SaaS à 29 €/mois, commission de 15 % par transaction, "
-            "licence annuelle à 5 000 €*",
+            "*ex : abonnement SaaS à 29 €/mois, commission de 15 % par transaction, licence annuelle à 5 000 €*",
             "Formate en Markdown : questions en **gras**, exemples en *italique*,",
             "une question par puce. L'objectif : que le porteur comprenne instantanément",
             "ce qu'on lui demande grâce à l'exemple.",
@@ -273,10 +277,7 @@ def build_module_turn_prompt(
     lang: str = "fr",
 ) -> str:
     # Tour de conversation dans un module (phase context).
-    hist = "\n".join(
-        f"{'Porteur' if t['role'] == 'porteur' else 'Coach'}: {t['text']}"
-        for t in history[-6:]
-    )
+    hist = "\n".join(f"{'Porteur' if t['role'] == 'porteur' else 'Coach'}: {t['text']}" for t in history[-6:])
     return "\n".join(
         [
             "FORMAT=module_coach.",
@@ -327,10 +328,7 @@ def build_module_form_prefill_prompt(
         [{"key": s["key"], "label": s["label"]} for s in form_sections],
         ensure_ascii=False,
     )
-    hist = "\n".join(
-        f"{'Porteur' if t['role'] == 'porteur' else 'Coach'}: {t['text']}"
-        for t in history
-    )
+    hist = "\n".join(f"{'Porteur' if t['role'] == 'porteur' else 'Coach'}: {t['text']}" for t in history)
     return "\n".join(
         [
             "FORMAT=form_prefill.",
@@ -338,14 +336,14 @@ def build_module_form_prefill_prompt(
             f"À partir de la conversation sur le module « {dimension.upper()} — {label} »",
             f"pour le projet {projet}{secteur}, pré-remplis les sections du formulaire.",
             "RÈGLE ABSOLUE : ne JAMAIS inventer une info absente de la conversation.",
-            "Si une section n'est pas couverte par la conversation → chaîne vide (\"\").",
+            'Si une section n\'est pas couverte par la conversation → chaîne vide ("").',
             "",
             f"SECTIONS DU FORMULAIRE : {sections_json}",
             "",
             "CONVERSATION :",
             hist or "(aucun historique)",
             "",
-            "Réponds STRICTEMENT en JSON : { \"<section_key>\": \"<valeur ou vide>\", ... }",
+            'Réponds STRICTEMENT en JSON : { "<section_key>": "<valeur ou vide>", ... }',
         ]
     )
 
@@ -365,7 +363,8 @@ def build_module_fiches_prompt(
     return "\n".join(
         [
             "FORMAT=fiches.",
-            lang_directive(lang) + " (titres, descriptions et détails suivent la langue ; les need_type restent des clés)",
+            lang_directive(lang)
+            + " (titres, descriptions et détails suivent la langue ; les need_type restent des clés)",
             f"À partir du formulaire complété sur « {dimension.upper()} — {label} »",
             f"pour le projet {projet}{secteur}, identifie les besoins concrets",
             "qui permettraient de consolider ce projet.",
@@ -387,7 +386,7 @@ def build_module_fiches_prompt(
             "",
             "Réponds STRICTEMENT en JSON :",
             '{ "fiches": [',
-            '  {',
+            "  {",
             '    "need_type": "<type>",',
             '    "title": "<titre court et concret>",',
             '    "description": "<description 2-3 phrases>",',
@@ -399,9 +398,9 @@ def build_module_fiches_prompt(
             '      "deliverables": ["<livrable1>", "..."],',
             '      "priority": "high|medium|low",',
             '      "engagement_type": "<freelance|CDI|association|prestation|autre>"',
-            '    }',
-            '  }',
-            '] }',
+            "    }",
+            "  }",
+            "] }",
         ]
     )
 
@@ -487,6 +486,195 @@ def build_pitch_section_prompt(
     return "\n".join(lines)
 
 
+# --- Incohérences : détection de contradictions internes ------------------------
+# Chaque type est une PROCÉDURE exécutable, pas une exhortation. La mesure a montré que
+# « RECALCULE tout produit volume × prix » fonctionne là où « COMPARE les durées » échoue :
+# une procédure donne des étapes, une exhortation donne une intention.
+# Les procédures sont en français ; le paramètre `lang` ne pilote que la langue de SORTIE
+# (une version anglaise des procédures reste à écrire ET à mesurer avant usage).
+_INCONSISTENCY_PROCEDURES: dict[InconsistencyType, str] = {
+    InconsistencyType.ARITHMETIC: (
+        "PROCÉDURE : (1) relève tout couple volume + prix unitaire ; (2) calcule le produit ; "
+        "(3) compare-le au chiffre d'affaires ou au revenu déclaré ; (4) signale tout écart "
+        "SIGNIFICATIF. Un porteur qui écrit « environ », « à peu près » ou « ~ » arrondit : "
+        "un écart inférieur à 10 % sur un montant explicitement approximatif est un arrondi "
+        "NORMAL et ne se signale JAMAIS. On cherche les écarts d'un facteur, pas les décimales."
+    ),
+    InconsistencyType.CAPACITY: (
+        "PROCÉDURE : (1) relève la taille exacte de l'équipe et les moyens déclarés ; (2) relève "
+        "tous les volumes, couvertures géographiques et fréquences annoncés ; (3) confronte les "
+        "deux et signale ce qui excède manifestement les moyens décrits."
+    ),
+    InconsistencyType.MARKET: (
+        "PROCÉDURE : (1) identifie QUI PAIE — un ménage, ou une entreprise ? Le repère de revenu "
+        "des ménages ne vaut QUE si le payeur est un particulier : pour un prix facturé à un "
+        "commerçant ou à une entreprise, il est HORS SUJET. Dans ce cas `found: false`, liste "
+        "VIDE, et tu n'écris RIEN — pas même pour expliquer que le repère ne s'applique pas ; "
+        "(2) si le payeur "
+        "est un ménage, relève le pouvoir d'achat qu'implique la cible déclarée ; (3) relève le "
+        "prix annoncé ; (4) vérifie leur compatibilité."
+    ),
+    InconsistencyType.TEMPORAL: (
+        "PROCÉDURE : (1) relève TOUTES les dates, durées et anciennetés du récit (depuis quand le "
+        "projet existe, quelle profondeur d'historique est invoquée, quelle durée d'expérience) ; "
+        "(2) compare-les deux à deux ; (3) signale toute paire où l'une rend l'autre impossible — "
+        "par exemple un historique de données plus long que l'ancienneté du projet lui-même."
+    ),
+    InconsistencyType.INTERNAL: (
+        "PROCÉDURE : (1) repère toute affirmation ABSOLUE ou d'unicité (« aucun concurrent », "
+        "« personne ne fait », « le seul », « déjà N utilisateurs », « validé par ») ; (2) relis "
+        "le RESTE du récit en cherchant une phrase qui la dément ; (3) signale la paire."
+    ),
+    InconsistencyType.REGULATORY: (
+        "PROCÉDURE : (1) repère toute activité impliquant une obligation légale — détention de "
+        "fonds de tiers, collecte d'épargne, données de santé, acte réservé à une profession ; "
+        "(2) cherche dans le récit une affirmation qui NIE explicitement cette obligation "
+        "(« nous n'avons pas besoin d'agrément », « nous ne sommes qu'un intermédiaire »). "
+        "SANS cette négation explicite, il n'y a PAS de contradiction : un dossier qui reste "
+        "muet sur la réglementation ne se contredit pas, il est seulement incomplet — et un "
+        "manque n'est jamais un constat. N'écris JAMAIS « le récit ne mentionne pas… »."
+    ),
+}
+
+# Deux passes de trois types. Le regroupement sépare ce qui se vérifie PAR CALCUL de ce qui se
+# vérifie PAR RELECTURE. Mesuré meilleur qu'une passe unique (procédures diluées) et qu'une
+# passe par type (six appels, et un chercheur isolé n'ose plus rien signaler).
+INCONSISTENCY_GROUPS: dict[str, tuple[InconsistencyType, ...]] = {
+    "quantitative": (
+        InconsistencyType.ARITHMETIC,
+        InconsistencyType.CAPACITY,
+        InconsistencyType.MARKET,
+    ),
+    "textual": (
+        InconsistencyType.TEMPORAL,
+        InconsistencyType.INTERNAL,
+        InconsistencyType.REGULATORY,
+    ),
+}
+
+
+def build_context_prompt(*, narrative: str, lang: str = "fr") -> str:
+    """Déduit pays et devise — sans quoi `market` et `regulatory` jugent à l'aveugle.
+
+    Un prix ne se juge que rapporté au pouvoir d'achat local, et une obligation légale dépend
+    de la juridiction. Passe EXPLICITE plutôt que déduction implicite dans chaque prompt :
+    le contexte retenu figure dans le rapport d'audit, et le client peut le contester.
+    """
+    return "\n".join(
+        [
+            "FORMAT=context.",
+            lang_directive(lang) + " (les clés JSON restent en anglais)",
+            "Déduis du récit ci-dessous le pays et la devise dans lesquels le projet opère.",
+            "Appuie-toi sur les indices explicites : villes, monnaies citées, institutions,",
+            "dispositifs sociaux, mentions géographiques, vocabulaire administratif.",
+            "Si aucun indice fiable n'existe, réponds country et currency à null — n'invente pas.",
+            "",
+            "Donne aussi un ORDRE DE GRANDEUR du revenu mensuel d'un ménage modeste dans ce pays,",
+            "exprimé dans la devise locale. C'est ce repère qui permettra de juger si un prix est",
+            "compatible avec la cible annoncée.",
+            "",
+            "RÉCIT :",
+            narrative,
+            "",
+            "Réponds STRICTEMENT en JSON :",
+            '{ "country": "<pays ou null>", "currency": "<code ISO ou null>",',
+            '  "signals": "<les indices qui ont permis de trancher, 1 phrase>",',
+            '  "modest_household_income": "<ordre de grandeur mensuel, devise locale, ou null>" }',
+        ]
+    )
+
+
+def _inconsistency_context_block(context: dict | None) -> list[str]:
+    if not context or not context.get("country"):
+        return [
+            "CONTEXTE : pays indéterminé. Ne juge PAS le pouvoir d'achat ni les obligations",
+            "réglementaires — tu n'as pas la juridiction. Concentre-toi sur les incohérences",
+            "internes au récit, qui ne dépendent d'aucun pays.",
+            "",
+        ]
+    income = context.get("modest_household_income") or "non déterminé"
+    return [
+        f"CONTEXTE DÉTECTÉ : pays = {context['country']} · devise = {context.get('currency') or '?'}.",
+        f"Repère de pouvoir d'achat : revenu mensuel d'un ménage modeste ≈ {income}.",
+        "Utilise CE repère pour juger si un prix est compatible avec la cible annoncée,",
+        "et CETTE juridiction pour juger les obligations réglementaires. Un même montant",
+        "n'a pas la même portée selon le pays : raisonne toujours en ordre de grandeur local.",
+        "ATTENTION : ce bloc de contexte est une donnée de RÉFÉRENCE, il ne fait PAS partie du",
+        "récit du porteur. Ne le cite JAMAIS comme passage : toute citation doit être extraite",
+        "du récit lui-même, et de lui seul.",
+        "",
+    ]
+
+
+def build_inconsistency_prompt(
+    *,
+    narrative: str,
+    group: str,
+    category: str,
+    archetype: str,
+    context: dict | None = None,
+    lang: str = "fr",
+) -> str:
+    """Détecte les contradictions internes d'un récit, pour un groupe de types donné.
+
+    Ne note rien et ne juge pas la qualité du projet : constate ce qui ne peut pas être vrai
+    en même temps, en citant les deux passages. C'est ce qui rend le constat vérifiable en
+    cinq secondes par le client, donc vendable sans calibration préalable.
+    """
+    types = INCONSISTENCY_GROUPS[group]
+    lines = [
+        "FORMAT=inconsistencies.",
+        lang_directive(lang) + " (les clés et valeurs JSON restent en anglais)",
+        "Tu es un analyste de dossiers entrepreneuriaux, rigoureux et strictement factuel.",
+        f"Catégorie : {category} · Archétype : {archetype}.",
+        "Tu ne notes rien, tu n'évalues pas la qualité du projet, tu ne donnes aucun conseil.",
+        "",
+        *_inconsistency_context_block(context),
+        f"Tu examines UNIQUEMENT le groupe « {group} » : {', '.join(t.value for t in types)}.",
+        "Applique CHAQUE procédure ci-dessous, l'une APRÈS l'autre, et prononce-toi sur CHACUNE.",
+        "Produis une entrée par type, même quand tu ne trouves rien.",
+        "",
+        "RÈGLE ABSOLUE — un MANQUE d'information n'est PAS une contradiction.",
+        "Un récit incomplet, vague, modeste ou prudent est NORMAL à ce stade d'un projet.",
+        "Un porteur qui reconnaît ce qu'il ne sait pas encore est honnête, pas contradictoire :",
+        "ne le signale JAMAIS pour ça.",
+        "Une FAIBLESSE, un sous-dimensionnement, un risque ou une fragilité du projet n'est PAS",
+        "une contradiction. Ne signale que des INCOMPATIBILITÉS FACTUELLES entre deux affirmations.",
+        "",
+        "RÈGLE SYMÉTRIQUE — les deux moitiés comptent autant :",
+        "- Si ta vérification CONFIRME la cohérence → `found: false`, liste vide. C'est un succès,",
+        "  et tu n'exposes JAMAIS dans `contradictions` un calcul qui tombe juste. La liste",
+        "  `contradictions` ne contient QUE des contradictions : si ton explication contient le mot",
+        "  « cohérent », « correct » ou « compatible », l'entrée n'a rien à y faire — retire-la.",
+        "- Si ta vérification RÉVÈLE un écart → SIGNALE-LE sans hésiter, c'est exactement ce qu'on",
+        "  cherche. Un écart avéré est la trouvaille la plus précieuse de toutes.",
+        "",
+        "ANTI-DOUBLON : une même contradiction n'apparaît qu'UNE fois, sous le type le plus spécifique.",
+        "",
+        "NE RENDS JAMAIS COMPTE DE TA MÉTHODE. Les `contradictions` parlent du DOSSIER, jamais de",
+        "la façon dont tu l'as analysé. « le calcul est cohérent », « ce repère ne s'applique pas »,",
+        "« ce type est hors sujet ici » sont des remarques sur TON travail : elles n'ont rien à y",
+        "faire. Quand une procédure ne donne rien, la bonne réponse est le SILENCE : `found: false`.",
+        "",
+        "PROCÉDURES À APPLIQUER, DANS CET ORDRE :",
+        *[f"- {t.value} : {_INCONSISTENCY_PROCEDURES[t]}" for t in types],
+        "",
+        "Pour CHAQUE contradiction, cite les DEUX passages en conflit, MOT POUR MOT, et tous deux",
+        "extraits du RÉCIT DU PORTEUR uniquement — jamais du bloc de contexte, jamais de ta propre",
+        "rédaction. Un calcul que tu poses (« 1 200 × 5 000 = 6 000 000 ») n'est PAS une citation :",
+        "il va dans `explanation`. Si tu ne peux pas produire deux extraits littéraux, ne signale rien.",
+        "",
+        "RÉCIT DU PORTEUR :",
+        narrative,
+        "",
+        f"Réponds STRICTEMENT en JSON, avec les {len(types)} types du groupe, dans l'ordre :",
+        '{ "analysis": [ { "type": "<type>", "found": <true|false>, "contradictions": [',
+        '  { "quote_a": "<citation tirée du récit>", "quote_b": "<citation tirée du récit>",',
+        '    "explanation": "<1 phrase>", "severity": "high|medium|low" } ] } ] }',
+    ]
+    return "\n".join(lines)
+
+
 def build_deck_prompt(
     *,
     source: str,
@@ -524,7 +712,7 @@ def build_deck_prompt(
             "MATIÈRE :",
             source or "(peu d'éléments — reste général mais honnête)",
             "",
-            "Réponds STRICTEMENT en JSON : { \"slides\": [ {",
+            'Réponds STRICTEMENT en JSON : { "slides": [ {',
             '  "layout": "cover|stat|bullets|chart|image",',
             '  "title": "...", "subtitle": "", "bullets": [], ',
             '  "stat": { "value": "", "label": "" }, ',

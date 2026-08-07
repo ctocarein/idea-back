@@ -20,8 +20,8 @@ from app.llm.base import LLMProvider
 from app.llm.prompt import build_extraction_prompt
 from app.scoring.constants import AXES
 
-_MAX_TEXT = 5000   # limite identique à IdeaExtractIn.idea
-_MAX_PAGES = 15    # PDF : on ne lit pas au-delà pour économiser la mémoire
+_MAX_TEXT = 5000  # limite identique à IdeaExtractIn.idea
+_MAX_PAGES = 15  # PDF : on ne lit pas au-delà pour économiser la mémoire
 
 
 def _extract_pdf_text(data: bytes) -> str:
@@ -81,9 +81,7 @@ class IdeaExtractionService:
     async def extract(
         self, idea: str, project_name: str | None, lang: str = "fr", currency: str = "XOF"
     ) -> IdeaExtractOut:
-        prompt = build_extraction_prompt(
-            idea=idea, axes=AXES, project_name=project_name, lang=lang, currency=currency
-        )
+        prompt = build_extraction_prompt(idea=idea, axes=AXES, project_name=project_name, lang=lang, currency=currency)
         # 12 dimensions × (evidence + question + suggestion) : le défaut 1024 tronque le JSON
         # (→ LLMParseError). On relève le plafond pour cette sortie longue spécifiquement.
         raw = await self.provider.analyze_json(prompt, max_tokens=3072)

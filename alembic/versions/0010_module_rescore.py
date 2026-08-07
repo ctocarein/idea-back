@@ -7,6 +7,7 @@ Revises: 0009_academy_modules
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0010_module_rescore"
@@ -20,9 +21,7 @@ def upgrade() -> None:
     existing_cols = {
         r[0]
         for r in conn.execute(
-            sa.text(
-                "SELECT column_name FROM information_schema.columns WHERE table_name='guided_sessions'"
-            )
+            sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='guided_sessions'")
         )
     }
     if "axis_score_before" not in existing_cols:

@@ -14,6 +14,7 @@ from sqlalchemy import ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.core.project_stage import ProjectStage
 
 
 class ProfessionalStatus(str, Enum):
@@ -23,14 +24,6 @@ class ProfessionalStatus(str, Enum):
     FREELANCE = "freelance"
     CAREER_CHANGE = "career_change"
     UNEMPLOYED = "unemployed"
-
-
-class ProjectStage(str, Enum):
-    IDEA = "idea"
-    VALIDATION = "validation"
-    MVP = "mvp"
-    TRACTION = "traction"
-    SCALE = "scale"
 
 
 class WeeklyAvailability(str, Enum):

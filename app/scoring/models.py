@@ -12,7 +12,7 @@ from datetime import datetime
 from enum import Enum
 from uuid import UUID, uuid4
 
-from sqlalchemy import String, func
+from sqlalchemy import ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -47,9 +47,13 @@ class ScoreRun(Base):
     __tablename__ = "score_runs"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    diagnostic_id: Mapped[UUID | None] = mapped_column(index=True, default=None)
-    project_id: Mapped[UUID] = mapped_column(index=True)
-    report_id: Mapped[UUID | None] = mapped_column(index=True, default=None)
+    diagnostic_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("diagnostics.id", ondelete="SET NULL"), index=True, default=None
+    )
+    project_id: Mapped[UUID] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    report_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("reports.id", ondelete="SET NULL"), index=True, default=None
+    )
 
     # Reproductibilité : tout ce qui détermine un score est figé ici.
     grid_version: Mapped[str] = mapped_column(String(40), index=True)
@@ -59,7 +63,7 @@ class ScoreRun(Base):
 
     # Audit : la sortie brute (LLM) telle quelle, pour rejeu et diagnostic de dérive.
     raw_output: Mapped[dict | None] = mapped_column(JSONB, default=None)
-    # Résultat : axes validés (0-100), justifications, agrégation déterministe.
+    # Résultat : axes validés sur l'échelle de la grille, justifications et agrégation.
     axes: Mapped[dict] = mapped_column(JSONB, default=dict)
     justifications: Mapped[dict | None] = mapped_column(JSONB, default=None)
     pillars: Mapped[dict] = mapped_column(JSONB, default=dict)  # scores agrégés par pilier

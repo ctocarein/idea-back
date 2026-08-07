@@ -8,6 +8,7 @@ Create Date: 2026-06-29
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "0007_share_view_tracking"
@@ -18,9 +19,12 @@ depends_on = None
 
 def upgrade() -> None:
     conn = op.get_bind()
-    cols = {r[0] for r in conn.execute(sa.text(
-        "SELECT column_name FROM information_schema.columns WHERE table_name='project_shares'"
-    ))}
+    cols = {
+        r[0]
+        for r in conn.execute(
+            sa.text("SELECT column_name FROM information_schema.columns WHERE table_name='project_shares'")
+        )
+    }
     if "token" not in cols:
         op.add_column("project_shares", sa.Column("token", sa.String(64), nullable=True))
     if "view_count" not in cols:

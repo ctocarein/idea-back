@@ -26,8 +26,8 @@ def render_pitch_html(pitch: Pitch, project_title: str | None = None) -> str:
     blocks = []
     for s in _filled_sections(pitch):
         blocks.append(
-            f'<section><h2>{escape(str(s.get("title", "")))}</h2>'
-            f'<p>{escape(str(s.get("content", ""))).replace(chr(10), "<br>")}</p></section>'
+            f"<section><h2>{escape(str(s.get('title', '')))}</h2>"
+            f"<p>{escape(str(s.get('content', ''))).replace(chr(10), '<br>')}</p></section>"
         )
     body = "".join(blocks) or "<p>Ton pitch est encore vide.</p>"
     return f"""<!doctype html><html><head><meta charset="utf-8"><style>

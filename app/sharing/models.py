@@ -30,8 +30,6 @@ class ProjectShare(Base):
     # SEC-11 : expiration automatique (90 j par défaut, renouvelable).
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-    # Token brut pour affichage dans le dashboard porteur (risque faible : lecture publique, 90 j).
-    token: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     # Suivi des vues (V1-08).
     view_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     last_viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)

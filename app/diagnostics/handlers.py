@@ -23,11 +23,17 @@ from app.core.logging import get_logger
 from app.core.storage import get_storage
 from app.diagnostics.repository import DiagnosticRepository
 from app.iam.repository import UserRepository
+from app.inconsistencies.dedup import Finding
+from app.inconsistencies.service import Dossier, InconsistencyService
 from app.llm.factory import get_llm
 from app.llm.prompt import PROMPT_VERSION, build_report_prompt, build_scoring_prompt
 from app.notifications.repository import NotificationRepository
+from app.project_memory.contradictions import persist_findings
+from app.project_memory.evaluation import ProjectEvaluationProjector
+from app.project_memory.repository import ProjectMemoryRepository
 from app.projects.models import DiagnosticStatus, ReviewStatus
 from app.projects.repository import ProjectRepository
+from app.projects.state_service import ProjectStateService
 from app.reports.models import ReportStatus
 from app.reports.pdf import render_bilan_html, render_bilan_pdf
 from app.reports.repository import ReportRepository
@@ -55,14 +61,19 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
         diagnostics = DiagnosticRepository(session)
         projects = ProjectRepository(session)
         reports = ReportRepository(session)
-        scoring = ScoringService(ScoringRepository(session), ScoreRunRepository(session))
+        runs = ScoreRunRepository(session)
+        scoring = ScoringService(ScoringRepository(session), runs)
         auditor = AuditService(session)
+        states = ProjectStateService(projects, auditor)
 
         diagnostic = await diagnostics.get_by_id(diagnostic_id)
         project = await projects.get_by_id(project_id)
         report = await reports.get_by_id(report_id)
         if diagnostic is None or project is None or report is None:
             raise RuntimeError("run_diagnostic : entités introuvables (déjà supprimées ?).")
+        if report.status is ReportStatus.READY and project.diagnostic_status is DiagnosticStatus.BILAN_READY:
+            logger.info("diagnostic_job_already_completed", report_id=str(report.id))
+            return
 
         grid = await scoring.repo.get_active()
         if grid is None:
@@ -86,15 +97,38 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
             )
             return await provider.analyze_json(prompt)
 
+        # Détection des contradictions internes du récit. Elle tourne EN PARALLÈLE du scoring :
+        # elle n'en dépend pas et ne doit pas retarder le Radar. Son produit alimente la chaîne
+        # `contradiction_gap` déjà en place — c'est le seul signal du parcours qui soit vrai
+        # indépendamment de la calibration du score.
+        async def _detect_inconsistencies() -> list[Finding]:
+            if not diagnostic.description:
+                return []  # dossier issu d'un document : pas de récit à confronter
+            try:
+                detector = InconsistencyService(provider, concurrency=1)
+                analysis = await detector.analyze(
+                    Dossier(
+                        reference=str(project.id),
+                        narrative=diagnostic.description,
+                        category=project.sector,
+                        archetype=project.archetype.value,
+                    )
+                )
+                return analysis.findings
+            except Exception as exc:
+                # IDX-MEM-04 : un diagnostic doit aboutir même sans détection. Le porteur
+                # préfère un Radar sans contradictions à pas de Radar du tout.
+                logger.warning("inconsistency_detection_failed", report_id=str(report.id), error=str(exc))
+                return []
+
         # TOLÉRANT : une passe qui échoue (rate-limit, transitoire, JSON invalide) ne doit pas
         # faire tomber tout le scoring — l'ensemble sait produire un consensus avec moins de
         # 3 passes (confiance moindre, signalée). On ne lève QUE si TOUTES échouent.
-        results = await asyncio.gather(
-            *(_score_pass(k) for k in range(N_PASSES)), return_exceptions=True
+        results, findings = await asyncio.gather(
+            asyncio.gather(*(_score_pass(k) for k in range(N_PASSES)), return_exceptions=True),
+            _detect_inconsistencies(),
         )
-        raw_outputs: list[dict] = [
-            r for r in results if isinstance(r, dict) and isinstance(r.get("axes"), dict)
-        ]
+        raw_outputs: list[dict] = [r for r in results if isinstance(r, dict) and isinstance(r.get("axes"), dict)]
         if not raw_outputs:
             first_exc = next((r for r in results if isinstance(r, Exception)), None)
             raise first_exc or RuntimeError("scoring : toutes les passes LLM ont échoué")
@@ -105,9 +139,7 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
                 kept=len(raw_outputs),
                 total=N_PASSES,
             )
-        passes: list[dict[str, int]] = [
-            {key: int(v) for key, v in out["axes"].items()} for out in raw_outputs
-        ]
+        passes: list[dict[str, int]] = [{key: int(v) for key, v in out["axes"].items()} for out in raw_outputs]
         justifications: dict[str, str] | None = next(
             (out.get("justifications") for out in raw_outputs if out.get("justifications")), None
         )
@@ -137,6 +169,19 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
 
         radar_score = {"gridVersion": result.grid_version, "axes": result.axes}
         comprehension = {"pillars": result.pillars, "overall": result.overall}
+        score_run = await runs.get_by_id(result.run_id)
+        if score_run is not None:
+            memory = ProjectMemoryRepository(session)
+            # AVANT la projection : le projecteur relit la mémoire pour bâtir l'état des
+            # dimensions. Une contradiction écrite après lui resterait invisible jusqu'au run suivant.
+            await persist_findings(memory, project_id=project.id, findings=findings)
+            await ProjectEvaluationProjector(memory).persist_from_score_run(
+                project_id=project.id,
+                axes=grid.axes,
+                score_run=score_run,
+                next_actions=next_actions,
+                scale_max=grid.scale_max,
+            )
 
         # ── PHASE 1 : le Radar est prêt → on l'EXPOSE TOUT DE SUITE ────────────────────
         # score + compréhension + prochaines actions. Le porteur voit son score sans
@@ -149,10 +194,10 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
             comprehension=comprehension,
             next_actions=next_actions,
         )
-        await projects.set_diagnostic_status(project, DiagnosticStatus.DIAGNOSTIC_COMPLETED)
+        await states.transition_diagnostic(project, DiagnosticStatus.DIAGNOSTIC_COMPLETED, actor_id=None)
         # Routage AUTO vers la revue humaine si le score est incertain (dépend du score).
         if result.needs_review and project.review_status is ReviewStatus.NEW_DIAGNOSTIC:
-            await projects.set_review_status(project, ReviewStatus.IN_REVIEW)
+            await states.transition_review(project, ReviewStatus.IN_REVIEW, actor_id=None)
         await auditor.record(
             actor_id=project.owner_id,
             action="diagnostic.scored",
@@ -208,7 +253,7 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
                 )
                 pdf_bytes = await asyncio.to_thread(render_bilan_pdf, html)
                 key = f"bilans/{report.id}.pdf"
-                await asyncio.to_thread(storage.put_bytes, key=key, data=pdf_bytes, content_type="application/pdf")
+                await storage.aput_bytes(key=key, data=pdf_bytes, content_type="application/pdf")
                 # Le report.id sert de référence d'objet (clé = bilans/<id>.pdf) tant que
                 # le module documents ne formalise pas une table dédiée.
                 pdf_document_id = report.id
@@ -225,7 +270,7 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
             next_actions=next_actions,
             pdf_document_id=pdf_document_id,
         )
-        await projects.set_diagnostic_status(project, DiagnosticStatus.BILAN_READY)
+        await states.transition_diagnostic(project, DiagnosticStatus.BILAN_READY, actor_id=None)
 
         # Notifie le porteur : son bilan complet est prêt.
         try:
@@ -271,6 +316,7 @@ async def handle_run_diagnostic_failed(payload: dict[str, Any]) -> None:
             # Déjà prêt (course avec un retry qui a réussi) ou supprimé : rien à faire.
             return
         projects = ProjectRepository(session)
+        states = ProjectStateService(projects, AuditService(session))
         project = await projects.get_by_id(report.project_id)
         owner_id = project.owner_id if project is not None else None
 
@@ -280,7 +326,7 @@ async def handle_run_diagnostic_failed(payload: dict[str, Any]) -> None:
             # le score déjà calculé. Le porteur voit son Radar ; l'analyste complètera.
             report.status = ReportStatus.READY
             if project is not None:
-                await projects.set_diagnostic_status(project, DiagnosticStatus.BILAN_READY)
+                await states.transition_diagnostic(project, DiagnosticStatus.BILAN_READY, actor_id=None)
             await session.commit()
             logger.warning("diagnostic_radar_only_ready", report_id=str(report_id))
             notif_type = "report_ready"

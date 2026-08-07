@@ -18,9 +18,30 @@ _CHARTJS = (Path(__file__).parent / "vendor" / "chart.umd.min.js").read_text(enc
 
 # --- Thèmes (templates). Un thème = un jeu de variables CSS. ---
 TEMPLATES: dict[str, dict] = {
-    "base": {"label": "Base", "ink": "#1C1633", "accent": "#FF7A4D", "bg": "#FFFFFF", "muted": "#6B6580", "band": "#F4F1FB"},
-    "midnight": {"label": "Midnight", "ink": "#EAeaf5", "accent": "#7C6BFF", "bg": "#141026", "muted": "#A9A3C4", "band": "#1E1838"},
-    "editorial": {"label": "Éditorial", "ink": "#23201A", "accent": "#C2410C", "bg": "#FBF8F1", "muted": "#7A7263", "band": "#F0E9DB"},
+    "base": {
+        "label": "Base",
+        "ink": "#1C1633",
+        "accent": "#FF7A4D",
+        "bg": "#FFFFFF",
+        "muted": "#6B6580",
+        "band": "#F4F1FB",
+    },
+    "midnight": {
+        "label": "Midnight",
+        "ink": "#EAeaf5",
+        "accent": "#7C6BFF",
+        "bg": "#141026",
+        "muted": "#A9A3C4",
+        "band": "#1E1838",
+    },
+    "editorial": {
+        "label": "Éditorial",
+        "ink": "#23201A",
+        "accent": "#C2410C",
+        "bg": "#FBF8F1",
+        "muted": "#7A7263",
+        "band": "#F0E9DB",
+    },
 }
 
 
@@ -54,7 +75,7 @@ def _slide(s: dict, t: dict, idx: int, logo_html: str = "") -> str:
     foot = f'<div class="brand-logo">{logo_html}</div>' if logo_html and layout != "cover" else ""
 
     if layout == "cover":
-        return f"""<section class="slide cover" style="background:{_bg(s.get('image_keyword'), t, dark=True)}">
+        return f"""<section class="slide cover" style="background:{_bg(s.get("image_keyword"), t, dark=True)}">
           <div class="cover-in">
             <h1>{title}</h1>
             <p class="lead">{subtitle}</p>
@@ -64,25 +85,27 @@ def _slide(s: dict, t: dict, idx: int, logo_html: str = "") -> str:
         stat = s.get("stat") or {}
         return f"""<section class="slide stat">
           <div class="stat-in">
-            <div class="big-num">{escape(str(stat.get('value','')))}</div>
-            <div class="stat-label">{escape(str(stat.get('label','')))}</div>
-            <p class="ctx">{subtitle or (bullets[0] if bullets else '')}</p>
+            <div class="big-num">{escape(str(stat.get("value", "")))}</div>
+            <div class="stat-label">{escape(str(stat.get("label", "")))}</div>
+            <p class="ctx">{subtitle or (bullets[0] if bullets else "")}</p>
           </div>{foot}</section>"""
 
     if layout == "chart":
         chart = s.get("chart") or {}
         cid = f"chart{idx}"
-        data = json.dumps({"type": chart.get("type", "bar"), "labels": chart.get("labels", []), "values": chart.get("values", [])})
+        data = json.dumps(
+            {"type": chart.get("type", "bar"), "labels": chart.get("labels", []), "values": chart.get("values", [])}
+        )
         return f"""<section class="slide chart">
           <div class="pad">
-            <span class="eyebrow">{escape(str(chart.get('type','')).upper())}</span>
+            <span class="eyebrow">{escape(str(chart.get("type", "")).upper())}</span>
             <h2>{title}</h2>
             <div class="chart-wrap"><canvas id="{cid}" data-chart='{data}'></canvas></div>
           </div>{foot}</section>"""
 
     if layout == "image":
         return f"""<section class="slide image">
-          <div class="img-half" style="background:{_bg(s.get('image_keyword'), t)}"></div>
+          <div class="img-half" style="background:{_bg(s.get("image_keyword"), t)}"></div>
           <div class="img-txt"><h2>{title}</h2><p>{caption or subtitle}</p></div>
         {foot}</section>"""
 
@@ -94,7 +117,7 @@ def _slide(s: dict, t: dict, idx: int, logo_html: str = "") -> str:
         else ""
     )
     return f"""<section class="slide bullets">
-      <div class="pad"><h2>{title}</h2>{f'<p class="lead">{subtitle}</p>' if subtitle else ''}<ul>{lis}</ul></div>
+      <div class="pad"><h2>{title}</h2>{f'<p class="lead">{subtitle}</p>' if subtitle else ""}<ul>{lis}</ul></div>
       {img}{foot}</section>"""
 
 
@@ -120,7 +143,13 @@ def render_deck_html(
     logo_html = brand["logo_svg"] if brand else ""
     slides = pitch.slides or []
     if not slides:
-        slides = [{"layout": "cover", "title": project_title or pitch.title or "Ton deck", "subtitle": "Génère ton deck pour démarrer."}]
+        slides = [
+            {
+                "layout": "cover",
+                "title": project_title or pitch.title or "Ton deck",
+                "subtitle": "Génère ton deck pour démarrer.",
+            }
+        ]
     body = "".join(_slide(s, t, i, logo_html) for i, s in enumerate(slides))
 
     deck_layout = (
@@ -140,7 +169,7 @@ def render_deck_html(
 
     css = f"""
     {font_import}
-    :root {{ --ink:{t['ink']}; --accent:{t['accent']}; --bg:{t['bg']}; --muted:{t['muted']}; --band:{t['band']}; }}
+    :root {{ --ink:{t["ink"]}; --accent:{t["accent"]}; --bg:{t["bg"]}; --muted:{t["muted"]}; --band:{t["band"]}; }}
     * {{ box-sizing:border-box; margin:0; padding:0; }}
     body {{ font-family:{body_family}'Segoe UI',Roboto,system-ui,sans-serif; color:var(--ink); }}
     h1,h2 {{ font-family:{display_family}'Segoe UI',Roboto,sans-serif; }}
@@ -154,7 +183,8 @@ def render_deck_html(
     .eyebrow {{ color:var(--accent); font-size:13px; letter-spacing:2px; font-weight:800; text-transform:uppercase; }}
     ul {{ list-style:none; display:flex; flex-direction:column; gap:14px; margin-top:8px; }}
     li {{ font-size:24px; padding-left:28px; position:relative; }}
-    li::before {{ content:''; position:absolute; left:0; top:11px; width:12px; height:12px; border-radius:4px; background:var(--accent); }}
+    li::before {{ content:''; position:absolute; left:0; top:11px; width:12px; height:12px;
+      border-radius:4px; background:var(--accent); }}
     .cover {{ align-items:flex-end; color:#fff; background-size:cover; background-position:center; }}
     .cover-in {{ padding:64px; }} .cover h1 {{ color:#fff; }} .cover .lead {{ color:#ffffffcc; }}
     .stat {{ background:var(--band); align-items:center; justify-content:center; }}
@@ -197,7 +227,7 @@ def render_deck_html(
     <script>
       {zoom_fit}
       window.addEventListener('load', async () => {{
-        {'fitDeck();' if not export else ''}
+        {"fitDeck();" if not export else ""}
         const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
         document.querySelectorAll('canvas[data-chart]').forEach(c => {{
           const d = JSON.parse(c.dataset.chart);

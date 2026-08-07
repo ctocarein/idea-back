@@ -45,7 +45,7 @@ async def _check_minio() -> bool | None:
     if storage is None:
         return None
     try:
-        return await asyncio.to_thread(storage.health_ok)
+        return await storage.ahealth_ok()
     except Exception as exc:  # noqa: BLE001
         logger.warning("health_minio_down", error=str(exc))
         return False

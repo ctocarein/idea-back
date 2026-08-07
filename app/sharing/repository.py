@@ -20,7 +20,6 @@ class ShareRepository:
         *,
         project_id: UUID,
         owner_id: UUID,
-        token: str,
         token_hash: str,
         consent_at: datetime,
         expires_at: datetime,
@@ -28,7 +27,6 @@ class ShareRepository:
         share = ProjectShare(
             project_id=project_id,
             owner_id=owner_id,
-            token=token,
             token_hash=token_hash,
             consent_at=consent_at,
             expires_at=expires_at,
@@ -61,9 +59,7 @@ class ShareRepository:
 
     async def list_by_owner(self, owner_id: UUID) -> list[ProjectShare]:
         result = await self.session.execute(
-            select(ProjectShare)
-            .where(ProjectShare.owner_id == owner_id)
-            .order_by(ProjectShare.created_at.desc())
+            select(ProjectShare).where(ProjectShare.owner_id == owner_id).order_by(ProjectShare.created_at.desc())
         )
         return list(result.scalars().all())
 

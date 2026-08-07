@@ -74,9 +74,7 @@ def build_pptx_from_pngs(pngs: list[bytes]) -> bytes:
 
     for png in pngs:
         slide = prs.slides.add_slide(blank_layout)
-        slide.shapes.add_picture(
-            BytesIO(png), 0, 0, width=prs.slide_width, height=prs.slide_height
-        )
+        slide.shapes.add_picture(BytesIO(png), 0, 0, width=prs.slide_width, height=prs.slide_height)
 
     buf = BytesIO()
     prs.save(buf)

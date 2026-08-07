@@ -65,10 +65,18 @@ def _bar_cls(score: int, scale_max: int) -> str:
 
 # Libellés courts pour les 12 dimensions standards du radar
 _AXIS_SHORT: dict[str, str] = {
-    "d1": "Problème", "d2": "Solution", "d3": "Valeur",
-    "d4": "Marché", "d5": "Concurrence", "d6": "Modèle éco",
-    "d7": "Traction", "d8": "Croissance", "d9": "Go-to-Market",
-    "d10": "Équipe", "d11": "Avancement", "d12": "Risques",
+    "d1": "Problème",
+    "d2": "Solution",
+    "d3": "Valeur",
+    "d4": "Marché",
+    "d5": "Concurrence",
+    "d6": "Modèle éco",
+    "d7": "Traction",
+    "d8": "Croissance",
+    "d9": "Go-to-Market",
+    "d10": "Équipe",
+    "d11": "Avancement",
+    "d12": "Risques",
 }
 
 
@@ -91,9 +99,9 @@ def _axis_short(axis: dict) -> str:
 def _radar_svg(scores: dict[str, int], axes: list[dict], scale_max: int) -> str:
     """SVG radar 12 dimensions avec labels lisibles et scores colorés."""
     n = min(12, len(axes))
-    R = 160          # rayon de la grille
+    R = 160  # rayon de la grille
     CX, CY = 310, 310
-    LR = R + 58      # rayon des étiquettes
+    LR = R + 58  # rayon des étiquettes
     step = 2 * math.pi / n
 
     def pt(i: int, radius: float) -> tuple[float, float]:
@@ -119,8 +127,7 @@ def _radar_svg(scores: dict[str, int], axes: list[dict], scale_max: int) -> str:
 
     # Rayons
     spokes = "".join(
-        f'<line x1="{CX}" y1="{CY}" x2="{pt(i, R)[0]:.1f}" y2="{pt(i, R)[1]:.1f}" '
-        f'stroke="#e7e4f0" stroke-width="0.8"/>'
+        f'<line x1="{CX}" y1="{CY}" x2="{pt(i, R)[0]:.1f}" y2="{pt(i, R)[1]:.1f}" stroke="#e7e4f0" stroke-width="0.8"/>'
         for i in range(n)
     )
 
@@ -132,9 +139,7 @@ def _radar_svg(scores: dict[str, int], axes: list[dict], scale_max: int) -> str:
         x, y = pt(i, score / scale_max * R if scale_max else 0)
         data_pts.append(f"{x:.1f},{y:.1f}")
         dot_c = "#1fb0a0" if score >= 8 else "#f4b740" if score >= 5 else "#e0473b"
-        dots.append(
-            f'<circle cx="{x:.1f}" cy="{y:.1f}" r="6" fill="{dot_c}" stroke="#fff" stroke-width="2"/>'
-        )
+        dots.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="6" fill="{dot_c}" stroke="#fff" stroke-width="2"/>')
 
     poly_pts = " ".join(data_pts)
     poly = (
@@ -160,11 +165,11 @@ def _radar_svg(scores: dict[str, int], axes: list[dict], scale_max: int) -> str:
         # Décalage vertical : texte centré verticalement autour du point de label
         # Moitié supérieure : texte au-dessus → première ligne au-dessus du point
         # Moitié inférieure : texte en-dessous → première ligne au point
-        if ly < CY - 35:   # secteur haut
+        if ly < CY - 35:  # secteur haut
             dy1, dy2 = "-13", "13"
         elif ly > CY + 35:  # secteur bas
             dy1, dy2 = "4", "13"
-        else:               # côtés gauche/droit
+        else:  # côtés gauche/droit
             dy1, dy2 = "-5", "13"
 
         labels.append(
@@ -174,15 +179,15 @@ def _radar_svg(scores: dict[str, int], axes: list[dict], scale_max: int) -> str:
             f'fill="#1c1633" font-weight="700">{short}</tspan>'
             f'<tspan x="{lx:.1f}" dy="{dy2}" font-size="11" '
             f'fill="{score_c}" font-weight="700">{score}/10</tspan>'
-            f'</text>'
+            f"</text>"
         )
 
     return (
         '<svg width="100%" viewBox="0 0 620 620" role="img" '
         'aria-label="Radar 12 dimensions Ideaxion">'
-        f'{"".join(rings)}{spokes}{scale_ticks}{poly}'
-        f'{"".join(dots)}{"".join(labels)}'
-        '</svg>'
+        f"{''.join(rings)}{spokes}{scale_ticks}{poly}"
+        f"{''.join(dots)}{''.join(labels)}"
+        "</svg>"
     )
 
 
@@ -219,8 +224,6 @@ def render_bilan_html(
     )
     steps = [s for s in (r.get("next_steps") or []) if isinstance(s, dict) and s.get("action")]
     desc = r.get("description") or {}
-    competition = [c for c in (r.get("competition") or []) if isinstance(c, dict) and c.get("name")]
-
     # --- Verdict ---
     verdict = r.get("verdict") or {}
     v_status = (verdict.get("status") or "conditional").lower()
@@ -229,17 +232,11 @@ def render_bilan_html(
 
     # --- Carte Forces ---
     forces_items = "".join(f"<li>{_e(s.get('text'))}</li>" for s in strengths) or "<li>—</li>"
-    forces_card = (
-        '<div class="card success"><h3>Forces identifiées</h3>'
-        f'<ul class="list">{forces_items}</ul></div>'
-    )
+    forces_card = f'<div class="card success"><h3>Forces identifiées</h3><ul class="list">{forces_items}</ul></div>'
 
     # --- Carte Risques ---
     risks_items = "".join(f"<li>{_e(x.get('text'))}</li>" for x in risks) or "<li>—</li>"
-    risks_card = (
-        '<div class="card danger"><h3>Risques détectés</h3>'
-        f'<ul class="list">{risks_items}</ul></div>'
-    )
+    risks_card = f'<div class="card danger"><h3>Risques détectés</h3><ul class="list">{risks_items}</ul></div>'
 
     # --- Carte Description / À clarifier ---
     desc_items: list[str] = []
@@ -251,10 +248,7 @@ def render_bilan_html(
         desc_items.append(f"<li><strong>Modèle éco :</strong> {_e(desc['business_model'])}</li>")
     if not desc_items:
         desc_items = ["<li>Données non renseignées</li>"]
-    desc_card = (
-        '<div class="card warning"><h3>Éléments clés</h3>'
-        f'<ul class="list">{"".join(desc_items)}</ul></div>'
-    )
+    desc_card = f'<div class="card warning"><h3>Éléments clés</h3><ul class="list">{"".join(desc_items)}</ul></div>'
 
     # --- Verdict box ---
     verdict_box = ""
@@ -276,8 +270,8 @@ def render_bilan_html(
             tag_lbl = "Urgent" if pr == 1 else "Priorité haute" if pr == 2 else "Action recommandée"
             items += (
                 f'<div class="step"><div>'
-                f'<h3>{_e(x.get("title"))}</h3>'
-                f'<p>{_e(x.get("description"))}</p>'
+                f"<h3>{_e(x.get('title'))}</h3>"
+                f"<p>{_e(x.get('description'))}</p>"
                 f'</div><span class="tag {tag_cls}">{tag_lbl}</span></div>'
             )
         reco_block = f'<div style="margin-top:20px;"><div class="eyebrow" style="margin-bottom:14px;">Recommandations prioritaires</div><div class="roadmap">{items}</div></div>'
@@ -286,8 +280,7 @@ def render_bilan_html(
     steps_block = ""
     if steps:
         rows = "".join(
-            f"<tr><td><strong>{_e(s.get('deadline'))}</strong></td><td>{_e(s.get('action'))}</td></tr>"
-            for s in steps
+            f"<tr><td><strong>{_e(s.get('deadline'))}</strong></td><td>{_e(s.get('action'))}</td></tr>" for s in steps
         )
         steps_block = (
             '<div style="margin-top:20px;"><div class="eyebrow" style="margin-bottom:10px;">Prochaines étapes</div>'

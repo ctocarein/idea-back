@@ -118,7 +118,7 @@ class ScoringService:
         grid = await self._resolve_grid(grid_version)
 
         keys = engine.axis_keys(grid.axes)
-        cons = consensus(passes, keys, thresholds)
+        cons = consensus(passes, keys, thresholds, scale_max=grid.scale_max)
 
         engine.validate_axes(grid.axes, cons.axes, grid.scale_max)
         pillars = engine.pillar_scores(grid.axes, cons.axes)

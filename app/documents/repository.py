@@ -45,6 +45,12 @@ class DocumentRepository:
         )
         return list(result.scalars())
 
+    async def list_for_project(self, project_id: UUID) -> list[Document]:
+        result = await self.session.execute(
+            select(Document).where(Document.project_id == project_id).order_by(Document.created_at.desc())
+        )
+        return list(result.scalars())
+
     async def confirm(self, doc: Document) -> None:
         doc.status = DocumentStatus.CONFIRMED
         await self.session.flush()

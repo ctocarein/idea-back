@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.reports.pdf import reading, render_bilan_html
-from app.scoring.constants import AXES, PILLARS
+from app.scoring.constants import AXES, GRID_VERSION_V2, PILLARS
 
 _SCORES = {
     "d1": 8,
@@ -81,7 +81,7 @@ def _html(report: dict | None = _REPORT, actions: list | None = _ACTIONS) -> str
         pillar_scores=_PILLARS,
         overall=6,
         scale_max=10,
-        grid_version="v2-placeholder",
+        grid_version=GRID_VERSION_V2,
         generated_at="23/06/2026",
         n_passes=3,
         confidence=0.86,
@@ -98,28 +98,26 @@ def test_reading_bands_ten_scale() -> None:
 
 def test_radar_pillars_and_dims() -> None:
     html = _html()
-    assert "Rapport de pré-diagnostic" in html
-    assert all(p in html for p in ("Sens du projet", "Viabilité", "Scalabilité", "Exécution"))
+    assert "Bilan de diagnostic entrepreneurial" in html
+    assert "Radar 12 dimensions" in html and "Performance détaillée par axe" in html
     assert "D6 · Modèle économique" in html and "/10" in html
-    assert 'class="fill t-fragile" style="width:40%"' in html  # d6 = 4 → Faible
+    assert 'class="bar-fill red" style="width:40%"' in html  # d6 = 4 → à renforcer
 
 
 def test_all_report_sections_render() -> None:
     html = _html()
-    assert "Description du projet" in html and "Commission par tour de tontine." in html
-    assert "Résumé du diagnostic" in html and "Maturité · Prototype" in html
-    assert "Verdict" in html and "Projet à potentiel sous conditions" in html
-    assert "Risques identifiés" in html and "Critique" in html  # gravité
-    assert "Paysage concurrentiel" in html and "Acteur A" in html
-    assert "Niveau d'avancement" in html and "3 pers." in html
+    assert "Éléments clés" in html and "Commission par tour de tontine." in html
+    assert "Score global" in html and "Prototype" in html
+    assert "Projet à potentiel sous conditions" in html
+    assert "Risques détectés" in html and "Unit economics à prouver" in html
     assert "Recommandations prioritaires" in html and "Chiffrer le modèle" in html
     assert "Prochaines étapes" in html and "Interviewer 20 clients cibles." in html
-    assert "non contractuel" in html  # mentions RGPD
+    assert "Non contractuel" in html  # mentions RGPD
 
 
 def test_next_step_block_renders_primary_action() -> None:
     html = _html()
-    assert "Ta prochaine étape" in html and "À renforcer en priorité" in html
+    assert "Ta prochaine priorité" in html and "À renforcer en priorité" in html
     assert "Apprends : modèle économique" in html  # action primaire (CTA)
     assert "D6 · Modèle économique — 4/10" in html
     # L'action secondaire apparaît dans la liste.
@@ -128,14 +126,15 @@ def test_next_step_block_renders_primary_action() -> None:
 
 def test_no_actions_no_block() -> None:
     html = _html(actions=[])
-    assert "Ta prochaine étape" not in html
+    assert "Ta prochaine priorité" not in html
 
 
 def test_report_optional_degrades_gracefully() -> None:
     # Aucun rapport structuré → le bilan scoré reste complet (sections qualitatives absentes).
     html = _html(report=None)
-    assert "Rapport de pré-diagnostic" in html and "Sens du projet" in html
-    assert "Verdict" not in html and "Risques identifiés" not in html
+    assert "Bilan de diagnostic entrepreneurial" in html and "Radar 12 dimensions" in html
+    assert "Projet à potentiel sous conditions" not in html
+    assert "Données non renseignées" in html and "<li>—</li>" in html
 
 
 def test_diagnostic_report_schema_tolerant() -> None:

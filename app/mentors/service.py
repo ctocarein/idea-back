@@ -42,7 +42,13 @@ def _hash_token(token: str) -> str:
 
 
 class MentorService:
-    def __init__(self, repo: MentorRepository, users: UserRepository, auditor: AuditService, projects: ProjectRepository | None = None) -> None:  # noqa: E501
+    def __init__(
+        self,
+        repo: MentorRepository,
+        users: UserRepository,
+        auditor: AuditService,
+        projects: ProjectRepository | None = None,
+    ) -> None:  # noqa: E501
         self.repo = repo
         self.users = users
         self.auditor = auditor

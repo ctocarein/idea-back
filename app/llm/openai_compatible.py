@@ -100,9 +100,7 @@ class OpenAICompatibleProvider:
             usage={k: int(v) for k, v in usage.items() if isinstance(v, int)},
         )
 
-    async def analyze_json(
-        self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None
-    ) -> dict:
+    async def analyze_json(self, prompt: str, *, schema: dict | None = None, max_tokens: int | None = None) -> dict:
         # Demande une réponse JSON et la parse strictement (sortie malformée → LLMParseError).
         messages = [
             {"role": "system", "content": "Réponds STRICTEMENT en JSON valide, sans texte autour."},
@@ -112,9 +110,7 @@ class OpenAICompatibleProvider:
         content = data["choices"][0]["message"]["content"]
         return extract_json_object(content)
 
-    async def analyze_json_with_images(
-        self, prompt: str, *, images: list[str], schema: dict | None = None
-    ) -> dict:
+    async def analyze_json_with_images(self, prompt: str, *, images: list[str], schema: dict | None = None) -> dict:
         """Comme analyze_json, mais le comité VOIT les slides (vision multimodale).
 
         `images` : data URLs base64 (`data:image/png;base64,...`). Utilise le modèle vision

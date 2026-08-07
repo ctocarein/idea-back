@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 from app.core.logging import get_logger
 from app.jobs.models import Job
@@ -20,6 +21,7 @@ logger = get_logger("jobs")
 
 # Délais de backoff par tentative (en minutes), index = retry_count courant.
 _BACKOFF_MINUTES = [1, 5, 15]
+JOB_LEASE_SECONDS = 30 * 60
 
 
 class JobService:
@@ -33,9 +35,28 @@ class JobService:
         job_type: str,
         payload: dict[str, Any],
         priority: int = 100,
+        idempotency_key: str | None = None,
+        correlation_id: UUID | None = None,
+        project_id: UUID | None = None,
     ) -> Job:
         # Appelé DANS la transaction du service métier (ex. lancer un diagnostic).
-        return await self.repo.enqueue(job_type=job_type, payload=payload, priority=priority)
+        return await self.repo.enqueue(
+            job_type=job_type,
+            payload=payload,
+            priority=priority,
+            idempotency_key=idempotency_key,
+            correlation_id=correlation_id,
+            project_id=project_id,
+        )
+
+    async def recover_stale(self) -> list[Job]:
+        stale_before = datetime.now(UTC) - timedelta(seconds=JOB_LEASE_SECONDS)
+        async with self.session.begin():
+            return await self.repo.recover_stale(stale_before=stale_before)
+
+    async def heartbeat(self, job_id: UUID) -> None:
+        async with self.session.begin():
+            await self.repo.heartbeat(job_id)
 
     async def claim(self) -> Job | None:
         async with self.session.begin():

@@ -15,10 +15,12 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit.service import AuditService
+from app.core.cache import get_redis
 from app.core.database import get_session
 from app.core.errors import ForbiddenError, UnauthenticatedError
 from app.core.security import decode_access_token
 from app.iam.models import AccountStatus, Role, User
+from app.iam.oauth_service import OAuthService
 from app.iam.permissions import Permission, permissions_for
 from app.iam.repository import RefreshTokenRepository, UserRepository
 from app.iam.service import AuthService
@@ -43,6 +45,16 @@ def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthServic
         users=UserRepository(session),
         refresh_tokens=RefreshTokenRepository(session),
         auditor=AuditService(session),
+    )
+
+
+def get_oauth_service(session: AsyncSession = Depends(get_session)) -> OAuthService:
+    return OAuthService(
+        auth=get_auth_service(session),
+        users=UserRepository(session),
+        auditor=AuditService(session),
+        redis=get_redis(),
+        session=session,
     )
 
 

@@ -1,0 +1,193 @@
+{
+  "grid_version": "radar-v2.0.0-preprod.1",
+  "note": "Corpus de récits porteurs réalistes pour le BANC D'ESSAI du taux d'exception (app/scoring/exception_bench.py). Chaque cas est scoré N fois par le LLM courant sur la grille v2 (d1..d12, /10) ; la divergence inter-passes révèle les dimensions que le système routerait vers l'humain. `tags.quality` (thin|medium|rich) et `tags.stage` servent à mesurer si le taux d'exception baisse quand le récit est riche. AUCUN label expert ici : ce banc mesure l'auto-incertitude du système (le pilote de charge évaluateur), pas la justesse absolue.",
+  "cases": [
+    {
+      "id": "tontine-fintech",
+      "category": "fintech",
+      "archetype": "digital",
+      "tags": { "quality": "medium", "stage": "validation" },
+      "description": "Appli de tontine/épargne collective via mobile money : traçabilité de chaque cotisation et confiance entre membres d'un groupe.",
+      "answers": {
+        "probleme": "Les tontines manuelles génèrent pertes, oublis et litiges entre membres.",
+        "solution": "Chaque cotisation est tracée et prouvée ; l'ordre de décaissement est transparent.",
+        "confiance": "Agrégateur mobile money agréé, chiffrement des transactions.",
+        "traction": "80 utilisateurs en test sur 3 groupes pilotes à Cotonou, aucun revenu encore."
+      }
+    },
+    {
+      "id": "irrigation-agritech",
+      "category": "agritech",
+      "archetype": "field",
+      "tags": { "quality": "medium", "stage": "mvp" },
+      "description": "Place de marché de kits d'irrigation goutte-à-goutte abordables + conseil agronomique pour petits producteurs maraîchers.",
+      "answers": {
+        "probleme": "Rendements faibles faute d'eau maîtrisée en saison sèche.",
+        "solution": "Kits financés en plusieurs fois + suivi terrain par des relais coopératives.",
+        "terrain": "Partenariat signé avec 2 coopératives, 40 kits déployés.",
+        "modele": "Marge sur le kit + abonnement conseil à 2000 XOF/mois, non encore validé."
+      }
+    },
+    {
+      "id": "tutorat-edtech-generique",
+      "category": "edtech",
+      "archetype": "digital",
+      "tags": { "quality": "thin", "stage": "idea" },
+      "description": "Une appli de tutorat scolaire qui met en relation des élèves et des tuteurs.",
+      "answers": {
+        "probleme": "Le soutien scolaire coûte cher.",
+        "solution": "On met en relation des tuteurs et des élèves."
+      }
+    },
+    {
+      "id": "teleconsult-sante",
+      "category": "sante",
+      "archetype": "digital",
+      "tags": { "quality": "rich", "stage": "traction" },
+      "description": "Plateforme de téléconsultation pour zones rurales mal desservies, avec relais infirmiers équipés d'une valise de diagnostic connectée.",
+      "answers": {
+        "probleme": "Déserts médicaux ruraux : 4h de trajet moyen pour voir un médecin dans notre zone pilote.",
+        "solution": "Téléconsultation via un relais infirmier local qui fait les mesures ; le médecin agréé décide à distance.",
+        "confiance": "Médecins inscrits à l'ordre, dossier patient chiffré, protocole validé par 2 médecins conseils.",
+        "traction": "6 centres relais actifs, 1 200 consultations en 5 mois, 18 % de patients reviennent, revenu 3,2 M XOF cumulés.",
+        "modele": "Facturation par consultation (1 500 XOF), part reversée à l'infirmier relais ; marge brute 40 %.",
+        "risques": "Cadre réglementaire télémédecine encore flou dans le pays ; dépendance à la connectivité."
+      }
+    },
+    {
+      "id": "livraison-derniere-boucle",
+      "category": "commerce",
+      "archetype": "field",
+      "tags": { "quality": "medium", "stage": "mvp" },
+      "description": "Service de livraison dernier kilomètre pour petits commerçants urbains via un réseau de livreurs à moto.",
+      "answers": {
+        "probleme": "Les petits commerçants n'ont pas de logistique fiable pour livrer leurs clients en ville.",
+        "solution": "Une flotte de livreurs partenaires + une appli de dispatch simple.",
+        "traction": "15 commerçants actifs, ~200 courses/semaine.",
+        "modele": "Commission de 12 % par course + frais fixes."
+      }
+    },
+    {
+      "id": "recyclage-plastique",
+      "category": "commerce",
+      "archetype": "field",
+      "tags": { "quality": "thin", "stage": "idea" },
+      "description": "On veut collecter le plastique dans les quartiers et le revendre transformé. C'est bon pour l'environnement et ça crée des emplois.",
+      "answers": {
+        "probleme": "Il y a trop de déchets plastiques.",
+        "vision": "Devenir le leader du recyclage en Afrique de l'Ouest."
+      }
+    },
+    {
+      "id": "saas-gestion-pharmacies",
+      "category": "sante",
+      "archetype": "digital",
+      "tags": { "quality": "rich", "stage": "traction" },
+      "description": "Logiciel de gestion de stock et de vente pour officines de pharmacie, avec alertes de rupture et de péremption.",
+      "answers": {
+        "probleme": "Les pharmacies gèrent leur stock sur papier : ruptures fréquentes et pertes sur les produits périmés.",
+        "solution": "Un SaaS simple qui suit le stock en temps réel et alerte avant rupture/péremption.",
+        "traction": "34 officines abonnées, MRR de 1,7 M XOF, churn mensuel 3 %.",
+        "modele": "Abonnement par officine à 50 000 XOF/mois ; CAC ~120 000 XOF, payback 3 mois.",
+        "equipe": "2 cofondateurs : un pharmacien, un dev senior ; 3 salariés.",
+        "concurrence": "Deux tableurs Excel maison et un concurrent régional plus cher et complexe."
+      }
+    },
+    {
+      "id": "marketplace-artisans",
+      "category": "commerce",
+      "archetype": "digital",
+      "tags": { "quality": "medium", "stage": "validation" },
+      "description": "Marketplace en ligne pour vendre l'artisanat local à l'international.",
+      "answers": {
+        "probleme": "Les artisans locaux n'ont pas accès aux marchés export.",
+        "solution": "Une vitrine en ligne + gestion logistique et paiement international.",
+        "traction": "120 produits listés, 8 ventes le premier mois.",
+        "risques": "Logistique export complexe, paiements internationaux."
+      }
+    },
+    {
+      "id": "energie-solaire-kiosques",
+      "category": "commerce",
+      "archetype": "field",
+      "tags": { "quality": "medium", "stage": "mvp" },
+      "description": "Kiosques de recharge solaire et de vente de lampes pour villages hors réseau électrique.",
+      "answers": {
+        "probleme": "Des millions de personnes hors réseau paient cher le kérosène et la recharge de téléphone.",
+        "solution": "Des kiosques solaires opérés par des gérants locaux ; recharge + vente/location de lampes.",
+        "traction": "9 kiosques, ~600 recharges/jour cumulées.",
+        "modele": "Marge recharge + location lampe en pay-as-you-go.",
+        "equipe": "Fondateur ingénieur énergie ; pas de profil commercial."
+      }
+    },
+    {
+      "id": "credit-scoring-informel",
+      "category": "fintech",
+      "archetype": "digital",
+      "tags": { "quality": "rich", "stage": "validation" },
+      "description": "Scoring de crédit pour commerçants du secteur informel à partir de leurs flux mobile money, pour débloquer des microcrédits de trésorerie.",
+      "answers": {
+        "probleme": "Les commerçants informels sont invisibles pour les banques : pas d'historique, donc pas de crédit de trésorerie.",
+        "solution": "Un score dérivé des flux mobile money (avec consentement) qui prédit la capacité de remboursement.",
+        "traction": "Pilote de 300 commerçants, 210 crédits accordés, taux de défaut 6 % à 3 mois.",
+        "modele": "Commission sur intérêts partagée avec un partenaire prêteur agréé.",
+        "risques": "Réglementation prêt/données ; biais du modèle de score ; dépendance à un seul opérateur mobile money.",
+        "concurrence": "Les banques (absentes du segment) et une néobanque qui vise le salariat, pas l'informel."
+      }
+    },
+    {
+      "id": "app-fitness-vague",
+      "category": "sante",
+      "archetype": "digital",
+      "tags": { "quality": "thin", "stage": "idea" },
+      "description": "Une super app de bien-être et de fitness avec de l'IA pour aider les gens à être en meilleure santé.",
+      "answers": {
+        "vision": "Révolutionner le bien-être avec l'intelligence artificielle.",
+        "fonctionnalites": "Coaching, nutrition, méditation, communauté, tout-en-un."
+      }
+    },
+    {
+      "id": "logistique-froid-agri",
+      "category": "agritech",
+      "archetype": "field",
+      "tags": { "quality": "medium", "stage": "mvp" },
+      "description": "Chaîne du froid mutualisée (chambres froides mobiles) pour réduire les pertes post-récolte des maraîchers.",
+      "answers": {
+        "probleme": "30 à 40 % des récoltes maraîchères se perdent faute de conservation entre champ et marché.",
+        "solution": "Des unités de froid partagées, louées à l'heure, placées près des marchés de gros.",
+        "traction": "2 unités en test, 25 maraîchers utilisateurs réguliers.",
+        "modele": "Location à l'heure/au bac ; investissement matériel lourd."
+      }
+    },
+    {
+      "id": "contradiction-traction-modele",
+      "category": "edtech",
+      "archetype": "digital",
+      "tags": { "quality": "medium", "stage": "traction", "note": "cas volontairement incohérent" },
+      "description": "Plateforme de cours en ligne certifiants pour les métiers du numérique, déjà utilisée par des milliers d'apprenants.",
+      "answers": {
+        "traction": "Plus de 15 000 inscrits en 6 mois, croissance virale.",
+        "modele": "C'est gratuit pour tout le monde, on ne fait pas encore payer.",
+        "revenus": "Aucun revenu à ce jour.",
+        "equipe": "Un fondateur solo, non technique, qui sous-traite le développement.",
+        "cout": "Chaque apprenant actif coûte de l'hébergement vidéo ; pas de plan de monétisation."
+      }
+    },
+    {
+      "id": "assurance-indicielle-agri",
+      "category": "fintech",
+      "archetype": "field",
+      "tags": { "quality": "rich", "stage": "validation" },
+      "description": "Assurance récolte indicielle basée sur données satellites/pluviométrie, distribuée via les coopératives agricoles.",
+      "answers": {
+        "probleme": "Les petits agriculteurs n'ont aucune protection contre les aléas climatiques ; une mauvaise saison peut tout emporter.",
+        "solution": "Une assurance qui paie automatiquement quand un indice climatique (pluviométrie) franchit un seuil, sans expertise terrain.",
+        "traction": "Saison pilote avec 1 coopérative, 450 agriculteurs assurés, 1 déclenchement de paiement testé.",
+        "modele": "Prime par hectare, réassurance derrière ; distribution via coopératives (commission).",
+        "equipe": "Actuaire + agronome + responsable partenariats coopératives.",
+        "risques": "Risque de base (l'indice ne reflète pas la perte réelle) ; agrément assurance ; éducation des agriculteurs.",
+        "concurrence": "Assureurs classiques absents du micro-segment ; un programme public sous-doté."
+      }
+    }
+  ]
+}

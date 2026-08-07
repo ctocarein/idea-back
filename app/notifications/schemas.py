@@ -17,7 +17,7 @@ class NotificationOut(BaseModel):
     read_at: datetime | None
     created_at: datetime
 
-    @computed_field  # type: ignore[misc]
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def unread(self) -> bool:
         return self.read_at is None

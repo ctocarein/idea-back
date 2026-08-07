@@ -85,9 +85,7 @@ async def extract_file_idea(
         )
 
     name = project_name or (file.filename or "").rsplit(".", 1)[0] or None
-    return await svc.extract(
-        text.strip()[:5000], name, lang=lang if lang in ("fr", "en") else "fr", currency=currency
-    )
+    return await svc.extract(text.strip()[:5000], name, lang=lang if lang in ("fr", "en") else "fr", currency=currency)
 
 
 @router.post(

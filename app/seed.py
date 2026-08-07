@@ -54,7 +54,8 @@ async def _seed_users(repo: UserRepository) -> None:
 
 
 async def _seed_grid(repo: ScoringRepository) -> None:
-    # Grille Radar v2 (placeholder) — à remplacer par les ancres figées en atelier.
+    # Grille Radar v2 de préproduction. Toute évolution crée une nouvelle version :
+    # une grille déjà utilisée pour un score n'est jamais modifiée en place.
     if await repo.get_by_version(GRID_VERSION_V2) is not None:
         logger.info("seed_grid_skipped", version=GRID_VERSION_V2)
         return

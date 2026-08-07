@@ -1,17 +1,17 @@
 """Grille Radar v2 — 4 piliers × 3 dimensions = 12 dimensions (D1-D12), notées /10.
 
-⚠️ Ancres/poids PLACEHOLDER (première passe, cf. `docs/GRILLE_RADAR_V2.md`) — à figer en
-atelier. La STRUCTURE (piliers, dimensions, questions centrales) est, elle, arrêtée.
+Cette révision de préproduction fige la structure technique afin que chaque score reste
+rejouable. Son activation en production reste soumise à la calibration métier documentée.
 
 Le moteur (`engine.py`) est piloté par la grille : adopter v2 = cette donnée + un seed.
 """
 
 from __future__ import annotations
 
-GRID_VERSION_V2 = "v2-placeholder"
+GRID_VERSION_V2 = "radar-v2.0.0-preprod.1"
 SCALE_MAX = 10
 
-# Niveaux de maturité globaux — 6 paliers sur le score /100.
+# Niveaux de maturité globaux — 6 paliers sur le pourcentage normalisé /100.
 # Utilisés dans GridOut, les rapports et le front (badge de maturité).
 MATURITY_LEVELS: list[dict] = [
     {
@@ -71,6 +71,7 @@ def get_maturity_level(overall_pct: int) -> dict:
         if level["min"] <= overall_pct <= level["max"]:
             return level
     return MATURITY_LEVELS[-1]
+
 
 # Piliers (vue porteur) — chaque pilier a sa question directrice.
 PILLARS: list[dict[str, str]] = [

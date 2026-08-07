@@ -37,10 +37,7 @@ class LogoService:
     # --- helpers ---------------------------------------------------------------
     def _to_out(self, logo: Logo) -> LogoOut:
         spec = logo.spec
-        variations = [
-            VariationOut(spec=v, svg=render_logo_svg(v, standalone=True))
-            for v in (logo.variations or [])
-        ]
+        variations = [VariationOut(spec=v, svg=render_logo_svg(v, standalone=True)) for v in (logo.variations or [])]
         return LogoOut(
             id=logo.id,
             spec=spec,
@@ -90,8 +87,11 @@ class LogoService:
         variations: list[dict]
         try:
             prompt = build_logo_prompt(
-                name=name, sector=sector, archetype=archetype,
-                description=description, lang=ctx.user.language,
+                name=name,
+                sector=sector,
+                archetype=archetype,
+                description=description,
+                lang=ctx.user.language,
             )
             # 4 briefs (un par angle) = sortie longue : on relève le plafond sinon JSON tronqué.
             raw = await self.provider.analyze_json(prompt, max_tokens=1800)
