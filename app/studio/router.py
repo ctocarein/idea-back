@@ -36,7 +36,7 @@ async def get_kit(
     "/logo/{logo_id}/generate",
     response_model=LogoOut,
     # Génération = appel LLM : anti-abus coût (fail-closed si Redis down).
-    dependencies=[Depends(rate_limit("logo_generate", limit=12, window_seconds=60, fail_open=False))],
+    dependencies=[Depends(rate_limit("logo_generate", limit=12, window_seconds=60))],
 )
 async def generate_logo(
     logo_id: UUID,

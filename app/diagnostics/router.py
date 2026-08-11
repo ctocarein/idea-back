@@ -47,7 +47,7 @@ async def _read_limited(file: UploadFile, limit: int) -> bytes:
     "/extract",
     response_model=IdeaExtractOut,
     # PUBLIC : le porteur raconte AVANT de s'inscrire. Rate-limité par IP (1 appel LLM/visiteur).
-    dependencies=[Depends(rate_limit("diagnostic_extract", limit=8, window_seconds=60, fail_open=False))],
+    dependencies=[Depends(rate_limit("diagnostic_extract", limit=8, window_seconds=60))],
 )
 async def extract_idea(
     body: IdeaExtractIn,
@@ -61,7 +61,7 @@ async def extract_idea(
     "/extract-file",
     response_model=IdeaExtractOut,
     # PUBLIC + rate-limité : même logique que /extract mais pour les fichiers.
-    dependencies=[Depends(rate_limit("diagnostic_extract_file", limit=5, window_seconds=60, fail_open=False))],
+    dependencies=[Depends(rate_limit("diagnostic_extract_file", limit=5, window_seconds=60))],
 )
 async def extract_file_idea(
     file: UploadFile = File(...),
@@ -93,7 +93,7 @@ async def extract_file_idea(
     status_code=status.HTTP_202_ACCEPTED,
     response_model=DiagnosticCreatedOut,
     # Scoring = 3 passes LLM : anti-abus coût (fail-closed si Redis down).
-    dependencies=[Depends(rate_limit("diagnostic_run", limit=6, window_seconds=60, fail_open=False))],
+    dependencies=[Depends(rate_limit("diagnostic_run", limit=6, window_seconds=60))],
 )
 async def start_guided_diagnostic(
     body: ManualDiagnosticIn,
@@ -108,7 +108,7 @@ async def start_guided_diagnostic(
     "/upload",
     status_code=status.HTTP_202_ACCEPTED,
     response_model=DiagnosticCreatedOut,
-    dependencies=[Depends(rate_limit("diagnostic_run", limit=6, window_seconds=60, fail_open=False))],
+    dependencies=[Depends(rate_limit("diagnostic_run", limit=6, window_seconds=60))],
 )
 async def start_upload_diagnostic(
     body: UploadDiagnosticIn,

@@ -55,7 +55,7 @@ async def update_section(
 @router.post(
     "/{pitch_id}/sections/{key}/generate",
     response_model=SectionGenerateOut,
-    dependencies=[Depends(rate_limit("pitch_generate", limit=15, window_seconds=60, fail_open=False))],
+    dependencies=[Depends(rate_limit("pitch_generate", limit=15, window_seconds=60))],
 )
 async def generate_section(
     pitch_id: UUID,
@@ -70,7 +70,7 @@ async def generate_section(
     "/{pitch_id}/deck/generate",
     response_model=PitchOut,
     # Génération du deck = appel LLM : anti-abus coût (fail-closed si Redis down).
-    dependencies=[Depends(rate_limit("deck_generate", limit=10, window_seconds=60, fail_open=False))],
+    dependencies=[Depends(rate_limit("deck_generate", limit=10, window_seconds=60))],
 )
 async def generate_deck(
     pitch_id: UUID,
