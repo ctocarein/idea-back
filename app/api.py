@@ -16,7 +16,7 @@ from app.gdpr.router import router as gdpr_router
 from app.iam.router import router as iam_router
 from app.instrumentation.router import router as analytics_router
 from app.jobs.router import router as jobs_admin_router
-from app.mentors.router import router as mentors_router
+# from app.mentors.router import router as mentors_router  # RETIRÉ — pas de réseau mentor (cf. RETRAIT_MENTORAT.md)
 from app.notifications.router import router as notifications_router
 from app.opportunities.admin_router import router as opportunities_admin_router
 from app.opportunities.router import router as opportunities_router
@@ -49,7 +49,7 @@ api_router.include_router(pitchsim_router)  # /pitchsim/*       (Sprint 4)
 api_router.include_router(projects_owner_router)  # /projects/* — espace porteur unifié
 api_router.include_router(projects_admin_router)  # /admin/projects/* (Sprint 5)
 api_router.include_router(audit_router)  # /admin/audit-logs   (Sprint 5)
-api_router.include_router(mentors_router)  # /mentors/*, /admin/mentor-applications/* (Sprint 5)
+# api_router.include_router(mentors_router)  # RETIRÉ — pas de réseau mentor : POST /mentors/apply fermé (cf. RETRAIT_MENTORAT.md)
 api_router.include_router(scoring_admin_router)  # /admin/scoring/grids/* (Sprint 5)
 api_router.include_router(sharing_router)  # /projects/{id}/share, /shared/{token} (Sprint 5)
 api_router.include_router(analytics_router)  # /admin/learning-dashboard (Sprint 6)
