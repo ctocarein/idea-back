@@ -25,6 +25,7 @@ from app.mentors.models import (  # noqa: F401
     MentorProfile,
     MentorRequest,
 )
+from app.notifications.models import Notification  # noqa: F401
 from app.opportunities.models import Opportunity  # noqa: F401
 from app.pitch.models import Pitch  # noqa: F401
 from app.pitchsim.models import (  # noqa: F401
@@ -55,6 +56,7 @@ __all__ = [
     "MentorProfile",
     "MentorRequest",
     "NeedFiche",
+    "Notification",
     "Opportunity",
     "PermissionGrant",
     "PitchDeck",
