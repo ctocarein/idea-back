@@ -17,8 +17,15 @@ class ShareOut(BaseModel):
     path: str  # à composer avec le domaine front : <front>/shared/{token}
 
 
-class SharedFicheOut(BaseModel):
-    # Lecture jury/incubateur (triple-lecture) : le credential + une synthèse, pas les internes.
+class SharedProjectOut(BaseModel):
+    """Synthèse publique d'un projet partagé — lecture jury/incubateur.
+
+    Nommé `SharedFicheOut` jusqu'ici, en collision avec la fiche de besoin d'`academy` :
+    deux objets sans rapport sous un même nom, que l'OpenAPI désambiguïsait en
+    `app__sharing__schemas__SharedFicheOut` jusque dans les types du front.
+    """
+
+    # Triple-lecture : le credential + une synthèse, pas les internes.
     project_title: str
     sector: str
     maturity: str | None
