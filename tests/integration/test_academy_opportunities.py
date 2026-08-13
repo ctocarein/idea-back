@@ -20,53 +20,6 @@ async def _register(client, email: str) -> dict:
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
-async def test_academy_lessons_progress_and_guided_build(client) -> None:
-    headers = await _register(client, "academy@ideaxion.io")
-
-    # 1) Catalogue de leçons (seedé) + filtre par topic (résolution d'un next_action).
-    r = await client.get("/api/v1/academy/lessons", headers=headers)
-    assert r.status_code == 200, r.text
-    assert len(r.json()) >= 6
-    r = await client.get("/api/v1/academy/lessons?topic=modele_economique", headers=headers)
-    assert r.status_code == 200
-    lessons = r.json()
-    assert len(lessons) == 1 and lessons[0]["topic"] == "modele_economique"
-    slug = lessons[0]["slug"]
-
-    # 2) Détail d'une leçon (corps présent).
-    r = await client.get(f"/api/v1/academy/lessons/{slug}", headers=headers)
-    assert r.status_code == 200 and r.json()["body"]
-
-    # 3) Compléter la leçon → progression persistée (idempotent).
-    r = await client.post(f"/api/v1/academy/lessons/{slug}/complete", headers=headers)
-    assert r.status_code == 200, r.text
-    assert r.json()["completed_count"] == 1
-    await client.post(f"/api/v1/academy/lessons/{slug}/complete", headers=headers)  # rejoue
-    r = await client.get("/api/v1/academy/progress", headers=headers)
-    assert r.json()["completed_count"] == 1  # pas de doublon
-
-    # 4) Construire guidé : l'IA répond (coach), le porteur écrit le brouillon.
-    r = await client.post("/api/v1/academy/build/start", headers=headers, json={"section": "modele_economique"})
-    assert r.status_code == 200, r.text
-    session_id = r.json()["id"]
-
-    r = await client.post(
-        f"/api/v1/academy/build/{session_id}/turn",
-        headers=headers,
-        json={"message": "Comment formuler mon modèle ?"},
-    )
-    assert r.status_code == 200, r.text
-    turns = r.json()["turns"]
-    assert len(turns) == 2 and turns[1]["role"] == "coach"
-
-    r = await client.patch(
-        f"/api/v1/academy/build/{session_id}/draft",
-        headers=headers,
-        json={"draft": "Commission de 2% sur les transactions."},
-    )
-    assert r.status_code == 200 and "Commission" in r.json()["draft"]
-
-
 async def test_opportunities_eligibility_for_project(client) -> None:
     headers = await _register(client, "oppo@ideaxion.io")
 
