@@ -26,6 +26,21 @@ class ProjectAdminOut(BaseModel):
     created_at: datetime
 
 
+class ProjectAdminDetailOut(ProjectAdminOut):
+    """Fiche projet côté back-office : la liste, plus le dernier bilan du projet.
+
+    Sans `latest_report_id`, l'analyste assigné n'a AUCUN chemin vers
+    `PATCH /reports/{id}/scores|report` : la garde de ces routes le désigne
+    explicitement (`guard_assigned_or_admin`), mais `GET /reports` est owner-scoped —
+    il ne pouvait donc pas découvrir l'identifiant du bilan qu'il est censé reprendre.
+
+    Volontairement absent de la liste : le résoudre pour chaque ligne coûterait une
+    requête par projet, pour une information dont seule la fiche a besoin.
+    """
+
+    latest_report_id: UUID | None = None
+
+
 class ReviewTransitionIn(BaseModel):
     target: ReviewStatus  # validé contre la machine REVIEW_TRANSITIONS dans le service
 

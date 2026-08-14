@@ -68,7 +68,7 @@ async def client():
         SCALE_MAX,
     )
     from app.scoring.repository import ScoringRepository
-    from app.seed import _seed_lessons, _seed_opportunities
+    from app.seed import _seed_opportunities
 
     async with get_session_factory()() as session:
         async with session.begin():
@@ -81,7 +81,6 @@ async def client():
                 scale_max=SCALE_MAX,
             )
             # Sprint 3 : leçons (topics alignés aux leviers) + catalogue d'opportunités.
-            await _seed_lessons(session)
             await _seed_opportunities(session)
             # Sprint 4 : rubrique de pitch active.
             from app.pitchsim.constants import PITCH_AXES, PITCH_RUBRIC_VERSION, PITCH_SCALE_MAX

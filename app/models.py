@@ -8,7 +8,7 @@ Quand une feature ajoute des modèles, on l'importe ici.
 from __future__ import annotations
 
 # Transverse
-from app.academy.models import GuidedSession, LearningProgress, Lesson, NeedFiche  # noqa: F401
+from app.academy.models import GuidedSession, NeedFiche  # noqa: F401
 from app.audit.models import AuditLog  # noqa: F401
 
 # Métier
@@ -25,6 +25,7 @@ from app.mentors.models import (  # noqa: F401
     MentorProfile,
     MentorRequest,
 )
+from app.notifications.models import Notification  # noqa: F401
 from app.opportunities.models import Opportunity  # noqa: F401
 from app.pitch.models import Pitch  # noqa: F401
 from app.pitchsim.models import (  # noqa: F401
@@ -50,13 +51,12 @@ __all__ = [
     "GuidedSession",
     "Invitation",
     "Job",
-    "LearningProgress",
-    "Lesson",
     "Logo",
     "MentorApplication",
     "MentorProfile",
     "MentorRequest",
     "NeedFiche",
+    "Notification",
     "Opportunity",
     "PermissionGrant",
     "PitchDeck",

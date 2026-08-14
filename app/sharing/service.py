@@ -18,7 +18,7 @@ from app.reports.models import Report, ReportStatus
 from app.reports.repository import ReportRepository
 from app.sharing.models import SHARE_DEFAULT_TTL_DAYS
 from app.sharing.repository import ShareRepository
-from app.sharing.schemas import ProjectVisibilityOut, SharedFicheOut, ShareOut, ShareStatsOut
+from app.sharing.schemas import ProjectVisibilityOut, SharedProjectOut, ShareOut, ShareStatsOut
 
 
 def _hash(token: str) -> str:
@@ -104,7 +104,7 @@ class ShareService:
             is_public=project.is_public,
         )
 
-    async def get_fiche(self, token: str) -> SharedFicheOut:
+    async def get_fiche(self, token: str) -> SharedProjectOut:
         token_hash = _hash(token)
         share = await self.repo.get_active_by_hash(token_hash)
         if share is None:
@@ -122,7 +122,7 @@ class ShareService:
         insights = report.insights or {}
         comprehension = report.comprehension or {}
         strengths = [s.get("text", "") for s in insights.get("strengths", []) if isinstance(s, dict)]
-        return SharedFicheOut(
+        return SharedProjectOut(
             project_title=project.title,
             sector=project.sector,
             maturity=insights.get("maturity"),

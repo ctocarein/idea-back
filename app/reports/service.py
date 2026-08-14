@@ -43,8 +43,11 @@ class ReportService:
             raise NotFoundError("project")
         # Permission + propriété (admin passe via PROJECT_READ_ANY).
         guard_owner_access(owner_id=project.owner_id, ctx=ctx)
-        # Funnel : on capte la consultation du bilan (entrée du maillon bilan → action).
-        if self.instrumentation is not None:
+        # Funnel : on capte la consultation du bilan (entrée du maillon bilan → action),
+        # mais SEULEMENT celle du porteur. Le funnel compte des acteurs distincts : un admin
+        # ou un analyste qui ouvre un bilan pour le relire gonflerait le premier étage et
+        # écraserait le taux de conversion — la métrique nord mesurerait notre propre activité.
+        if self.instrumentation is not None and project.owner_id == ctx.user.id:
             await self.instrumentation.emit(
                 BILAN_VIEWED,
                 actor_id=ctx.user.id,

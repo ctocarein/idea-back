@@ -1,7 +1,4 @@
-"""Modèles Academy — leçons, progression, sessions modules, fiches de besoin.
-
-`topic` relie une leçon à un levier de la grille (cf. `app/scoring/constants.py::_LEVERS`) :
-un axe faible (next_actions) pointe un `topic` → on sert la leçon correspondante.
+"""Modèles Academy — sessions de module et fiches de besoin.
 
 Les modules Academy suivent un flux en 3 phases :
   context → form → fiches
@@ -14,34 +11,11 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, ForeignKey, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
-
-
-class Lesson(Base):
-    __tablename__ = "academy_lessons"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    slug: Mapped[str] = mapped_column(String(80), unique=True, index=True)
-    title: Mapped[str] = mapped_column(String(200))
-    topic: Mapped[str] = mapped_column(String(60), index=True)  # ex. "modele_economique"
-    summary: Mapped[str] = mapped_column(String(400))
-    body: Mapped[str] = mapped_column(Text)
-    position: Mapped[int] = mapped_column(default=0)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
-
-
-class LearningProgress(Base):
-    __tablename__ = "learning_progress"
-    __table_args__ = (UniqueConstraint("user_id", "lesson_id", name="uq_progress_user_lesson"),)
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    lesson_id: Mapped[UUID] = mapped_column(ForeignKey("academy_lessons.id", ondelete="CASCADE"), index=True)
-    completed_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
 class GuidedSession(Base):

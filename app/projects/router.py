@@ -13,7 +13,12 @@ from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
 from app.projects.dependencies import get_project_admin_service
 from app.projects.models import DiagnosticStatus, ReviewStatus
-from app.projects.schemas import AssigneeIn, ProjectAdminOut, ReviewTransitionIn
+from app.projects.schemas import (
+    AssigneeIn,
+    ProjectAdminDetailOut,
+    ProjectAdminOut,
+    ReviewTransitionIn,
+)
 from app.projects.service import ProjectAdminService
 
 router = APIRouter(prefix="/admin/projects", tags=["admin-projects"])
@@ -36,12 +41,12 @@ async def list_projects(
     )
 
 
-@router.get("/{project_id}", response_model=ProjectAdminOut)
+@router.get("/{project_id}", response_model=ProjectAdminDetailOut)
 async def get_project(
     project_id: UUID,
     ctx: AuthContext = Depends(require(Permission.PROJECT_READ_ANY)),
     svc: ProjectAdminService = Depends(get_project_admin_service),
-) -> ProjectAdminOut:
+) -> ProjectAdminDetailOut:
     return await svc.get_detail(project_id)
 
 

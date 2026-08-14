@@ -10,7 +10,7 @@ from app.iam.dependencies import AuthContext, require
 from app.iam.permissions import Permission
 from app.projects.schemas import VisibilityIn
 from app.sharing.dependencies import get_share_service
-from app.sharing.schemas import ProjectVisibilityOut, ShareCreateIn, SharedFicheOut, ShareOut, ShareStatsOut
+from app.sharing.schemas import ProjectVisibilityOut, ShareCreateIn, SharedProjectOut, ShareOut, ShareStatsOut
 from app.sharing.service import ShareService
 
 router = APIRouter(tags=["sharing"])
@@ -62,10 +62,10 @@ async def set_project_visibility(
     await svc.set_visibility(ctx, project_id, body.is_public)
 
 
-@router.get("/shared/{token}", response_model=SharedFicheOut)
+@router.get("/shared/{token}", response_model=SharedProjectOut)
 async def get_shared_fiche(
     token: str,
     svc: ShareService = Depends(get_share_service),
-) -> SharedFicheOut:
+) -> SharedProjectOut:
     # Fiche publique (jury/incubateur) — aucune authentification.
     return await svc.get_fiche(token)

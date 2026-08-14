@@ -18,15 +18,23 @@ from app.projects.models import (
     ReviewStatus,
 )
 from app.projects.repository import ProjectRepository
-from app.projects.schemas import ProjectAdminOut
+from app.projects.schemas import ProjectAdminDetailOut, ProjectAdminOut
 from app.projects.state_service import ProjectStateService
+from app.reports.repository import ReportRepository
 
 
 class ProjectAdminService:
-    def __init__(self, repo: ProjectRepository, users: UserRepository, auditor: AuditService) -> None:
+    def __init__(
+        self,
+        repo: ProjectRepository,
+        users: UserRepository,
+        auditor: AuditService,
+        reports: ReportRepository,
+    ) -> None:
         self.repo = repo
         self.users = users
         self.auditor = auditor
+        self.reports = reports
         self.states = ProjectStateService(repo, auditor)
         self.session = repo.session
 
@@ -46,11 +54,17 @@ class ProjectAdminService:
         )
         return [ProjectAdminOut.model_validate(p) for p in rows]
 
-    async def get_detail(self, project_id: UUID) -> ProjectAdminOut:
+    async def get_detail(self, project_id: UUID) -> ProjectAdminDetailOut:
         project = await self.repo.get_by_id(project_id)
         if project is None:
             raise NotFoundError("project")
-        return ProjectAdminOut.model_validate(project)
+        # Le dernier bilan : c'est celui que l'analyste assigné reprend (scores / rédaction).
+        latest = await self.reports.get_latest_for_project(project_id)
+        base = ProjectAdminOut.model_validate(project)
+        return ProjectAdminDetailOut(
+            **base.model_dump(),
+            latest_report_id=latest.id if latest else None,
+        )
 
     async def transition_review(self, ctx: AuthContext, project_id: UUID, target: ReviewStatus) -> ProjectAdminOut:
         project = await self.repo.get_by_id(project_id)
