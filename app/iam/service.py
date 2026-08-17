@@ -14,7 +14,7 @@ import jwt
 
 from app.audit.service import AuditService
 from app.core.config import get_settings
-from app.core.email import send_verification_email
+from app.core.email import asend_verification_email
 from app.core.errors import BusinessRuleError, ConflictError, NotFoundError, RateLimitError, UnauthenticatedError
 from app.core.ratelimit import RateLimiter
 from app.core.security import (
@@ -79,7 +79,9 @@ class AuthService:
         # user + audit + refresh token sont commités ensemble (atomique).
         tokens = await self._issue_tokens(user)
         # Email de vérification (best-effort, hors transaction ; ne bloque pas l'inscription).
-        send_verification_email(
+        # `asend_*` : le dialogue SMTP part dans un thread — sinon il gèle la boucle,
+        # et donc toutes les autres requêtes, jusqu'à 10 s par inscription.
+        await asend_verification_email(
             to=user.email, name=user.full_name, token=create_email_token(user.id), lang=user.language
         )
         return tokens
@@ -102,7 +104,7 @@ class AuthService:
         user = await self.users.get_by_id(user_id)
         if user is None or user.email_verified:
             return
-        send_verification_email(
+        await asend_verification_email(
             to=user.email, name=user.full_name, token=create_email_token(user.id), lang=user.language
         )
 

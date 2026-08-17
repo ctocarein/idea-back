@@ -6,6 +6,10 @@ x-app-env: &app-env
   DATABASE_URL: postgresql://ideaxion:ideaxion@postgres:5432/ideaxion
   REDIS_URL: redis://redis:6379/0
   MINIO_ENDPOINT: minio:9000
+  # `minio:9000` n'existe que dans le réseau Docker : une URL présignée avec cet hôte
+  # est illisible par un navigateur. Les URLs sont donc signées avec l'hôte public
+  # ci-dessous — celui par lequel le porteur atteint réellement MinIO.
+  MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-localhost:9000}
 
 services:
   postgres:

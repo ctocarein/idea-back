@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     smtp_port: int = 587
     smtp_user: str | None = None
     smtp_password: SecretStr | None = None
+    # Mode TLS : "starttls" (587), "implicit" (465, TLS dès la connexion), "none".
+    # Vide = déduit du port. `starttls()` sur 465 échoue systématiquement, d'où ce réglage.
+    smtp_tls: str | None = None
+    smtp_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
     email_from: str = "IDEAXION <no-reply@ideaxion.cloud>"
 
     # --- CORS ---
@@ -82,7 +86,18 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 30.0
 
     # --- Stockage objet (MinIO) ---
+    # Endpoint INTERNE : celui que l'api et le worker utilisent pour parler à MinIO.
+    # En conteneur c'est un nom de réseau Docker (`minio:9000`), qu'aucun navigateur
+    # ne sait résoudre.
     minio_endpoint: str = "localhost:9000"
+    # Endpoint PUBLIC : celui qui doit apparaître dans les URLs présignées.
+    # Une signature SigV4 couvre l'en-tête Host — on ne peut donc PAS réécrire l'hôte
+    # après signature, il faut signer avec le bon dès le départ. Vide = même endpoint
+    # que l'interne (correct uniquement hors conteneur, où les deux coïncident).
+    minio_public_endpoint: str | None = None
+    # HTTPS côté public (le reverse proxy termine souvent le TLS que MinIO ne fait pas).
+    # Vide = on reprend `minio_secure`.
+    minio_public_secure: bool | None = None
     minio_access_key: SecretStr | None = None
     minio_secret_key: SecretStr | None = None
     minio_bucket: str = "ideaxion"

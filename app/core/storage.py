@@ -56,6 +56,7 @@ class ObjectStorage:
         client: object,
         bucket: str,
         *,
+        presign_client: object | None = None,
         timeout_seconds: float = 5.0,
         max_attempts: int = 3,
         circuit_failure_threshold: int = 3,
@@ -63,6 +64,11 @@ class ObjectStorage:
         retry_base_delay: float = 0.2,
     ) -> None:
         self._client = client
+        # Les URLs présignées sont signées par un client dédié, calé sur l'endpoint
+        # PUBLIC : la signature couvre l'en-tête Host, donc une URL signée pour
+        # `minio:9000` est invalide dès qu'un navigateur l'ouvre. Absent → même client
+        # (cas local, où interne et public coïncident).
+        self._presign_client = presign_client if presign_client is not None else client
         self._bucket = bucket
         self._timeout_seconds = timeout_seconds
         self._retry = RetryPolicy(
@@ -114,13 +120,15 @@ class ObjectStorage:
         return True
 
     def _presigned_get(self, key: str, expires_seconds: int) -> str:
-        return self._client.presigned_get_object(  # type: ignore[attr-defined]
+        return self._presign_client.presigned_get_object(  # type: ignore[attr-defined]
             self._bucket, key, expires=timedelta(seconds=expires_seconds)
         )
 
     def _presigned_put(self, key: str, expires_seconds: int) -> str:
+        # Le bucket se vérifie sur l'endpoint interne (vraie requête réseau) ; seule
+        # la signature passe par le client public.
         self._ensure_bucket()
-        return self._client.presigned_put_object(  # type: ignore[attr-defined]
+        return self._presign_client.presigned_put_object(  # type: ignore[attr-defined]
             self._bucket, key, expires=timedelta(seconds=expires_seconds)
         )
 
@@ -187,9 +195,32 @@ def get_storage() -> ObjectStorage | None:
         region=settings.minio_region,
         http_client=http_client,
     )
+
+    # Client de signature, calé sur l'endpoint public. Signer est une opération locale
+    # (HMAC) : ce client n'ouvre aucune connexion — SAUF s'il doit résoudre la région,
+    # via un GetBucketLocation qu'il adresserait à l'URL publique, injoignable depuis
+    # le conteneur. On lui impose donc une région explicite. `us-east-1` est le défaut
+    # de MinIO ; sur un S3 régional, renseigner MINIO_REGION.
+    presign_client: object | None = None
+    public_endpoint = (settings.minio_public_endpoint or "").strip()
+    if public_endpoint and public_endpoint != settings.minio_endpoint:
+        presign_client = Minio(
+            public_endpoint,
+            access_key=access.get_secret_value(),
+            secret_key=secret.get_secret_value(),
+            secure=(
+                settings.minio_secure
+                if settings.minio_public_secure is None
+                else settings.minio_public_secure
+            ),
+            region=settings.minio_region or "us-east-1",
+            http_client=http_client,
+        )
+
     _storage = ObjectStorage(
         client,
         settings.minio_bucket,
+        presign_client=presign_client,
         timeout_seconds=settings.minio_timeout_seconds,
         max_attempts=settings.minio_max_attempts,
         circuit_failure_threshold=settings.minio_circuit_failure_threshold,

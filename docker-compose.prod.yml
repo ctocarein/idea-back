@@ -11,6 +11,11 @@ x-app-env: &app-env
   DATABASE_URL: postgresql://ideaxion:${POSTGRES_PASSWORD:?set in .env}@postgres:5432/ideaxion
   REDIS_URL: redis://redis:6379/0
   MINIO_ENDPOINT: minio:9000
+  # Hôte qui signe les URLs présignées. Obligatoire et distinct de l'interne : signée
+  # `minio:9000`, une URL de bilan ne s'ouvre dans aucun navigateur. Fail-fast plutôt
+  # que panne silencieuse — cette erreur ne se voit pas dans les logs du serveur.
+  MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:?set in .env}
+  MINIO_PUBLIC_SECURE: ${MINIO_PUBLIC_SECURE:-true}
 
 services:
   postgres:
