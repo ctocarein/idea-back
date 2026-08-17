@@ -12,6 +12,7 @@ from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
+from app.core.sector import Sector, SectorSource
 from app.diagnostics.models import EntryMode
 from app.projects.models import Archetype, DiagnosticStatus, ProjectStage, ReviewStatus
 
@@ -24,8 +25,9 @@ class _BaseDiagnosticIn(BaseModel):
         max_length=200,
         validation_alias=AliasChoices("project_name", "projectName"),
     )
-    # "sector" porte la clé de catégorie (agritech, fintech…), comme côté front.
-    sector: str = Field(min_length=1, max_length=120)
+    # Vocabulaire fermé (app/core/sector.py). Le porteur ne saisit pas ce champ :
+    # il confirme le secteur déduit du récit par l'extraction.
+    sector: Sector
     consent: bool = False
     archetype: Archetype = Archetype.FIELD
     stage: ProjectStage = ProjectStage.IDEA
@@ -117,8 +119,34 @@ class ExtractedDimension(BaseModel):
     suggestion: str = ""
 
 
+class SectorProposal(BaseModel):
+    """Classement sectoriel déduit du récit — à confirmer par le porteur.
+
+    Le secteur est un fait sur le projet, pas un jugement de sa valeur : le porteur
+    peut donc le corriger sans enfreindre « le porteur est source, jamais juge ».
+    `source` et `model` sont tracés pour la même raison qu'un `ScoreRun` : un
+    changement de modèle ne doit jamais reclasser le corpus en silence.
+    """
+
+    sector: Sector
+    label: str
+    confidence: float = Field(ge=0.0, le=1.0, default=0.0)
+    # Repli présenté au porteur quand la confiance est basse : 3 options, pas 13.
+    candidates: list[Sector] = Field(default_factory=list)
+    source: SectorSource = SectorSource.LLM
+    model: str = ""
+    prompt_version: str = ""
+
+    @property
+    def needs_confirmation(self) -> bool:
+        # Confirmation systématique en v2 : c'est le taux de correction observé qui
+        # dira si l'on peut un jour passer en confirmation silencieuse.
+        return True
+
+
 class IdeaExtractOut(BaseModel):
     project_name: str | None = None  # déduit du récit si non fourni
+    sector_proposal: SectorProposal | None = None
     captured_count: int
     total: int
     dimensions: list[ExtractedDimension]

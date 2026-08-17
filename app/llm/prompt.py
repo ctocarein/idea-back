@@ -18,7 +18,7 @@ REPORT_PROMPT_VERSION = "report-v1"
 COACH_PROMPT_VERSION = "coach-v1"
 PITCH_PROMPT_VERSION = "pitch-v2"  # v2 : cohérence dit/montré
 VERDICT_PROMPT_VERSION = "verdict-v2"  # v2 : le verdict voit le deck + juge la cohérence
-EXTRACTION_PROMPT_VERSION = "extract-v2"  # v2 : chiffres devinés marqués « ≈ … (à confirmer) »
+EXTRACTION_PROMPT_VERSION = "extract-v3"  # v3 : classement sectoriel contraint à la liste fermée
 MODULE_PROMPT_VERSION = "module-v1"  # modules Academy : opener + turn + form + fiches
 CONTEXT_PROMPT_VERSION = "context-v1"  # pays + devise + repère de pouvoir d'achat
 INCONSISTENCY_PROMPT_VERSION = "inconsistency-v1"  # mesuré 9/10 constats, 0 faux positif
@@ -44,6 +44,7 @@ def build_extraction_prompt(
     project_name: str | None = None,
     lang: str = "fr",
     currency: str = "XOF",
+    sectors: list[dict] | None = None,
 ) -> str:
     # « Raconte, on structure » : depuis le RÉCIT LIBRE, on repère pour chaque dimension si
     # l'info est déjà là (preuve) ou s'il faut la demander (question) + un brouillon proposé.
@@ -69,6 +70,24 @@ def build_extraction_prompt(
         "Ne donne jamais un chiffre inventé comme s'il était un fait établi.",
         "",
         f"NOM du projet fourni : {project_name or '(aucun — déduis-le du récit s’il est nommé, sinon null)'}",
+    ]
+
+    # Classement sectoriel : sortie CONTRAINTE à la liste fermée. Le secteur est un
+    # fait sur le projet (pas un jugement), il alimente le corpus de comparaison —
+    # d'où la confiance demandée et les candidats de repli en cas de doute.
+    if sectors:
+        lines += [
+            "",
+            "SECTEUR : classe le projet dans EXACTEMENT UNE des clés ci-dessous.",
+            "N'invente aucune clé. Si le récit ne permet pas de trancher, renvoie la",
+            "meilleure hypothèse ET une confiance basse — ne choisis 'autre' que si",
+            "le projet ne relève réellement d'aucune de ces catégories.",
+            "Donne aussi les 2 clés suivantes les plus plausibles (sector_candidates).",
+        ]
+        for sector in sectors:
+            lines.append(f"- {sector['key']} ({sector['label']}) — ex. : {sector['hint']}")
+
+    lines += [
         "",
         "DIMENSIONS À COUVRIR :",
     ]
@@ -80,7 +99,9 @@ def build_extraction_prompt(
         "RÉCIT DU PORTEUR :",
         idea,
         "",
-        'Réponds STRICTEMENT en JSON : { "project_name": "<nom ou null>", "dimensions": {',
+        'Réponds STRICTEMENT en JSON : { "project_name": "<nom ou null>", '
+        '"sector": "<clé de la liste SECTEUR>", "sector_confidence": <0.0 à 1.0>, '
+        '"sector_candidates": ["<clé>", "<clé>"], "dimensions": {',
         '  "<key d1..d12>": { "captured": <true|false>, "evidence": "<preuve si captured, sinon \\"\\">", '
         '"question": "<question courte si manquant, sinon \\"\\">", '
         '"suggestion": "<brouillon 1re personne si manquant, sinon \\"\\">" } } }',

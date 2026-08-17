@@ -72,12 +72,24 @@ def test_pillar_scores() -> None:
     assert pillars["execution"] == 6  # d10,d11,d12 = 9,9,0 → 6
 
 
-def test_weighted_overall_penalizes_fintech() -> None:
+def test_weighted_overall_penalizes_finance() -> None:
+    # Clé canonique depuis la fermeture du vocabulaire sectoriel (`finance`, ex-`fintech`).
     equal = engine.weighted_overall(AXES, CATEGORY_WEIGHTS, "inconnue", _VALID)
-    fintech = engine.weighted_overall(AXES, CATEGORY_WEIGHTS, "fintech", _VALID)
+    finance = engine.weighted_overall(AXES, CATEGORY_WEIGHTS, "finance", _VALID)
     assert equal == 7  # round(81/12)
-    assert fintech == 6  # d5/d6/d12 (=0) survalorisés → tire le global vers le bas
-    assert fintech < equal
+    assert finance == 6  # d5/d6/d12 (=0) survalorisés → tire le global vers le bas
+    assert finance < equal
+
+
+def test_legacy_sector_key_no_longer_weights() -> None:
+    """`fintech` n'est plus une clé de pondération : le lookup retombe à 1.0.
+
+    C'est le comportement voulu — les grilles déjà en base gardent leurs clés, et
+    aucun bilan existant n'est recalculé. Ce test fixe la conséquence pour qu'elle
+    ne soit pas redécouverte comme un bug.
+    """
+    equal = engine.weighted_overall(AXES, CATEGORY_WEIGHTS, "inconnue", _VALID)
+    assert engine.weighted_overall(AXES, CATEGORY_WEIGHTS, "fintech", _VALID) == equal
 
 
 def test_find_anchor_on_ten_scale() -> None:

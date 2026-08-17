@@ -320,10 +320,18 @@ for _axis in AXES:
     _axis["lever"] = _LEVERS.get(_axis["key"])
 
 # Pondération par catégorie : { catégorie: { dimKey: poids } }. Non listé = 1.0.
+#
+# Les clés suivent le vocabulaire canonique (`app/core/sector.py`) depuis la
+# fermeture du vocabulaire : `fintech`→`finance`, `agritech`→`agro`, `edtech`→
+# `education`. Ces poids alimentent les grilles CRÉÉES à partir d'ici (seed) ;
+# les grilles déjà en base gardent les leurs, et aucun score existant n'est
+# recalculé — la comparabilité des bilans déjà remis passe avant la correction.
+# Les 9 secteurs sans entrée pondèrent à 1.0, ce qui est neutre et assumé : on
+# n'invente pas des poids qu'aucune calibration ne soutient.
 CATEGORY_WEIGHTS: dict[str, dict[str, float]] = {
-    "fintech": {"d6": 1.5, "d12": 1.3, "d5": 1.2},
-    "agritech": {"d7": 1.3, "d4": 1.2, "d9": 1.2},
-    "edtech": {"d7": 1.3, "d3": 1.2, "d8": 1.2},
+    "finance": {"d6": 1.5, "d12": 1.3, "d5": 1.2},
+    "agro": {"d7": 1.3, "d4": 1.2, "d9": 1.2},
+    "education": {"d7": 1.3, "d3": 1.2, "d8": 1.2},
     "sante": {"d12": 1.4, "d10": 1.3, "d2": 1.2},
     "commerce": {"d6": 1.3, "d7": 1.2, "d9": 1.2},
 }
