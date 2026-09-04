@@ -40,6 +40,7 @@ from app.reports.repository import ReportRepository
 from app.reports.schemas import DiagnosticReport
 from app.scoring.actions import derive_next_actions
 from app.scoring.repository import ScoreRunRepository, ScoringRepository
+from app.scoring.schemas import radar_payload
 from app.scoring.service import ScoringService
 
 logger = get_logger("run_diagnostic")
@@ -167,7 +168,7 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
             scale_max=grid.scale_max,
         )
 
-        radar_score = {"gridVersion": result.grid_version, "axes": result.axes}
+        radar_score = radar_payload(result)
         comprehension = {"pillars": result.pillars, "overall": result.overall}
         score_run = await runs.get_by_id(result.run_id)
         if score_run is not None:

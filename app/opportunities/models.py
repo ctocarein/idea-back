@@ -33,8 +33,9 @@ class Opportunity(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     # Critères d'éligibilité (tous optionnels = pas de contrainte sur ce critère).
     sector: Mapped[str | None] = mapped_column(String(120), default=None)  # None = tous secteurs
-    min_overall: Mapped[float] = mapped_column(Numeric(4, 1), default=0)  # score global /10
-    min_maturity: Mapped[int | None] = mapped_column(default=None)  # axe D11 avancement /10
+    # Seuils d'éligibilité, sur DEUX échelles distinctes (cf. SPEC_SCORING_INTEGRITY C4) :
+    min_overall: Mapped[float] = mapped_column(Numeric(4, 1), default=0)  # score global /100
+    min_advancement: Mapped[int | None] = mapped_column(default=None)  # dimension D11 /10
     deadline: Mapped[datetime | None] = mapped_column(default=None)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

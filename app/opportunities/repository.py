@@ -46,7 +46,7 @@ class OpportunityRepository:
         description: str,
         sector: str | None,
         min_overall: float,
-        min_maturity: int | None,
+        min_advancement: int | None,
         deadline,
         is_active: bool,
     ) -> Opportunity:
@@ -56,7 +56,7 @@ class OpportunityRepository:
             description=description,
             sector=sector or None,
             min_overall=min_overall,
-            min_maturity=min_maturity,
+            min_advancement=min_advancement,
             deadline=deadline,
             is_active=is_active,
         )

@@ -42,6 +42,10 @@ class ScoringService:
             pillars=[PillarOut(**p) for p in grid.pillars],
             axes=[AxisOut(**axis) for axis in grid.axes],
             category_weights=grid.category_weights,
+            # Calibrés SELON CETTE GRILLE, pas selon les constantes du code : une grille
+            # ancienne peut porter d'autres clés, et c'est elle qui a produit les scores.
+            calibrated_sectors=sorted(grid.category_weights or {}),
+            overall_scale=engine.OVERALL_SCALE,
             maturity_levels=[MaturityLevel(**lvl) for lvl in MATURITY_LEVELS],
         )
 
@@ -72,7 +76,8 @@ class ScoringService:
 
         engine.validate_axes(grid.axes, axes, grid.scale_max)
         pillars = engine.pillar_scores(grid.axes, axes)
-        overall = engine.weighted_overall(grid.axes, grid.category_weights, category, axes)
+        overall = engine.weighted_overall(grid.axes, grid.category_weights, category, axes, scale_max=grid.scale_max)
+        calibrated = engine.is_calibrated(grid.category_weights, category)
 
         run = await self.runs.create(
             project_id=project_id,
@@ -95,6 +100,7 @@ class ScoringService:
             axes=axes,
             pillars=pillars,
             overall=overall,
+            sector_calibrated=calibrated,
         )
 
     async def build_consensus_score(
@@ -122,7 +128,10 @@ class ScoringService:
 
         engine.validate_axes(grid.axes, cons.axes, grid.scale_max)
         pillars = engine.pillar_scores(grid.axes, cons.axes)
-        overall = engine.weighted_overall(grid.axes, grid.category_weights, category, cons.axes)
+        overall = engine.weighted_overall(
+            grid.axes, grid.category_weights, category, cons.axes, scale_max=grid.scale_max
+        )
+        calibrated = engine.is_calibrated(grid.category_weights, category)
 
         run = await self.runs.create(
             project_id=project_id,
@@ -149,6 +158,7 @@ class ScoringService:
             axes=cons.axes,
             pillars=pillars,
             overall=overall,
+            sector_calibrated=calibrated,
             confidence=cons.confidence,
             needs_review=cons.needs_human_review,
             uncertain_axes=cons.uncertain_axes,

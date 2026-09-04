@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from app.reports.pdf import reading, render_bilan_html
-from app.scoring.constants import AXES, GRID_VERSION_V2, PILLARS
+from app.reports.pdf import reading, reading_overall, render_bilan_html
+from app.scoring.constants import AXES, GRID_VERSION_ACTIVE, PILLARS
 
 _SCORES = {
     "d1": 8,
@@ -71,17 +71,23 @@ _ACTIONS = [
 ]
 
 
-def _html(report: dict | None = _REPORT, actions: list | None = _ACTIONS) -> str:
+def _html(
+    report: dict | None = _REPORT,
+    actions: list | None = _ACTIONS,
+    *,
+    sector_calibrated: bool = True,
+) -> str:
     return render_bilan_html(
         project_title="Tontine+",
-        category="fintech",
+        category="finance",
         grid_pillars=PILLARS,
         grid_axes=AXES,
         scores=_SCORES,
         pillar_scores=_PILLARS,
-        overall=6,
-        scale_max=10,
-        grid_version=GRID_VERSION_V2,
+        overall=62,  # global NORMALISÉ /100, servi par le back
+        scale_max=10,  # échelle d'une dimension
+        sector_calibrated=sector_calibrated,
+        grid_version=GRID_VERSION_ACTIVE,
         generated_at="23/06/2026",
         n_passes=3,
         confidence=0.86,
@@ -91,9 +97,39 @@ def _html(report: dict | None = _REPORT, actions: list | None = _ACTIONS) -> str
 
 
 def test_reading_bands_ten_scale() -> None:
+    # Lecture d'une DIMENSION, /10.
     assert reading(8) == ("Fort", "strong")
     assert reading(6) == ("Moyen", "watch")
     assert reading(3) == ("Faible", "fragile")
+
+
+def test_reading_overall_bands_hundred_scale() -> None:
+    """Lecture du GLOBAL, /100 — mêmes bandes transposées (SPEC C3).
+
+    Confondre les deux échelles affichait « Faible » sur un projet à 60.
+    """
+    assert reading_overall(80) == ("Fort", "strong")
+    assert reading_overall(62) == ("Moyen", "watch")
+    assert reading_overall(30) == ("Faible", "fragile")
+
+
+def test_overall_rendered_as_served_without_conversion() -> None:
+    # Le nombre affiché est EXACTEMENT celui que le back a persisté (SPEC C3).
+    html = _html()
+    assert "62<span>%</span>" in html
+    assert "62/100" in html
+
+
+def test_method_note_explains_pillar_vs_overall_divergence() -> None:
+    # La divergence pilier/global est expliquée à l'écran, pas laissée à la déduction (C5).
+    html = _html()
+    assert "ne s&#x27;additionnent pas au total" in html or "ne s'additionnent pas au total" in html
+
+
+def test_uncalibrated_sector_is_stated_in_the_bilan() -> None:
+    # Neutralité assumée ET dite (C2).
+    assert "non calibrée" in _html(sector_calibrated=False)
+    assert "non calibrée" not in _html(sector_calibrated=True)
 
 
 def test_radar_pillars_and_dims() -> None:

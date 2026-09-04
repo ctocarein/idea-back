@@ -8,8 +8,25 @@ Le moteur (`engine.py`) est piloté par la grille : adopter v2 = cette donnée +
 
 from __future__ import annotations
 
+# Grille de préproduction initiale. Ses `category_weights` en base portent encore le
+# vocabulaire « -tech » d'avant la fermeture (fintech/agritech/edtech) : conservée telle
+# quelle, JAMAIS modifiée en place — les runs qui la référencent restent rejouables.
 GRID_VERSION_V2 = "radar-v2.0.0-preprod.1"
+
+# Grille ACTIVE. Mêmes 12 dimensions, mêmes ancres, mêmes piliers que v2.0.0 : seule la
+# table de pondération change, réalignée sur le vocabulaire sectoriel canonique
+# (`app/core/sector.py`). Sans ce réalignement, `finance`, `agro` et `education`
+# tombaient sur des clés mortes et étaient notés à poids neutre sans que rien ne le dise.
+#
+# Nouvelle VERSION, pas une réécriture : un poids modifié change tous les scores, donc il
+# change de version (SPEC_SCORING_INTEGRITY C2, contrainte de gouvernance).
+GRID_VERSION_V2_1 = "radar-v2.1.0"
+GRID_VERSION_ACTIVE = GRID_VERSION_V2_1
+
 SCALE_MAX = 10
+# Échelle du score global et des paliers de maturité (SPEC_SCORING_INTEGRITY C3/C4).
+# Les dimensions sont /10, le global est un pourcentage normalisé /100.
+OVERALL_SCALE = 100
 
 # Niveaux de maturité globaux — 6 paliers sur le pourcentage normalisé /100.
 # Utilisés dans GridOut, les rapports et le front (badge de maturité).
@@ -335,5 +352,11 @@ CATEGORY_WEIGHTS: dict[str, dict[str, float]] = {
     "sante": {"d12": 1.4, "d10": 1.3, "d2": 1.2},
     "commerce": {"d6": 1.3, "d7": 1.2, "d9": 1.2},
 }
+
+# Secteurs CALIBRÉS. Un secteur absent est pondéré à 1.0 partout : c'est une neutralité
+# ASSUMÉE et affichée au porteur (`sector_calibrated`), pas un oubli silencieux.
+# Compléter cette table exige une calibration défendable dimension par dimension — un poids
+# inventé est plus dangereux qu'un poids absent : il est indéfendable en pitch institutionnel.
+CALIBRATED_SECTORS: frozenset[str] = frozenset(CATEGORY_WEIGHTS)
 
 # Agrégation et validation : `app/scoring/engine.py` (opère sur la grille passée, version-correcte).

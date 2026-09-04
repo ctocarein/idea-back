@@ -59,6 +59,19 @@ async def test_register_diagnostic_to_bilan(client) -> None:
     assert isinstance(report["next_actions"], list)  # routage déterministe
     assert report["report"] is not None  # couche structurée (mock)
 
+    # Le score global est SERVI avec le radar, sur l'échelle unique /100 (SPEC C3) :
+    # le client n'a plus rien à réagréger, donc plus rien à faire diverger.
+    radar = report["radar_score"]
+    assert 0 <= radar["overall"] <= 100
+    assert set(radar["pillars"]) == {"sens", "viabilite", "scalabilite", "execution"}
+    assert isinstance(radar["sectorCalibrated"], bool)
+
+    # Même nombre en base, dans l'API et à l'écran — c'est le critère d'acceptation.
+    assert report["comprehension"]["overall"] == radar["overall"]
+    html = await client.get(f"/api/v1/reports/{created['report_id']}/html", headers=headers)
+    assert html.status_code == 200, html.text
+    assert f"{radar['overall']}/100" in html.text
+
     # 5) La liste des bilans du porteur contient le sien.
     r = await client.get("/api/v1/reports", headers=headers)
     assert r.status_code == 200
@@ -68,7 +81,7 @@ async def test_register_diagnostic_to_bilan(client) -> None:
 async def test_diagnostic_requires_auth(client) -> None:
     r = await client.post(
         "/api/v1/diagnostics",
-        json={"projectName": "X", "sector": "fintech", "description": "y" * 30, "consent": True},
+        json={"projectName": "X", "sector": "finance", "description": "y" * 30, "consent": True},
     )
     assert r.status_code == 401
 

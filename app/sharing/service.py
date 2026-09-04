@@ -121,12 +121,19 @@ class ShareService:
             await self.session.rollback()
         insights = report.insights or {}
         comprehension = report.comprehension or {}
+        radar = report.radar_score or {}
+        # Le global est LU tel qu'il a été persisté, sur son échelle /100 (SPEC C3).
+        # La conversion ×10 qui vivait ici supposait un /10 : c'est exactement le genre
+        # de réagrégation locale que l'unification supprime.
+        overall = radar.get("overall")
+        if overall is None:
+            overall = comprehension.get("overall")
         strengths = [s.get("text", "") for s in insights.get("strengths", []) if isinstance(s, dict)]
         return SharedProjectOut(
             project_title=project.title,
             sector=project.sector,
             maturity=insights.get("maturity"),
-            overall_100=round(float(comprehension.get("overall") or 0) * 10),
+            overall_100=max(0, min(100, round(float(overall or 0)))),
             summary=insights.get("summary", ""),
             strengths=[s for s in strengths if s][:3],
         )

@@ -59,11 +59,12 @@ async def client():
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
-    # Seed minimal : la grille v2 active (le scoring en a besoin).
+    # Seed minimal : la grille ACTIVE (le scoring en a besoin) — celle dont les clés de
+    # pondération suivent le vocabulaire sectoriel canonique.
     from app.scoring.constants import (
         AXES,
         CATEGORY_WEIGHTS,
-        GRID_VERSION_V2,
+        GRID_VERSION_ACTIVE,
         PILLARS,
         SCALE_MAX,
     )
@@ -73,7 +74,7 @@ async def client():
     async with get_session_factory()() as session:
         async with session.begin():
             await ScoringRepository(session).create(
-                version=GRID_VERSION_V2,
+                version=GRID_VERSION_ACTIVE,
                 pillars=PILLARS,
                 axes=AXES,
                 category_weights=CATEGORY_WEIGHTS,

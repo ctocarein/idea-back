@@ -34,16 +34,21 @@ class OpportunityService:
         self.session = repo.session
 
     async def _project_score(self, project_id: UUID) -> tuple[float, int | None, str | None]:
-        # (score global /10, avancement D11 /10, secteur) à partir du dernier bilan READY.
+        # (score global /100, avancement D11 /10, secteur) à partir du dernier bilan READY.
         reports = await self.reports.list_for_project(project_id)
         ready = next((r for r in reports if r.status == ReportStatus.READY), None)
         if ready is None:
             return (0.0, None, None)
-        overall = float((ready.comprehension or {}).get("overall") or 0.0)
-        axes = (ready.radar_score or {}).get("axes") or {}
+        radar = ready.radar_score or {}
+        # Le global est LU tel qu'il a été persisté, jamais réagrégé (SPEC C3).
+        raw_overall = radar.get("overall")
+        if raw_overall is None:
+            raw_overall = (ready.comprehension or {}).get("overall")
+        overall = float(raw_overall or 0.0)
+        axes = radar.get("axes") or {}
         raw_d11 = axes.get("d11")
-        maturity = int(raw_d11) if raw_d11 is not None else None
-        return (overall, maturity, None)
+        advancement = int(raw_d11) if raw_d11 is not None else None
+        return (overall, advancement, None)
 
     async def list_for_project(
         self, ctx: AuthContext, project_id: UUID, *, eligible_only: bool = False
@@ -53,17 +58,17 @@ class OpportunityService:
             raise NotFoundError("project")
         guard_owner_access(owner_id=project.owner_id, ctx=ctx)
 
-        overall, maturity, _ = await self._project_score(project_id)
+        overall, advancement, _ = await self._project_score(project_id)
         sector = project.sector
 
         items: list[OpportunityOut] = []
         for opp in await self.repo.list_active():
             eligible, missing = evaluate_eligibility(
                 min_overall=float(opp.min_overall),
-                min_maturity=opp.min_maturity,
+                min_advancement=opp.min_advancement,
                 opp_sector=opp.sector,
                 overall=overall,
-                maturity=maturity,
+                advancement=advancement,
                 sector=sector,
             )
             if eligible_only and not eligible:
@@ -89,7 +94,7 @@ class OpportunityService:
             description=data.description,
             sector=data.sector,
             min_overall=data.min_overall,
-            min_maturity=data.min_maturity,
+            min_advancement=data.min_advancement,
             deadline=data.deadline,
             is_active=data.is_active,
         )
@@ -108,7 +113,7 @@ class OpportunityService:
                 "description": data.description,
                 "sector": data.sector,
                 "min_overall": data.min_overall,
-                "min_maturity": data.min_maturity,
+                "min_advancement": data.min_advancement,
                 "deadline": data.deadline,
                 "is_active": data.is_active,
             },

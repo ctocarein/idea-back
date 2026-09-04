@@ -80,7 +80,13 @@ class ReportService:
         from datetime import UTC, datetime
 
         from app.reports.pdf import render_bilan_html
-        from app.scoring.constants import AXES, GRID_VERSION_V2, PILLARS, SCALE_MAX
+        from app.scoring.constants import (
+            AXES,
+            GRID_VERSION_ACTIVE,
+            MATURITY_LEVELS,
+            PILLARS,
+            SCALE_MAX,
+        )
 
         report = await self.reports.get_by_id(report_id)
         if report is None:
@@ -93,16 +99,26 @@ class ReportService:
         radar = report.radar_score or {}
         comprehension = report.comprehension or {}
 
+        # Le global est LU, jamais réagrégé ici (SPEC_SCORING_INTEGRITY C3) : `radar_score`
+        # le porte depuis la correction, `comprehension` pour les bilans antérieurs.
+        overall = radar.get("overall")
+        if overall is None:
+            overall = comprehension.get("overall", 0)
+        # Absent des bilans d'avant C2 → on ne prétend pas que le secteur est calibré.
+        calibrated = radar.get("sectorCalibrated")
+
         return render_bilan_html(
             project_title=project.title,
             category=project.sector or "",
             grid_pillars=PILLARS,
             grid_axes=AXES,
             scores=radar.get("axes", {}),
-            pillar_scores=comprehension.get("pillars", {}),
-            overall=int(comprehension.get("overall", 0)),
+            pillar_scores=radar.get("pillars") or comprehension.get("pillars", {}),
+            overall=int(overall or 0),
             scale_max=SCALE_MAX,
-            grid_version=radar.get("gridVersion", GRID_VERSION_V2),
+            sector_calibrated=bool(calibrated) if calibrated is not None else True,
+            maturity_levels=MATURITY_LEVELS,
+            grid_version=radar.get("gridVersion", GRID_VERSION_ACTIVE),
             generated_at=datetime.now(UTC).strftime("%d/%m/%Y"),
             report=report.insights,
             next_actions=report.next_actions or [],

@@ -6,13 +6,24 @@ Document de cadrage. *Aucune implémentation ici* : c'est la matière qui alimen
 v2 = **bump de version + remplissage**, pas une réécriture.
 
 > Statut : structure + questions centrales **figées** (ateliers) ; **ancres et poids à compléter**.
+>
+> ⚠️ **Ce document est indicatif. En cas de divergence, `app/scoring/constants.py` fait foi.**
 
 ---
 
 ## 1. Structure
 
-Score global **/10** = agrégation pondérée des 12 dimensions. Chaque pilier porte une **question
-directrice** ; chaque dimension une **question centrale** (ce que l'IA évalue, ce que l'humain affine).
+Chaque **dimension** est notée **0–10** (entier). Le **score global** est un **pourcentage normalisé
+0–100** : la moyenne pondérée des 12 dimensions, ramenée sur 100. Deux échelles, jamais confondues —
+c'est le nombre /100 qui est persisté, servi par l'API et affiché à l'écran, sans réagrégation nulle part
+(cf. `SPEC_SCORING_INTEGRITY` C3).
+
+Les **piliers** sont des moyennes **simples** sur 0–10. Ils ne reconstituent donc pas le global dès que
+le secteur est calibré : le pilier décrit un état, le global sert la comparaison. Divergence voulue,
+expliquée dans le bilan et verrouillée par un test (C5).
+
+Chaque pilier porte une **question directrice** ; chaque dimension une **question centrale** (ce que
+l'IA évalue, ce que l'humain affine).
 
 | Pilier | Question directrice | Dimensions |
 | :--- | :--- | :--- |
@@ -58,17 +69,30 @@ se **réduit** au **résumé**, aux **forces transverses** et aux **recommandati
 
 ---
 
-## 4. Décisions à trancher (avant implémentation v2)
+## 4. Décisions arbitrées (implémentation v2)
 
-1. **Échelle** : note **/10**. Interne en `0-10` entier, ou `0-100` affiché `/10`, ou `0-10` à 1 décimale ?
-   *(Reco : stocker en `0-10` entier par dimension ; global `/10` à 1 décimale.)*
-2. **Pondération** : poids **par dimension** et/ou **par pilier**, **modulés par catégorie** (`category_weights`
-   existe déjà). *(Reco : poids par dimension, surcharge par catégorie ; piliers = moyenne de leurs 3 dims.)*
-3. **Score global** : moyenne pondérée des 12 dims → `/10`. Confirmer la formule.
-4. **Ancres ×12** : rubrique 4 paliers par dimension (cf. §5) — **le vrai travail d'atelier**.
-5. **Contrat front** : 6 axes/3 lentilles → 4 piliers/12 dims. Réalignement front (types OpenAPI) à planifier.
-6. **Robustesse** : ensemble (N passes), validation stricte, ScoreRun, golden set → **inchangés**, mais le
-   golden set devra être renoté sur 12 dims /10.
+1. **Échelle** — dimension `0-10` entier **stockée** ; score global **`0-100` entier**, normalisé en fin
+   de chaîne sans arrondi intermédiaire. Arrondir d'abord sur /10 ne laisserait que 11 valeurs pour 12
+   dimensions et écraserait les écarts entre projets — donc la comparabilité, qui est le produit.
+2. **Pondération** — poids **par dimension**, surchargés par secteur (`category_weights`) ; piliers =
+   moyenne **simple** de leurs 3 dimensions (non pondérée, cf. §1).
+3. **Score global** — moyenne pondérée des 12 dimensions, ramenée sur 100. `engine.weighted_overall`.
+4. **Ancres ×12** — rubrique 4 paliers par dimension (cf. §5) — **le vrai travail d'atelier**.
+5. **Contrat front** — le back **sert** `overall`, `pillars` et `sectorCalibrated` avec le radar. Aucun
+   client ne réagrège un score : il affiche ce qui a été calculé et persisté.
+6. **Robustesse** — ensemble (N passes), validation stricte, ScoreRun, golden set → **inchangés**.
+
+### Secteurs calibrés
+
+Cinq secteurs portent une pondération : `finance`, `agro`, `education`, `sante`, `commerce`. Les autres
+sont notés à **poids neutre**, ce qui est **assumé et dit au porteur** (`sectorCalibrated: false` dans le
+bilan) — un poids inventé sans calibration est plus dangereux qu'un poids absent : il est indéfendable
+devant une institution.
+
+**Gouvernance** : un poids modifié change tous les scores, donc il crée une **nouvelle `grid_version`**,
+jamais une réécriture en place. C'est la raison d'être de `radar-v2.1.0` : `v2.0.0-preprod.1` portait les
+clés « -tech » (`fintech`, `agritech`, `edtech`) devenues mortes après la fermeture du vocabulaire
+sectoriel. Elle reste en base, intacte, et les runs qui la référencent restent rejouables.
 
 ---
 

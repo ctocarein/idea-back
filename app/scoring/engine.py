@@ -8,9 +8,15 @@ v2 /10) et le groupement (`pillar` en v2, `lens` en v1 — fallback).
 from __future__ import annotations
 
 from app.core.errors import BusinessRuleError
+from app.core.logging import get_logger
+
+logger = get_logger("scoring.engine")
 
 DEFAULT_WEIGHT = 1.0
 DEFAULT_SCALE_MAX = 10
+# Échelle canonique du score global (cf. SPEC_SCORING_INTEGRITY C3). Les dimensions
+# restent notées /10 ; le global est un POURCENTAGE normalisé, pas une note /100.
+OVERALL_SCALE = 100
 
 
 def axis_keys(grid_axes: list[dict]) -> list[str]:
@@ -73,11 +79,29 @@ def validate_axes(grid_axes: list[dict], axes: dict[str, int], scale_max: int = 
 
 
 def pillar_scores(grid_axes: list[dict], axes: dict[str, int]) -> dict[str, int]:
-    # Vue porteur : moyenne simple des dimensions de chaque pilier.
+    """Vue porteur : moyenne SIMPLE des dimensions de chaque pilier, sur l'échelle de la grille.
+
+    Divergence assumée (SPEC_SCORING_INTEGRITY C5) : **la moyenne des piliers ne
+    reconstitue pas `weighted_overall`** dès que le secteur est calibré. Ce n'est pas
+    une incohérence, c'est une différence de rôle — le pilier décrit un état (photo
+    brute, lisible), le global sert la comparaison entre projets (donc pondéré).
+
+    Verrouillé par `test_pillar_mean_differs_from_weighted_overall_on_calibrated_sector`.
+    """
     groups: dict[str, list[int]] = {}
     for axis in grid_axes:
         groups.setdefault(_group_of(axis), []).append(int(axes.get(axis["key"], 0)))
     return {key: round(sum(vals) / len(vals)) for key, vals in groups.items() if vals}
+
+
+def is_calibrated(category_weights: dict[str, dict[str, float]], category: str) -> bool:
+    """Le secteur a-t-il une pondération calibrée dans CETTE grille ?
+
+    Faux = toutes les dimensions comptent également. C'est une neutralité ASSUMÉE
+    (SPEC_SCORING_INTEGRITY C2, option B), pas un oubli — mais elle doit être dite au
+    porteur, d'où l'exposition du drapeau jusque dans le bilan.
+    """
+    return bool(category_weights.get(category))
 
 
 def weights_for_category(
@@ -86,6 +110,11 @@ def weights_for_category(
     category: str,
 ) -> dict[str, float]:
     overrides = category_weights.get(category, {})
+    if not overrides:
+        # Le fallback neutre reste valide ; il cesse d'être SILENCIEUX. Un pic sur ce
+        # warning signale une clé de poids morte (grille désalignée du vocabulaire
+        # sectoriel), pas un secteur exotique.
+        logger.warning("scoring_category_unweighted", category=category)
     return {key: float(overrides.get(key, DEFAULT_WEIGHT)) for key in axis_keys(grid_axes)}
 
 
@@ -94,11 +123,21 @@ def weighted_overall(
     category_weights: dict[str, dict[str, float]],
     category: str,
     axes: dict[str, int],
+    *,
+    scale_max: int = DEFAULT_SCALE_MAX,
 ) -> int:
-    # Score global = moyenne PONDÉRÉE des dimensions selon la catégorie.
+    """Score global NORMALISÉ 0..100 = moyenne pondérée des dimensions selon la catégorie.
+
+    Échelle unique du système (SPEC_SCORING_INTEGRITY C3) : back, API et écran affichent
+    ce nombre tel quel. Les paliers `MATURITY_LEVELS` sont définis dessus.
+
+    Normalisation en fin de chaîne, sans arrondi intermédiaire : arrondir d'abord sur /10
+    n'offrirait que 11 valeurs possibles pour 12 dimensions et écraserait les écarts entre
+    projets — donc la comparabilité, qui est le produit.
+    """
     weights = weights_for_category(grid_axes, category_weights, category)
     total_w = sum(weights.values())
-    if total_w == 0:
+    if total_w == 0 or scale_max <= 0:
         return 0
     weighted = sum(int(axes.get(k, 0)) * weights[k] for k in weights)
-    return round(weighted / total_w)
+    return round((weighted / total_w) * (OVERALL_SCALE / scale_max))

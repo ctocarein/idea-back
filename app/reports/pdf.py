@@ -26,10 +26,31 @@ _VERDICTS = {
 
 
 def reading(value: int) -> tuple[str, str]:
+    # Lecture d'une DIMENSION, sur /10.
     for threshold, label, tone in _READINGS:
         if value >= threshold:
             return label, tone
     return "Faible", "fragile"
+
+
+def reading_overall(value: int) -> tuple[str, str]:
+    """Lecture du score GLOBAL, sur /100 (SPEC_SCORING_INTEGRITY C3).
+
+    Mêmes bandes que `reading`, transposées : le global est un pourcentage normalisé,
+    pas une note /10. Le confondre affichait « Faible » sur un projet à 60.
+    """
+    for threshold, label, tone in _READINGS:
+        if value >= threshold * 10:
+            return label, tone
+    return "Faible", "fragile"
+
+
+def _maturity_label(overall_100: int, levels: list[dict] | None) -> str:
+    """Palier correspondant au global /100, dans les bornes FOURNIES. Vide si non fournies."""
+    for level in levels or []:
+        if int(level["min"]) <= overall_100 <= int(level["max"]):
+            return str(level.get("label") or "")
+    return ""
 
 
 def _level(value: str | None) -> tuple[str, str]:
@@ -199,8 +220,13 @@ def render_bilan_html(
     grid_axes: list[dict],
     scores: dict[str, int],
     pillar_scores: dict[str, int],
-    overall: int,
-    scale_max: int = 10,
+    overall: int,  # score global NORMALISÉ /100 (servi par le back, jamais recalculé ici)
+    scale_max: int = 10,  # échelle d'une DIMENSION
+    sector_calibrated: bool = True,
+    # Paliers de maturité — INJECTÉS, jamais redéfinis ici (SPEC_SCORING_INTEGRITY C4 :
+    # une seule définition dans le système, `app/scoring/constants.MATURITY_LEVELS`).
+    # `render_bilan_html` reste pur stdlib : la source arrive par l'appelant.
+    maturity_levels: list[dict] | None = None,
     grid_version: str,
     generated_at: str,
     n_passes: int = 1,
@@ -208,12 +234,16 @@ def render_bilan_html(
     report: dict | None = None,
     next_actions: list | None = None,
 ) -> str:
-    overall_100 = round(overall * 100 / scale_max) if scale_max else 0
-    overall_label, _ = reading(overall)
+    # Le global arrive déjà normalisé /100 : on l'affiche tel quel. Toute conversion ici
+    # rouvrirait l'écart entre le nombre persisté et le nombre lu (SPEC C3).
+    overall_100 = max(0, min(100, int(overall)))
+    overall_label, _ = reading_overall(overall_100)
     r = report or {}
     acts = next_actions or []
 
-    mat = r.get("maturity") or overall_label
+    # Palier affiché : le libellé du LLM s'il existe, sinon le palier DÉTERMINISTE issu
+    # des bornes officielles — plus une lecture ad hoc reconstruite dans le rendu.
+    mat = r.get("maturity") or _maturity_label(overall_100, maturity_levels) or overall_label
 
     # Données structurées
     strengths = [s for s in (r.get("strengths") or []) if isinstance(s, dict) and s.get("text")]
@@ -319,6 +349,22 @@ def render_bilan_html(
         f'<div class="metric"><div class="metric-number">{n_weak}</div><div class="metric-label">axes à renforcer</div></div>'
         "</div>"
     )
+
+    # --- Notes de méthode (SPEC_SCORING_INTEGRITY C2 & C5) -------------------------
+    # Un porteur qui voit des dimensions et un total qui ne colle pas conclut que le
+    # calcul est faux — et il a raison de douter tant qu'on ne lui dit rien. On l'écrit,
+    # dans le bilan, pas dans une infobulle.
+    method_notes = [
+        "Le score global tient compte du poids de chaque dimension dans votre secteur. "
+        "Les dimensions et les piliers, eux, sont des moyennes simples : ils décrivent où "
+        "vous en êtes, ils ne s'additionnent pas au total."
+    ]
+    if not sector_calibrated:
+        method_notes.append(
+            "Pondération sectorielle non calibrée pour ce secteur : toutes les dimensions "
+            "comptent également dans le score global."
+        )
+    method_block = '<div class="method-note">' + "".join(f"<p>{escape(note)}</p>" for note in method_notes) + "</div>"
 
     # --- Legend tags page 1 ---
     legend_tags = ""
@@ -439,6 +485,9 @@ def render_bilan_html(
     .data-table {{ width:100%; border-collapse:collapse; font-size:12.5px; }}
     .data-table th {{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted-ink); padding:6px 8px; border-bottom:1px solid var(--line); background:var(--paper); }}
     .data-table td {{ padding:6px 8px; border-bottom:1px solid #f0eef8; vertical-align:top; }}
+    .method-note {{ margin-top:16px; padding:12px 14px; border-left:3px solid var(--line); background:#faf9fd; border-radius:6px; }}
+    .method-note p {{ color:var(--muted-ink); font-size:11.5px; line-height:1.55; margin:0 0 6px; }}
+    .method-note p:last-child {{ margin-bottom:0; }}
     .radar-wrap {{ display:grid; grid-template-columns:1fr 1fr; gap:18px; align-items:start; }}
     .radar-card {{ background:linear-gradient(180deg,#fff,#faf9fd); border:1px solid var(--line); border-radius:var(--r-lg); padding:16px; display:flex; justify-content:center; align-items:center; min-height:480px; }}
     .radar-card svg {{ display:block; width:100%; height:auto; }}
@@ -569,6 +618,7 @@ def render_bilan_html(
           <div class="dimension-list">{dim_bars_html}</div>
         </div>
         {summary_strip}
+        {method_block}
       </div>
       <div class="footer-bar">
         <span>Score RADAR · Grille {escape(grid_version)} · {escape(generated_at)}</span>

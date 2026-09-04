@@ -25,7 +25,7 @@ from app.reports.schemas import DiagnosticReport, ReportDetailOut, ScoreAdjustIn
 from app.scoring.actions import derive_next_actions
 from app.scoring.models import ScoreSource
 from app.scoring.repository import ScoreRunRepository
-from app.scoring.schemas import ScoreResult
+from app.scoring.schemas import ScoreResult, radar_payload
 from app.scoring.service import ScoringService
 
 
@@ -69,7 +69,7 @@ class ReportEditService:
             source=ScoreSource.HUMAN,
             model="human",
         )
-        report.radar_score = {"gridVersion": result.grid_version, "axes": result.axes}
+        report.radar_score = radar_payload(result)
         report.comprehension = {"pillars": result.pillars, "overall": result.overall}
         # Recalcule le routage (les axes faibles ont pu changer).
         grid = await self.scoring.repo.get_by_version(result.grid_version)

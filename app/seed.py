@@ -25,7 +25,7 @@ from app.scoring import engine
 from app.scoring.constants import (
     AXES,
     CATEGORY_WEIGHTS,
-    GRID_VERSION_V2,
+    GRID_VERSION_ACTIVE,
     PILLARS,
     SCALE_MAX,
 )
@@ -53,24 +53,28 @@ async def _seed_users(repo: UserRepository) -> None:
 
 
 async def _seed_grid(repo: ScoringRepository) -> None:
-    # Grille Radar v2 de préproduction. Toute évolution crée une nouvelle version :
-    # une grille déjà utilisée pour un score n'est jamais modifiée en place.
-    if await repo.get_by_version(GRID_VERSION_V2) is not None:
-        logger.info("seed_grid_skipped", version=GRID_VERSION_V2)
+    # Grille Radar active. Toute évolution crée une nouvelle version : une grille déjà
+    # utilisée pour un score n'est JAMAIS modifiée en place (elle doit rester rejouable).
+    if await repo.get_by_version(GRID_VERSION_ACTIVE) is not None:
+        logger.info("seed_grid_skipped", version=GRID_VERSION_ACTIVE)
         return
     # Contrôle d'intégrité AVANT activation : les ancres doivent couvrir 0..scale_max.
     engine.validate_grid(AXES, SCALE_MAX)
-    await repo.create(
-        version=GRID_VERSION_V2,
+    grid = await repo.create(
+        version=GRID_VERSION_ACTIVE,
         pillars=PILLARS,
         axes=AXES,
         category_weights=CATEGORY_WEIGHTS,
-        is_active=True,
+        is_active=False,
         scale_max=SCALE_MAX,
     )
-    logger.info("seed_grid_created", version=GRID_VERSION_V2)
+    # `activate` désactive les précédentes : une seule grille active à la fois. Les
+    # anciennes restent en base, référencées par les runs qui les ont utilisées.
+    await repo.activate(grid)
+    logger.info("seed_grid_created", version=GRID_VERSION_ACTIVE)
 
 
+# (titre, type, description, secteur, min_overall /100, min_advancement D11 /10)
 DEMO_OPPORTUNITIES = [
     (
         "Programme Mentorat Ideaxion",
@@ -84,18 +88,18 @@ DEMO_OPPORTUNITIES = [
         "Hackathon AgriTech",
         OpportunityKind.HACKATHON,
         "48h pour prototyper une solution agricole.",
-        "agritech",
-        4,
+        "agro",  # vocabulaire canonique (`app/core/sector.py`), ex-« agritech »
+        40,
         None,
     ),
-    ("Concours Jeune Pousse", OpportunityKind.CONCOURS, "Concours national pour projets early-stage.", None, 5, None),
+    ("Concours Jeune Pousse", OpportunityKind.CONCOURS, "Concours national pour projets early-stage.", None, 50, None),
     (
         "Incubateur Seed — Cohorte 1",
         OpportunityKind.INCUBATEUR,
         "Incubation de 6 mois pour projets avec premières preuves.",
         None,
-        6,
-        5,
+        60,  # score global /100
+        5,  # D11 /10
     ),
 ]
 
@@ -116,7 +120,7 @@ async def _seed_pitch_rubric(repo: PitchRubricRepository) -> None:
 
 
 async def _seed_opportunities(session: AsyncSession) -> None:
-    for title, kind, desc, sector, min_overall, min_maturity in DEMO_OPPORTUNITIES:
+    for title, kind, desc, sector, min_overall, min_advancement in DEMO_OPPORTUNITIES:
         exists = (await session.execute(select(Opportunity.id).where(Opportunity.title == title))).first()
         if exists is not None:
             continue
@@ -127,7 +131,7 @@ async def _seed_opportunities(session: AsyncSession) -> None:
                 description=desc,
                 sector=sector,
                 min_overall=min_overall,
-                min_maturity=min_maturity,
+                min_advancement=min_advancement,
             )
         )
         logger.info("seed_opportunity_created", title=title)
