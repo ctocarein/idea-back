@@ -35,15 +35,21 @@ class JobService:
         job_type: str,
         payload: dict[str, Any],
         priority: int = 100,
+        scheduled_at: datetime | None = None,
         idempotency_key: str | None = None,
         correlation_id: UUID | None = None,
         project_id: UUID | None = None,
     ) -> Job:
         # Appelé DANS la transaction du service métier (ex. lancer un diagnostic).
+        #
+        # `scheduled_at` dans le futur = job DIFFÉRÉ : la boucle de claim filtre déjà sur
+        # `scheduled_at <= now()`. C'est ce qui fait d'un rappel à J+7 un simple `enqueue`
+        # daté, sans planificateur externe.
         return await self.repo.enqueue(
             job_type=job_type,
             payload=payload,
             priority=priority,
+            scheduled_at=scheduled_at,
             idempotency_key=idempotency_key,
             correlation_id=correlation_id,
             project_id=project_id,

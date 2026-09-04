@@ -5,10 +5,17 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
 from app.core.ratelimit import rate_limit
-from app.diagnostics.dependencies import get_diagnostic_service, get_extraction_service
+from app.diagnostics.dependencies import (
+    get_diagnostic_service,
+    get_draft_service,
+    get_extraction_service,
+)
+from app.diagnostics.draft_service import DiagnosticDraftService
 from app.diagnostics.extraction import IdeaExtractionService, extract_text_from_file
 from app.diagnostics.schemas import (
     DiagnosticCreatedOut,
+    DiagnosticDraftIn,
+    DiagnosticDraftOut,
     IdeaExtractIn,
     IdeaExtractOut,
     ManualDiagnosticIn,
@@ -117,3 +124,40 @@ async def start_upload_diagnostic(
 ) -> DiagnosticCreatedOut:
     # Flow B — document déjà uploadé (app/documents). L'extraction se fait côté worker.
     return await svc.start_from_document(owner_id=ctx.user.id, data=body)
+
+
+# --- Brouillon de saisie (diagnostic en cours) --------------------------------
+#
+# Déclarées AVANT aucune route paramétrée du même préfixe : `/draft` est un segment
+# littéral, il ne doit jamais être capté comme un identifiant.
+#
+# `PUT` et non `POST` : l'appel est répété à chaque sauvegarde (une fois par dimension),
+# il doit donc être idempotent, et le corps porte l'état complet plutôt qu'un delta.
+
+
+@router.put("/draft", response_model=DiagnosticDraftOut)
+async def save_diagnostic_draft(
+    body: DiagnosticDraftIn,
+    ctx: AuthContext = Depends(require(Permission.DIAGNOSTIC_RUN)),
+    svc: DiagnosticDraftService = Depends(get_draft_service),
+) -> DiagnosticDraftOut:
+    return await svc.save(ctx, body)
+
+
+@router.get("/draft", response_model=DiagnosticDraftOut)
+async def get_diagnostic_draft(
+    ctx: AuthContext = Depends(require(Permission.DIAGNOSTIC_RUN)),
+    svc: DiagnosticDraftService = Depends(get_draft_service),
+) -> DiagnosticDraftOut:
+    # 404 si aucun brouillon vivant : c'est le signal « rien à reprendre » du front.
+    return await svc.get(ctx)
+
+
+@router.delete("/draft", status_code=status.HTTP_204_NO_CONTENT)
+async def discard_diagnostic_draft(
+    ctx: AuthContext = Depends(require(Permission.DIAGNOSTIC_RUN)),
+    svc: DiagnosticDraftService = Depends(get_draft_service),
+) -> None:
+    # « Recommencer » — abandon explicite. 204 même si aucun brouillon : l'appel est
+    # idempotent, et le front n'a pas à distinguer les deux cas.
+    await svc.discard(ctx)

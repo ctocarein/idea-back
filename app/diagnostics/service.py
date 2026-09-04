@@ -11,6 +11,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from app.audit.service import AuditService
+from app.diagnostics.draft_repository import DiagnosticDraftRepository
 from app.diagnostics.models import EntryMode
 from app.diagnostics.repository import DiagnosticRepository
 from app.diagnostics.schemas import (
@@ -44,6 +45,7 @@ class DiagnosticService:
         jobs: JobService,
         auditor: AuditService,
         documents: DocumentRepository | None = None,
+        drafts: DiagnosticDraftRepository | None = None,
     ) -> None:
         self.projects = projects
         self.diagnostics = diagnostics
@@ -51,6 +53,8 @@ class DiagnosticService:
         self.jobs = jobs
         self.auditor = auditor
         self.documents = documents
+        # Optionnel : le service reste utilisable sans brouillons (worker, tests unitaires).
+        self.drafts = drafts
         self.session = projects.session
         self.states = ProjectStateService(projects, auditor)
 
@@ -152,6 +156,13 @@ class DiagnosticService:
             correlation_id=diagnostic.id,
             project_id=project.id,
         )
+        # 5) Clôture du brouillon de saisie, DANS LA MÊME TRANSACTION : sans cela, un
+        # commit réussi laisserait un brouillon vivant que le front proposerait de
+        # « reprendre » alors que le diagnostic est déjà parti.
+        # No-op si aucun brouillon (parcours direct, upload de document) : la soumission ne
+        # doit jamais échouer à cause d'un brouillon absent.
+        if self.drafts is not None:
+            await self.drafts.mark_submitted(owner_id)
         await self.session.commit()
 
         return DiagnosticCreatedOut(

@@ -11,16 +11,24 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 import app.models  # noqa: F401 — enregistre TOUTES les tables sur Base.metadata (FK cross-features)
 from app.core.database import get_session_factory
 from app.core.logging import configure_logging, get_logger
+from app.diagnostics.draft_handlers import PURGE_DRAFTS_JOB, handle_purge_drafts
 from app.diagnostics.handlers import handle_run_diagnostic, handle_run_diagnostic_failed
 from app.jobs.models import Job
 from app.jobs.repository import JobRepository
 from app.jobs.service import JobService
+from app.notifications.handlers import (
+    ACTION_REMINDER_JOB,
+    SEND_EMAIL_JOB,
+    handle_action_reminder,
+    handle_send_email,
+)
 
 logger = get_logger("worker")
 
@@ -31,8 +39,9 @@ HEARTBEAT_INTERVAL = 30.0
 HandlerFn = Callable[[dict[str, Any]], Awaitable[None]]
 REGISTRY: dict[str, HandlerFn] = {
     "run_diagnostic": handle_run_diagnostic,  # Sprint 2 (diagnostic → bilan)
-    # "send_email": handle_send_email,           # Sprint 2
-    # "cleanup_expired": handle_cleanup_expired, # cron quotidien
+    SEND_EMAIL_JOB: handle_send_email,  # envoi différé (SMTP bloquant → thread)
+    ACTION_REMINDER_JOB: handle_action_reminder,  # rappel J+7 sur l'action prioritaire
+    PURGE_DRAFTS_JOB: handle_purge_drafts,  # purge quotidienne des brouillons abandonnés
 }
 
 # Nettoyage sur échec DÉFINITIF (retries épuisés). Optionnel par type : permet de
@@ -89,10 +98,33 @@ async def _cleanup_terminal(job: Job) -> None:
         logger.error("terminal_cleanup_failed", job_id=str(job.id), type=job.type, error=str(exc))
 
 
+async def _ensure_daily_jobs() -> None:
+    """Amorce les tâches récurrentes. Chacune se replanifie ensuite elle-même.
+
+    Il n'y a pas de planificateur externe dans la stack, et en ajouter un pour une purge
+    quotidienne serait disproportionné. L'`idempotency_key` datée rend l'amorçage sûr :
+    redémarrer le worker dix fois dans la journée ne crée pas dix jobs.
+    """
+    async with get_session_factory()() as session:
+        jobs = JobService(JobRepository(session))
+        today = datetime.now(UTC).date().isoformat()
+        await jobs.enqueue(
+            job_type=PURGE_DRAFTS_JOB,
+            payload={},
+            priority=900,
+            idempotency_key=f"{PURGE_DRAFTS_JOB}:{today}",
+        )
+        await session.commit()
+
+
 async def run() -> None:
     configure_logging()
     logger.info("worker_starting", handlers=sorted(REGISTRY))
     factory = get_session_factory()
+    try:
+        await _ensure_daily_jobs()
+    except Exception as exc:  # noqa: BLE001 — une tâche de fond ne bloque pas le worker
+        logger.warning("daily_jobs_bootstrap_failed", error=str(exc))
 
     while True:
         async with factory() as session:

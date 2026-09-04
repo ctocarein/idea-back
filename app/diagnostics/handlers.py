@@ -12,7 +12,7 @@ hasard — l'agrégation reste rejouable.
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -25,8 +25,15 @@ from app.diagnostics.repository import DiagnosticRepository
 from app.iam.repository import UserRepository
 from app.inconsistencies.dedup import Finding
 from app.inconsistencies.service import Dossier, InconsistencyService
+from app.jobs.repository import JobRepository
+from app.jobs.service import JobService
 from app.llm.factory import get_llm
 from app.llm.prompt import PROMPT_VERSION, build_report_prompt, build_scoring_prompt
+from app.notifications.handlers import (
+    ACTION_REMINDER_JOB,
+    ROUTABLE_LEVERS,
+    reminder_delay_days,
+)
 from app.notifications.repository import NotificationRepository
 from app.project_memory.contradictions import persist_findings
 from app.project_memory.evaluation import ProjectEvaluationProjector
@@ -284,6 +291,16 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
         except Exception as exc:  # noqa: BLE001 — dégradation gracieuse
             logger.warning("notification_skipped", report_id=str(report.id), error=str(exc))
 
+        # Rappel J+7 sur l'action prioritaire — un simple `enqueue` daté, la boucle de
+        # claim filtrant déjà sur `scheduled_at <= now()`. Aucun planificateur externe.
+        #
+        # Best-effort comme la notification : un rappel qui échoue à se planifier ne doit
+        # jamais compromettre la livraison du bilan, qui est la colonne vertébrale.
+        try:
+            await _schedule_action_reminder(session, project=project, report=report, next_actions=next_actions)
+        except Exception as exc:  # noqa: BLE001 — dégradation gracieuse
+            logger.warning("action_reminder_not_scheduled", report_id=str(report.id), error=str(exc))
+
         await session.commit()  # ← bilan complet (rapport + PDF)
 
     logger.info(
@@ -292,6 +309,50 @@ async def handle_run_diagnostic(payload: dict[str, Any]) -> None:
         overall=result.overall,
         confidence=result.confidence,
         needs_review=result.needs_review,
+    )
+
+
+async def _schedule_action_reminder(session, *, project, report, next_actions: list[dict]) -> None:
+    """Planifie UN rappel, si et seulement si l'action prioritaire est routable.
+
+    `next_actions` est déjà trié par priorité — `(scale_max − score) × poids` — donc le
+    premier levier éligible rencontré est le plus prioritaire PARMI LES ÉLIGIBLES. On ne
+    réordonne pas : ce serait substituer un critère à celui du moteur.
+
+    Portée réelle, plus étroite qu'il n'y paraît : `derive_next_actions` tronque à 3, et le
+    filtre s'applique APRÈS cette troncature. Un projet faible sur D7 mais plus faible
+    encore sur trois dimensions `academy` ne reçoit donc rien, alors qu'une action routable
+    existerait plus bas. C'est délibéré — le mail dit « ton bilan pointait une priorité »,
+    et cette phrase doit être vraie : référencer une action que le porteur n'a jamais vue
+    dans son bilan serait un mensonge. Élargir la recherche au-delà des 3 actions affichées
+    n'aurait de sens qu'une fois les 10 dimensions `academy`/`pitchsim` re-routées
+    (SPEC_LEVIERS_V2) — d'ici là, ça ne ferait qu'ajouter des rappels vers du vide.
+
+    Un seul rappel par bilan, garanti par `idempotency_key` : rejouer le job de diagnostic
+    (retry, reprise) ne planifie pas un second mail. Un NOUVEAU diagnostic en planifie un
+    nouveau — c'est voulu, il porte sur un autre bilan.
+    """
+    action = next(
+        (a for a in next_actions if a.get("lever_type") in ROUTABLE_LEVERS),
+        None,
+    )
+    if action is None:
+        # Aucun levier routable : pas de rappel. Silence assumé plutôt qu'un renvoi vers
+        # un module retiré (cf. SPEC_SCORING_INTEGRITY C8).
+        logger.info("action_reminder_skipped_unroutable", report_id=str(report.id))
+        return
+    jobs = JobService(JobRepository(session))
+    await jobs.enqueue(
+        job_type=ACTION_REMINDER_JOB,
+        payload={
+            "project_id": str(project.id),
+            "report_id": str(report.id),
+            "axis_key": action["key"],
+        },
+        priority=500,  # sous le diagnostic : un rappel n'est jamais urgent
+        scheduled_at=datetime.now(UTC) + timedelta(days=reminder_delay_days()),
+        idempotency_key=f"{ACTION_REMINDER_JOB}:{report.id}",
+        project_id=project.id,
     )
 
 

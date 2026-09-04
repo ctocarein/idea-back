@@ -70,9 +70,17 @@ Six règles qui ne se négocient pas. Tout le reste en découle.
 
   app.worker (process séparé) ── poll ──> table `jobs` (FOR UPDATE SKIP LOCKED)
         │
-        └── exécute run_diagnostic / send_email / cleanup_expired
+        └── exécute run_diagnostic / send_email / action_reminder / purge_drafts
             via les mêmes app/<feature>/service + app/core/* (llm, storage, mailer…)
 ```
+
+**Jobs différés et récurrents.** `enqueue(scheduled_at=…)` suffit : la boucle de claim
+filtre déjà sur `scheduled_at <= now()`. Un rappel à J+7 est donc un simple `enqueue` daté,
+et une tâche quotidienne (`purge_drafts`) se replanifie elle-même en fin d'exécution,
+amorcée au démarrage du worker. **Il n'y a pas de planificateur externe, et il n'en faut
+pas** : en ajouter un pour deux tâches serait une dépendance de plus à exploiter.
+L'`idempotency_key` — datée pour les récurrentes, portant l'identifiant du bilan pour les
+rappels — garantit qu'un rejeu ne duplique rien.
 
 Deux points d'entrée, **un seul code base** :
 - `app.main:app` : serveur HTTP (uvicorn/gunicorn). Répond vite, délègue le lourd.
@@ -125,7 +133,7 @@ Organisation **feature-first** (cohérente avec le front feature-first). Chaque 
 │   ├── mentors/                # marketplace mentors deux niveaux (coach / mentor-certificateur)
 │   ├── investors/              # Club Financeurs (profil, curation)
 │   ├── documents/              # upload presigned MinIO, data room
-│   ├── notifications/          # emails transactionnels (via jobs)
+│   ├── notifications/          # notifications in-app + emails (via jobs) + désabonnement
 │   ├── jobs/                   # file d'attente Postgres : enqueue, claim, retry
 │   ├── audit/                  # journalisation des actions sensibles
 │   │

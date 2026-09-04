@@ -13,12 +13,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.instrumentation.models import Event
 from app.instrumentation.repository import InstrumentationRepository
-from app.instrumentation.schemas import FunnelStageOut, LearningDashboardOut
+from app.instrumentation.schemas import (
+    DraftFunnelOut,
+    FunnelStageOut,
+    LearningDashboardOut,
+    ReminderStatsOut,
+)
 
 # Catalogue des noms d'événements (le funnel du maillon bilan → action).
 BILAN_VIEWED = "bilan_viewed"
 ACTION_STARTED = "action_started"
 OPPORTUNITY_INTEREST = "opportunity_interest"  # le porteur exprime un intérêt → signal B2B
+REMINDER_SENT = "reminder_sent"
+REMINDER_CANCELLED = "reminder_cancelled"
 
 # Le funnel de transformation, dans l'ordre.
 FUNNEL_STAGES = [BILAN_VIEWED, ACTION_STARTED, OPPORTUNITY_INTEREST]
@@ -43,6 +50,25 @@ class AnalyticsService:
             for s in FUNNEL_STAGES
         ]
         return LearningDashboardOut(total_events=sum(counts.values()), event_counts=counts, funnel=funnel)
+
+    async def draft_funnel(self) -> DraftFunnelOut:
+        created, submitted = await self.repo.draft_completion()
+        return DraftFunnelOut(
+            created=created,
+            submitted=submitted,
+            completion_rate=round(submitted / created, 3) if created else 0.0,
+            dropoff_by_dimension=await self.repo.draft_dropoff_by_dimension(),
+            median_resume_delay_seconds=await self.repo.draft_median_resume_delay_seconds(),
+        )
+
+    async def reminder_stats(self) -> ReminderStatsOut:
+        counts = await self.repo.counts_by_name()
+        return ReminderStatsOut(
+            sent=counts.get(REMINDER_SENT, 0),
+            cancelled=counts.get(REMINDER_CANCELLED, 0),
+            cancelled_by_reason=await self.repo.counts_by_prop(REMINDER_CANCELLED, "reason"),
+            opted_out_users=await self.repo.opted_out_users(),
+        )
 
 
 class InstrumentationService:

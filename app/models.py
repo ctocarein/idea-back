@@ -12,7 +12,7 @@ from app.academy.models import GuidedSession, NeedFiche  # noqa: F401
 from app.audit.models import AuditLog  # noqa: F401
 
 # Métier
-from app.diagnostics.models import Diagnostic  # noqa: F401
+from app.diagnostics.models import Diagnostic, DiagnosticDraft  # noqa: F401
 from app.documents.models import Document  # noqa: F401
 
 # IAM

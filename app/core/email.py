@@ -136,6 +136,74 @@ def _verification_message(*, name: str, token: str, lang: str) -> tuple[str, str
     return tpl["subject"], tpl["body"].format(name=name, link=link)
 
 
+# Rappel J+7 sur l'action prioritaire. Texte BRUT, pas de HTML : poids réduit, meilleure
+# délivrabilité, et cohérent avec une infrastructure mail encore jeune.
+#
+# Le mail référence CE QUE LE PORTEUR A LUI-MÊME ÉCRIT, via son action prioritaire. Il ne
+# ressemble pas à du marketing parce qu'il n'en est pas : pas de séquence, pas de contenu
+# générique, aucune injonction d'achat. Deux issues seulement, et les deux mènent au
+# produit — « pas encore » n'est pas un échec, c'est un retour au bilan.
+_REMINDER_EMAIL = {
+    "fr": {
+        "subject": "Où en es-tu sur {dimension} ?",
+        "body": (
+            "Bonjour {name},\n\n"
+            "Il y a une semaine, ton bilan IDEAXION pointait une priorité :\n"
+            "{action_label}.\n\n"
+            "Où en es-tu ?\n\n"
+            "  → C'est fait, je refais le point : {rediagnostic_url}\n"
+            "  → Pas encore : {bilan_url}\n\n"
+            "Ton bilan reste disponible à tout moment.\n\n"
+            "—\n"
+            "Se désabonner des rappels : {unsubscribe_url}\n"
+        ),
+    },
+    "en": {
+        "subject": "Where do you stand on {dimension}?",
+        "body": (
+            "Hi {name},\n\n"
+            "A week ago, your IDEAXION assessment pointed to one priority:\n"
+            "{action_label}.\n\n"
+            "Where do you stand?\n\n"
+            "  → Done, let's reassess: {rediagnostic_url}\n"
+            "  → Not yet: {bilan_url}\n\n"
+            "Your assessment stays available at any time.\n\n"
+            "—\n"
+            "Unsubscribe from reminders: {unsubscribe_url}\n"
+        ),
+    },
+}
+
+
+def reminder_message(
+    *,
+    name: str,
+    dimension: str,
+    action_label: str,
+    report_id: str,
+    unsubscribe_token: str,
+    lang: str = "fr",
+) -> tuple[str, str]:
+    """(sujet, corps) du rappel d'action, dans la langue du porteur."""
+    lang = lang if lang in _REMINDER_EMAIL else "fr"
+    base = get_settings().public_base_url.rstrip("/")
+    api = get_settings().backend_base_url.rstrip("/")
+    tpl = _REMINDER_EMAIL[lang]
+    return (
+        tpl["subject"].format(dimension=dimension),
+        tpl["body"].format(
+            name=name,
+            action_label=action_label,
+            dimension=dimension,
+            bilan_url=f"{base}/{lang}/dashboard/bilan/{report_id}",
+            rediagnostic_url=f"{base}/{lang}/dashboard/diagnostic",
+            # Le désabonnement est servi par le BACK : il doit fonctionner sans session,
+            # donc sans passer par une page qui exigerait d'être connecté.
+            unsubscribe_url=f"{api}/api/v1/notifications/unsubscribe?token={unsubscribe_token}",
+        ),
+    )
+
+
 def send_verification_email(*, to: str, name: str, token: str, lang: str = "fr") -> None:
     subject, body = _verification_message(name=name, token=token, lang=lang)
     send_email(to=to, subject=subject, body=body)

@@ -1,7 +1,7 @@
 """Service RGPD — export (portabilité) + effacement (droit à l'oubli).
 
 Export : toutes les données personnelles du porteur, en JSON. Effacement : suppression du
-compte → cascade SQL (projets/diagnostics/bilans/documents…) DANS une transaction, puis nettoyage
+compte → cascade SQL (projets/diagnostics/brouillons/bilans/documents…) DANS une transaction, puis nettoyage
 best-effort des objets MinIO. L'audit (actor_id non contraint par FK) survit à la suppression.
 """
 
@@ -11,6 +11,7 @@ from typing import Any
 
 from app.audit.service import AuditService
 from app.core.storage import ObjectStorage
+from app.diagnostics.draft_repository import DiagnosticDraftRepository
 from app.documents.repository import DocumentRepository
 from app.iam.dependencies import AuthContext
 from app.iam.repository import UserRepository
@@ -26,6 +27,7 @@ class GdprService:
         projects: ProjectRepository,
         reports: ReportRepository,
         documents: DocumentRepository,
+        drafts: DiagnosticDraftRepository,
         auditor: AuditService,
         storage: ObjectStorage | None,
     ) -> None:
@@ -33,6 +35,7 @@ class GdprService:
         self.projects = projects
         self.reports = reports
         self.documents = documents
+        self.drafts = drafts
         self.auditor = auditor
         self.storage = storage
         self.session = users.session
@@ -42,6 +45,9 @@ class GdprService:
         projects = await self.projects.list_for_owner(u.id)
         reports = await self.reports.list_for_owner(u.id)
         documents = await self.documents.list_for_owner(u.id)
+        # Le brouillon est une saisie personnelle persistée AVANT soumission : il entre
+        # dans la portabilité au même titre qu'un diagnostic soumis.
+        drafts = await self.drafts.list_for_owner(u.id)
         return {
             "account": {
                 "id": u.id,
@@ -83,6 +89,20 @@ class GdprService:
                     "created_at": d.created_at,
                 }
                 for d in documents
+            ],
+            "diagnostic_drafts": [
+                {
+                    "id": d.id,
+                    "answers": d.answers,
+                    "payload": d.payload,
+                    "mode": d.mode.value,
+                    "last_dimension": d.last_dimension,
+                    "consent_at": d.consent_at,
+                    "created_at": d.created_at,
+                    "updated_at": d.updated_at,
+                    "submitted_at": d.submitted_at,
+                }
+                for d in drafts
             ],
         }
 

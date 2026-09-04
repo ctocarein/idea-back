@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit.service import AuditService
 from app.core.config import get_settings
 from app.core.database import get_session
+from app.diagnostics.draft_repository import DiagnosticDraftRepository
+from app.diagnostics.draft_service import DiagnosticDraftService
 from app.diagnostics.extraction import IdeaExtractionService
 from app.diagnostics.repository import DiagnosticRepository
 from app.diagnostics.service import DiagnosticService
@@ -29,7 +31,14 @@ def get_diagnostic_service(
         jobs=JobService(JobRepository(session)),
         auditor=AuditService(session),
         documents=DocumentRepository(session),
+        drafts=DiagnosticDraftRepository(session),
     )
+
+
+def get_draft_service(
+    session: AsyncSession = Depends(get_session),
+) -> DiagnosticDraftService:
+    return DiagnosticDraftService(DiagnosticDraftRepository(session))
 
 
 def get_extraction_service() -> IdeaExtractionService:

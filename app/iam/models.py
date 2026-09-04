@@ -66,6 +66,13 @@ class User(Base):
     # Langue préférée (ISO 639-1 : "fr" | "en"). Pilote l'UI ET le contenu généré par
     # l'IA (bilan, coach, deck) + les emails. Défaut "fr" (marché actuel).
     language: Mapped[str] = mapped_column(String(2), default="fr", server_default="fr")
+    # Désabonnement des rappels par email. Obligation légale, et condition de
+    # DÉLIVRABILITÉ : sans lien de désabonnement, un mail non sollicité dégrade la
+    # réputation d'expédition — critique sur IP mutualisée, où la livraison des emails de
+    # vérification de compte est en jeu. Ne couvre QUE les rappels : les emails
+    # transactionnels (vérification d'adresse) restent envoyés.
+    reminders_opt_out: Mapped[bool] = mapped_column(default=False, server_default="false")
+
     # Horodatage du consentement RGPD donné à l'inscription. Nullable : les comptes
     # créés autrement (seed, invitation) le renseignent à leur propre étape.
     consent_at: Mapped[datetime | None] = mapped_column(default=None)

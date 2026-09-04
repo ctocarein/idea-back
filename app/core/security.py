@@ -94,6 +94,32 @@ def decode_email_token(token: str) -> UUID:
     return UUID(payload["sub"])
 
 
+# --- Token de désabonnement aux rappels (JWT dédié, stateless) -------------
+
+
+def create_unsubscribe_token(subject: UUID) -> str:
+    """Token porté par le lien de désabonnement des mails de rappel.
+
+    Sans expiration : un lien de désabonnement doit fonctionner tant que le mail existe
+    dans la boîte du destinataire. Un lien expiré équivaudrait à ne pas en avoir.
+    `purpose` distinct → aucun usage croisé avec l'access ou la vérification d'email.
+    """
+    payload = {
+        "sub": str(subject),
+        "purpose": "reminders_unsubscribe",
+        "iat": int(datetime.now(UTC).timestamp()),
+    }
+    return jwt.encode(payload, get_settings().jwt_secret.get_secret_value(), algorithm=_JWT_ALGORITHM)
+
+
+def decode_unsubscribe_token(token: str) -> UUID:
+    # Lève jwt.PyJWTError si invalide, ValueError si mauvais purpose.
+    payload = jwt.decode(token, get_settings().jwt_secret.get_secret_value(), algorithms=[_JWT_ALGORITHM])
+    if payload.get("purpose") != "reminders_unsubscribe":
+        raise ValueError("token de mauvais type")
+    return UUID(payload["sub"])
+
+
 # --- Tokens opaques (refresh, invitations) ---------------------------------
 
 

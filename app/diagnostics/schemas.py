@@ -8,6 +8,7 @@ le temps que le front régénère ses types depuis l'OpenAPI. `consent` RGPD req
 
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
@@ -154,3 +155,41 @@ class IdeaExtractOut(BaseModel):
     # Texte source utilisé pour l'extraction (récit brut ou texte extrait du fichier).
     # Renvoyé au front pour constituer le `description` du payload de scoring.
     source_text: str = ""
+
+
+# --- Brouillon de saisie (diagnostic en cours) --------------------------------
+
+
+class DiagnosticDraftIn(BaseModel):
+    """Corps du `PUT /diagnostics/draft` — l'état COMPLET du brouillon, pas un delta.
+
+    Volontairement permissif : c'est une saisie en cours, pas une soumission. Aucune
+    validation métier ici (secteur fermé, longueur minimale du récit…) — elle s'applique à
+    la soumission, dans `ManualDiagnosticIn`. Contraindre un brouillon reviendrait à
+    empêcher d'enregistrer un travail inachevé, ce qui est précisément son objet.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    # { dimensionKey: texte }, même forme que `Diagnostic.answers`.
+    answers: dict[str, str] = Field(default_factory=dict)
+    # Métadonnées du récit collectées avant le wizard : title, sector, stage…
+    payload: dict = Field(default_factory=dict)
+    mode: EntryMode = EntryMode.GUIDED
+    # Dernière dimension ouverte — le champ qui situe le décrochage.
+    last_dimension: str | None = Field(
+        default=None,
+        max_length=10,
+        validation_alias=AliasChoices("last_dimension", "lastDimension"),
+    )
+
+
+class DiagnosticDraftOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: UUID
+    answers: dict[str, str]
+    payload: dict
+    mode: EntryMode
+    last_dimension: str | None = Field(default=None, serialization_alias="lastDimension")
+    updated_at: datetime = Field(serialization_alias="updatedAt")

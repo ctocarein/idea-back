@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     smtp_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
     email_from: str = "IDEAXION <no-reply@ideaxion.cloud>"
 
+    # --- Diagnostic en cours & rappels ---
+    # Un brouillon inactif au-delà de ce délai est SUPPRIMÉ, pas archivé (RGPD : on
+    # persiste une saisie avant soumission, donc la durée de conservation est bornée).
+    draft_ttl_days: int = 90
+    # Délai du rappel sur l'action prioritaire. En configuration, pas en dur : c'est un
+    # réglage produit qu'on voudra bouger sans redéployer une constante.
+    reminder_delay_days: int = 7
+
     # --- CORS ---
     # Liste blanche d'origines. NoDecode : on reçoit la chaîne brute du .env et c'est notre
     # validateur (_split_csv) qui la découpe — pas le décodage JSON de pydantic-settings.

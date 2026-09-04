@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.projects.models import Project
 from app.scoring.models import ScoreRun, ScoreSource, ScoringGrid
 
 
@@ -109,6 +110,22 @@ class ScoreRunRepository:
             select(ScoreRun).where(ScoreRun.project_id == project_id).order_by(ScoreRun.created_at.desc())
         )
         return list(result.scalars())
+
+    async def get_latest_for_owner(self, owner_id: UUID) -> ScoreRun | None:
+        """Dernier score du PORTEUR, tous projets confondus.
+
+        Chaque diagnostic crée son propre projet : un porteur qui refait le point produit
+        un score sur un AUTRE `project_id`. Chercher au niveau du projet ne verrait donc
+        jamais qu'il est revenu — c'est au niveau du porteur que la question se pose.
+        """
+        result = await self.session.execute(
+            select(ScoreRun)
+            .join(Project, Project.id == ScoreRun.project_id)
+            .where(Project.owner_id == owner_id)
+            .order_by(ScoreRun.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
 
     async def get_latest_for_project(self, project_id: UUID) -> ScoreRun | None:
         result = await self.session.execute(
