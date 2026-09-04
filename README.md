@@ -1,8 +1,8 @@
 # Ideaxion — Backend (FastAPI)
 
 Backend du MVP freemium Ideaxion : **moteur de transformation** (diagnostic, Radar de
-Collision, academy, simulateur de pitch). Seule source de vérité métier, exposée en
-API REST `/api/v1` avec OpenAPI auto.
+Collision, Workshop). Seule source de vérité métier, exposée en API REST `/api/v1` avec
+OpenAPI auto.
 
 > Architecture de référence : [`docs/ARCHITECTURE_BACKEND.md`](docs/ARCHITECTURE_BACKEND.md).
 > Périmètre produit (fait foi) : `GUIDE.md` côté `idea-front`. Contrat consommé par le
@@ -78,11 +78,17 @@ Posé et fonctionnel :
 - `app/jobs/` + `app/worker.py` — file Postgres `SKIP LOCKED`, backoff 1/5/15 min.
 - `app/projects/` — machine à états (segment « comprendre ») + modèle.
 - `app/platform/` — health check (DB + Redis).
-- `app/llm/` — protocole + fabrique (stub : providers au Sprint 2).
+- `app/llm/` — protocole + fabrique, providers concrets avec failover et circuit breaker.
 - Outillage : `pyproject` (uv), Docker (api+worker), docker-compose, Alembic async,
   seed, tests unitaires (permissions, machine à états, sécurité).
 
-Stubs / à venir (sprints suivants) : `scoring`, `diagnostics`, `reports`, `academy`,
-`pitchsim`, `mentors`, `documents`, `notifications`, `onboarding`, et providers LLM
-concrets. Le `_v2/` (payments, signatures, certification, dealflow) est architecturé
-mais **non monté** en phase freemium.
+**Modules démontés** — `pitch` (éditeur & deck), `pitchsim` (comité) et `studio` (logo &
+marque) ne sont plus montés dans `app/api.py`. Ils sortent du chemin critique : marque et
+deck sont l'aval du parcours, hors du seul moment produit validé (diagnostic → bilan
+explicable → ce qui manque). Retrait par **démontage, pas par suppression** : le code, les
+modèles et les tests restent, aucune migration destructive. Pour rouvrir, remettre l'import
+et le `include_router` (les instructions sont dans `app/api.py`) et lever le flag
+correspondant côté front — les tests d'intégration se réactivent alors d'eux-mêmes.
+
+Le `_v2/` (payments, signatures, certification, dealflow) est architecturé mais **non
+monté** en phase freemium.

@@ -1,4 +1,15 @@
-"""Sprint 4 bout en bout : comités (lecture) + upload/parsing d'un deck."""
+"""Sprint 4 bout en bout : comités (lecture) + upload/parsing d'un deck.
+
+Le module `pitchsim` est DÉMONTÉ : son routeur n'est plus monté dans `app/api.py`
+(VISION v3.1 « Le Miroir » §3 — le comité est l'aval du parcours, hors du seul moment
+validé). Retrait par démontage, pas par suppression : le code, les modèles et CES TESTS
+restent en place, prêts à resservir.
+
+Ces tests sont donc ignorés tant que les routes ne répondent pas — et ils se réactivent
+SEULS dès qu'on remet le `include_router`. C'est ce qui rend le démontage réellement
+réversible : sans cela, remonter le module laisserait une couverture morte que personne
+ne penserait à rallumer.
+"""
 
 from __future__ import annotations
 
@@ -7,6 +18,17 @@ from io import BytesIO
 import pytest
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(autouse=True)
+async def _skip_if_dismounted(client):
+    """Ignore le module si `pitchsim` n'est pas servi.
+
+    On interroge l'API réelle plutôt que d'inspecter la configuration : c'est la seule
+    vérification qui ne peut pas se désynchroniser de ce qui est effectivement monté.
+    """
+    if (await client.get("/api/v1/pitchsim/committees")).status_code == 404:
+        pytest.skip("module `pitchsim` démonté (cf. app/api.py) — tests conservés, en veille")
 
 PPTX_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 

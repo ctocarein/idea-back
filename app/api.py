@@ -20,8 +20,6 @@ from app.mentors.router import router as mentors_router
 from app.notifications.router import router as notifications_router
 from app.opportunities.admin_router import router as opportunities_admin_router
 from app.opportunities.router import router as opportunities_router
-from app.pitch.router import router as pitch_router
-from app.pitchsim.router import router as pitchsim_router
 from app.platform.router import router as platform_router
 from app.projects.owner_router import router as projects_owner_router
 from app.projects.router import router as projects_admin_router
@@ -29,7 +27,6 @@ from app.reports.router import router as reports_router
 from app.scoring.governance import router as scoring_admin_router
 from app.scoring.router import router as scoring_router
 from app.sharing.router import router as sharing_router
-from app.studio.router import router as studio_router
 
 # Routeur racine de l'API versionnée.
 api_router = APIRouter(prefix="/api/v1")
@@ -45,7 +42,6 @@ api_router.include_router(reports_router)  # /reports         (Sprint 2)
 api_router.include_router(academy_router)  # /academy/*       (Sprint 3)
 api_router.include_router(documents_router)  # /documents/*   (Sprint 3)
 api_router.include_router(opportunities_router)  # /opportunities/* (Sprint 3)
-api_router.include_router(pitchsim_router)  # /pitchsim/*       (Sprint 4)
 api_router.include_router(projects_owner_router)  # /projects/* — espace porteur unifié
 api_router.include_router(projects_admin_router)  # /admin/projects/* (Sprint 5)
 api_router.include_router(audit_router)  # /admin/audit-logs   (Sprint 5)
@@ -57,9 +53,23 @@ api_router.include_router(gdpr_router)  # /me/export, DELETE /me (Sprint 6)
 api_router.include_router(jobs_admin_router)  # /admin/jobs/* (Sprint 6)
 api_router.include_router(notifications_router)  # /notifications/* (V1-05)
 api_router.include_router(opportunities_admin_router)  # /admin/opportunities/* (V1-06)
-api_router.include_router(pitch_router)  # /pitch/* — éditeur (V1.2)
-api_router.include_router(studio_router)  # /studio/* — logo & marque (V1.3)
 
-# Sprints suivants (à monter quand prêts) :
-#   from app.mentors.router import router as mentors_router          # Sprint 5
-#   ...
+# --- Hors chemin critique : NON MONTÉ (VISION v3.1 « Le Miroir » §3) ---
+#
+# `pitch` (éditeur & deck), `studio` (logo & marque) et `pitchsim` (comité silencieux)
+# sortent du produit : marque et deck sont l'AVAL du parcours, hors du seul moment
+# validé (diagnostic → bilan explicable → ce qui manque), et aucune réaction
+# utilisateur ne les a jamais concernés.
+#
+# Retrait par DÉMONTAGE, pas par suppression — c'est la méthode prescrite : le code,
+# les modèles (`app/models.py`) et les tests restent, aucune migration destructive.
+# On cesse de payer le coût cognitif et la surface d'attaque ; on ne perd pas le
+# travail. Pour rouvrir : remettre l'import et le `include_router` ci-dessous, et
+# lever le flag correspondant côté front (`src/shared/config/features.ts`).
+#
+#   from app.pitch.router import router as pitch_router
+#   from app.pitchsim.router import router as pitchsim_router
+#   from app.studio.router import router as studio_router
+#   api_router.include_router(pitch_router)      # /pitch/*    — éditeur (V1.2)
+#   api_router.include_router(pitchsim_router)   # /pitchsim/* — comité (Sprint 4)
+#   api_router.include_router(studio_router)     # /studio/*   — logo & marque (V1.3)
