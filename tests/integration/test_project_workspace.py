@@ -166,3 +166,42 @@ async def test_owner_evaluation_separates_score_confidence_evidence_and_question
     assert isinstance(d1["score"], int)
     assert 0 <= d1["confidence"] <= 1
     assert d1["evidence_state"] == "declared"
+
+    # L'incertitude du score remonte au porteur : ouvrir le détail dimension par dimension
+    # rend l'instabilité visible, autant la dire plutôt que de présenter le score comme
+    # définitif (SPEC_SCORING_INTEGRITY C6).
+    assert isinstance(evaluation["needs_review"], bool)
+    assert evaluation["confidence"] is None or 0 <= evaluation["confidence"] <= 1
+
+    # Les 12 dimensions se répartissent EXACTEMENT sur les 4 piliers : c'est ce qui permet
+    # au bilan de s'ouvrir sur les piliers et de déplier 3 dimensions sous chacun.
+    pillars: dict[str, int] = {}
+    for dimension in evaluation["dimensions"]:
+        pillars[dimension["pillar"]] = pillars.get(dimension["pillar"], 0) + 1
+    assert pillars == {"sens": 3, "viabilite": 3, "scalabilite": 3, "execution": 3}
+
+
+async def test_grid_serves_anchors_and_levers_for_every_dimension(client) -> None:
+    """La grille porte de quoi dire « ce qui manque », sans rien recalculer côté client.
+
+    Ancres et leviers sont DÉJÀ écrits dans la grille : ouvrir le détail au porteur n'est
+    pas un développement de moteur, c'est un affichage de champs existants — à condition
+    que le contrat les expose.
+    """
+    response = await client.get("/api/v1/scoring/grid")
+    assert response.status_code == 200, response.text
+    grid = response.json()
+    assert len(grid["axes"]) == 12
+
+    for axis in grid["axes"]:
+        bands = sorted(axis["anchors"], key=lambda band: band["min"])
+        assert bands, axis["key"]
+        # Contiguës et couvrant 0..scale_max : sinon un score tomberait entre deux ancres
+        # et le porteur lirait un chiffre sans signification.
+        assert bands[0]["min"] == 0
+        assert bands[-1]["max"] == grid["scale_max"]
+        for lower, upper in zip(bands, bands[1:], strict=False):
+            assert upper["min"] == lower["max"], axis["key"]
+        assert all(band["label"] for band in bands), axis["key"]
+        # Levier typé, servi par la grille — le front n'a plus à en tenir un miroir en dur.
+        assert axis["lever"] and axis["lever"]["type"], axis["key"]

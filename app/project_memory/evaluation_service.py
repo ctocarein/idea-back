@@ -62,4 +62,6 @@ class ProjectEvaluationService:
             grid_version=score_run.grid_version if score_run is not None else grid.version,
             dimensions=[DimensionEvaluationOut(**projection.__dict__) for projection in projections],
             questions=[AdaptiveQuestionOut(**question.__dict__) for question in questions],
+            needs_review=bool(score_run.needs_review) if score_run is not None else False,
+            confidence=score_run.confidence if score_run is not None else None,
         )

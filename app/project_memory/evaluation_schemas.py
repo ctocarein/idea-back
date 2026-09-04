@@ -40,3 +40,10 @@ class ProjectEvaluationOut(BaseModel):
     grid_version: str | None
     dimensions: list[DimensionEvaluationOut]
     questions: list[AdaptiveQuestionOut] = Field(default_factory=list)
+
+    # Incertitude du score, telle que mesurée à l'exécution (ensemble multi-passes).
+    # Ouvrir le détail dimension par dimension rend l'instabilité visible : autant
+    # l'assumer et dire qu'un score est en attente de revue, plutôt que de le présenter
+    # comme définitif (SPEC_SCORING_INTEGRITY C6).
+    needs_review: bool = False
+    confidence: float | None = None

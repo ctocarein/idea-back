@@ -27,6 +27,10 @@ class AxisOut(BaseModel):
     central_question: str = ""
     anchors: list[AnchorOut] = Field(default_factory=list)
     guiding_questions: list[str] = Field(default_factory=list)
+    # Levier typé ({type, topic}) — DATA de la grille, pas une URL : le client résout
+    # l'intent selon ce qui existe chez lui. Exposé pour que le front cesse d'en tenir un
+    # miroir en dur, qui dériverait en silence de la grille qui a produit le score.
+    lever: dict[str, str] | None = None
 
 
 class MaturityLevel(BaseModel):
